@@ -1,0 +1,6 @@
+cd public
+   git init
+   git remote add origin https://github.com/YOURNAME/mtg-movers.git
+   git branch -M gh-pages
+   git add . && git commit -m "first snapshot"
+   git push -u origin gh-pages

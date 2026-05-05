@@ -63,6 +63,11 @@
 <main>
   <section id="view-list">
     <div class="toolbar">
+      <label>Feed
+        <select id="feed">
+          <option value="">all feeds</option>
+        </select>
+      </label>
       <label>Rule
         <select id="rule">
           <option value="">all rules</option>
@@ -151,11 +156,13 @@ const fmtPrice = (v, pt) => (v == null || isNaN(v)) ? '-' : (isEur(pt) ? '€' :
 const currencyOf = pt => isEur(pt) ? 'EUR' : 'USD';
 let chart = null;
 function renderList() {
+  const feed = document.getElementById('feed').value;
   const rule = document.getElementById('rule').value;
   const dir  = document.getElementById('dir').value;
   const minp = parseFloat(document.getElementById('minp').value || '0');
   const q    = document.getElementById('q').value.trim().toLowerCase();
   let rows = RAW.filter(r => {
+    if (feed && r.price_type !== feed) return false;
     if (rule && r.rule !== rule) return false;
     if (dir === 'up'   && r.pct_change <= 0) return false;
     if (dir === 'down' && r.pct_change >= 0) return false;
@@ -315,7 +322,18 @@ function renderDetail(id, preferFinish, preferFeed) {
     cell('30d high', fmtPrice(hi, activePt)) +
     cell('30d low',  fmtPrice(lo, activePt));
 }
-['rule','dir','minp','q'].forEach(id => document.getElementById(id).addEventListener('input', renderList));
+// Populate feed dropdown from whatever feeds actually appear in today's data
+(function () {
+  const feedSel = document.getElementById('feed');
+  const seen = Array.from(new Set(RAW.map(r => r.price_type))).sort();
+  for (const pt of seen) {
+    const opt = document.createElement('option');
+    opt.value = pt;
+    opt.textContent = PT_LABELS[pt] || pt;
+    feedSel.appendChild(opt);
+  }
+})();
+['feed','rule','dir','minp','q'].forEach(id => document.getElementById(id).addEventListener('input', renderList));
 window.addEventListener('hashchange', route);
 renderList();
 route();

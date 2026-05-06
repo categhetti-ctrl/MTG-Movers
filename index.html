@@ -159,11 +159,11 @@
       <label>Rule
         <select id="rule">
           <option value="">all rules</option>
-          <option value="1d_pct">1d % move</option>
-          <option value="7d_pct">7d % move</option>
-          <option value="30d_pct">30d % move</option>
-          <option value="spike">spike (up)</option>
-          <option value="crash">crash (down)</option>
+          <option value="1d_pct">1 day %</option>
+          <option value="7d_pct">7 day %</option>
+          <option value="30d_pct">30 day %</option>
+          <option value="spike">spike</option>
+          <option value="crash">crash</option>
         </select>
       </label>
       <label>Direction
@@ -258,6 +258,13 @@ const PT_LABELS = {
   "ck_retail":  "CK retail",
   "cm_avg":     "Cardmarket"
 };
+const RULE_LABELS = {
+  "1d_pct":  "1 day %",
+  "7d_pct":  "7 day %",
+  "30d_pct": "30 day %",
+  "spike":   "spike",
+  "crash":   "crash"
+};
 const isEur = pt => pt && pt.indexOf('cm_') === 0;
 function feedClass(pt) {
   if (!pt) return '';
@@ -295,7 +302,7 @@ function renderList() {
   tbody.innerHTML = rows.map(r => `
     <tr class="row ${r.pct_change >= 0 ? 'up' : 'down'}" onclick="goCard('${r.scryfall_id}','${r.finish}','${r.price_type}')">
       <td><span class="chip ${feedClass(r.price_type)}">${PT_LABELS[r.price_type] || r.price_type}</span></td>
-      <td><span class="chip ${r.rule==='spike'?'spike':''}${r.rule==='crash'?'crash':''}">${r.rule}</span></td>
+      <td><span class="chip ${r.rule==='spike'?'spike':''}${r.rule==='crash'?'crash':''}">${RULE_LABELS[r.rule] || r.rule}</span></td>
       <td class="name">${r.image_uri ? `<img class="thumb" src="${r.image_uri}" loading="lazy" />` : ''}<a>${r.name}</a></td>
       <td>${(r.set_code||'').toUpperCase()}</td>
       <td>${r.finish}</td>

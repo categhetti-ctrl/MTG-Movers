@@ -25,8 +25,20 @@
     tr.row.down { background: rgba(239, 111, 108, 0.12); }
     tr.row.up:hover   { background: rgba(93, 211, 158, 0.22); }
     tr.row.down:hover { background: rgba(239, 111, 108, 0.22); }
-    .logo { display:flex; align-items:center; flex-shrink:0;}
-    .logo svg { display:block; height:108px; width:auto;}
+    .logo { display:block; position:relative; width:100%; height:108px; overflow:hidden; flex-shrink:1;}
+    .truck-anim { position:absolute; height:100%; display:flex; align-items:center; animation: truck-drive 14s linear infinite; will-change:left;}
+    .truck-anim svg { display:block; height:108px; width:auto;}
+    @keyframes truck-drive { 0% { left:100%; } 100% { left:-360px; } }
+    .falling-card { position:absolute; width:14px; height:20px; background:linear-gradient(135deg, #d4a574 0%, #8b6f47 60%, #5e4a30 100%); border:1px solid #1a1a1a; border-radius:2px; box-shadow:0 1px 2px rgba(0,0,0,.5); opacity:0; will-change:transform,opacity;}
+    @keyframes card-fall { 0% { transform:translate(0,0) rotate(0deg); opacity:0; } 8% { transform:translate(2px,4px) rotate(-15deg); opacity:1; } 100% { transform:translate(22px,82px) rotate(160deg); opacity:0; } }
+    .falling-card.c1 { left:322px; top:28px; animation: card-fall 1.6s ease-in 0s    infinite; }
+    .falling-card.c2 { left:320px; top:32px; animation: card-fall 1.6s ease-in 0.4s  infinite; }
+    .falling-card.c3 { left:324px; top:26px; animation: card-fall 1.6s ease-in 0.8s  infinite; }
+    .falling-card.c4 { left:318px; top:34px; animation: card-fall 1.6s ease-in 1.2s  infinite; }
+    @media (prefers-reduced-motion: reduce) {
+      .truck-anim { animation:none; left:50%; transform:translateX(-50%); }
+      .falling-card { animation:none; opacity:0; }
+    }
     .pos { color:#5dd39e; }
     .neg { color:#ef6f6c; }
     .chip { display:inline-block; padding:.1rem .45rem; border-radius:999px; font-size:.72rem; background:#2a2a2a; white-space:nowrap;}
@@ -117,6 +129,11 @@
 <body>
 <header>
   <a href="#" onclick="goHome();return false;" class="logo" aria-label="MTG Movers home">
+    <div class="truck-anim">
+    <span class="falling-card c1"></span>
+    <span class="falling-card c2"></span>
+    <span class="falling-card c3"></span>
+    <span class="falling-card c4"></span>
     <svg viewBox="0 0 230 70" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="MTG Movers truck logo">
       <!-- cab (truck faces left: low hood at left, windshield slopes up to roof, flat back joins cargo) -->
       <path d="M5 45 L15 45 L28 28 L62 28 L62 60 L5 60 Z"
@@ -138,6 +155,7 @@
       <circle cx="180" cy="60" r="6" fill="#000" stroke="#fff" stroke-width="2"/>
       <circle cx="208" cy="60" r="6" fill="#000" stroke="#fff" stroke-width="2"/>
     </svg>
+    </div>
   </a>
 </header>
 

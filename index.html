@@ -31,10 +31,6 @@
     @keyframes truck-drive { 0% { left:100%; } 100% { left:-360px; } }
     .falling-card { position:absolute; width:22px; height:30px; background:#1a1a1a center/cover no-repeat; border:1px solid #1a1a1a; border-radius:2px; box-shadow:0 1px 3px rgba(0,0,0,.6); opacity:0; will-change:transform,opacity;}
     @keyframes card-fall { 0% { transform:translate(0,0) rotate(0deg); opacity:0; } 12% { transform:translate(6px,6px) rotate(-18deg); opacity:1; } 100% { transform:translate(46px,90px) rotate(200deg); opacity:0; } }
-    .falling-card.c1 { left:352px; top:34px; animation: card-fall 1.6s ease-in 0s    infinite; }
-    .falling-card.c2 { left:350px; top:50px; animation: card-fall 1.6s ease-in 0.4s  infinite; }
-    .falling-card.c3 { left:354px; top:42px; animation: card-fall 1.6s ease-in 0.8s  infinite; }
-    .falling-card.c4 { left:348px; top:60px; animation: card-fall 1.6s ease-in 1.2s  infinite; }
     @media (prefers-reduced-motion: reduce) {
       .truck-anim { animation:none; left:50%; transform:translateX(-50%); }
       .falling-card { animation:none; opacity:0; }
@@ -130,10 +126,6 @@
 <header>
   <a href="#" onclick="goHome();return false;" class="logo" aria-label="MTG Movers home">
     <div class="truck-anim">
-    <span class="falling-card c1"></span>
-    <span class="falling-card c2"></span>
-    <span class="falling-card c3"></span>
-    <span class="falling-card c4"></span>
     <svg viewBox="0 0 230 70" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="MTG Movers truck logo">
       <!-- cab (truck faces left: low hood at left, windshield slopes up to roof, flat back joins cargo) -->
       <path d="M5 45 L15 45 L28 28 L62 28 L62 60 L5 60 Z"
@@ -594,14 +586,28 @@ function renderRightTicker() {
   target.innerHTML = html + html;  // duplicate for seamless scroll
 }
 function renderFallingCards() {
-  const movers = topMoversFromRows(RAW, 16).filter(r => r.image_uri);
+  const stage = document.querySelector('.truck-anim');
+  if (!stage) return;
+  // Wipe any prior cards so re-runs (page hot-reloads) don't pile up.
+  stage.querySelectorAll('.falling-card').forEach(el => el.remove());
+  const movers = topMoversFromRows(RAW, 25).filter(r => r.image_uri);
   if (!movers.length) return;
-  const shuffled = movers.slice().sort(() => Math.random() - 0.5);
-  ['c1','c2','c3','c4'].forEach((cls, i) => {
-    const el = document.querySelector('.falling-card.' + cls);
-    const m  = shuffled[i % shuffled.length];
-    if (el && m) el.style.backgroundImage = `url("${m.image_uri}")`;
-  });
+  const count = 4 + Math.floor(Math.random() * 22);  // 4..25 inclusive
+  for (let i = 0; i < count; i++) {
+    const card = document.createElement('span');
+    card.className = 'falling-card';
+    const m = movers[Math.floor(Math.random() * movers.length)];
+    card.style.backgroundImage = `url("${m.image_uri}")`;
+    // Slight jitter around the cargo-back spawn point.
+    const left = 346 + Math.random() * 12;       // 346..358
+    const top  = 25  + Math.random() * 40;       // 25..65
+    card.style.left = left.toFixed(1) + 'px';
+    card.style.top  = top.toFixed(1)  + 'px';
+    const delay    = (Math.random() * 2.5).toFixed(2);  // 0..2.5s
+    const duration = (1.4 + Math.random() * 0.8).toFixed(2); // 1.4..2.2s
+    card.style.animation = `card-fall ${duration}s ease-in ${delay}s infinite`;
+    stage.appendChild(card);
+  }
 }
 function renderLeftTicker() {
   const target = document.getElementById('ticker-left-track');

@@ -29,7 +29,7 @@
     .truck-anim { position:absolute; height:100%; display:flex; align-items:center; animation: truck-drive 14s linear infinite; will-change:left;}
     .truck-anim svg { display:block; height:108px; width:auto;}
     @keyframes truck-drive { 0% { left:100%; } 100% { left:-360px; } }
-    .falling-card { position:absolute; width:14px; height:20px; background:linear-gradient(135deg, #d4a574 0%, #8b6f47 60%, #5e4a30 100%); border:1px solid #1a1a1a; border-radius:2px; box-shadow:0 1px 2px rgba(0,0,0,.5); opacity:0; will-change:transform,opacity;}
+    .falling-card { position:absolute; width:22px; height:30px; background:#1a1a1a center/cover no-repeat; border:1px solid #1a1a1a; border-radius:2px; box-shadow:0 1px 3px rgba(0,0,0,.6); opacity:0; will-change:transform,opacity;}
     @keyframes card-fall { 0% { transform:translate(0,0) rotate(0deg); opacity:0; } 12% { transform:translate(6px,6px) rotate(-18deg); opacity:1; } 100% { transform:translate(46px,90px) rotate(200deg); opacity:0; } }
     .falling-card.c1 { left:352px; top:34px; animation: card-fall 1.6s ease-in 0s    infinite; }
     .falling-card.c2 { left:350px; top:50px; animation: card-fall 1.6s ease-in 0.4s  infinite; }
@@ -593,6 +593,16 @@ function renderRightTicker() {
   const html = items.map(tickerItemHtml).join('');
   target.innerHTML = html + html;  // duplicate for seamless scroll
 }
+function renderFallingCards() {
+  const movers = topMoversFromRows(RAW, 16).filter(r => r.image_uri);
+  if (!movers.length) return;
+  const shuffled = movers.slice().sort(() => Math.random() - 0.5);
+  ['c1','c2','c3','c4'].forEach((cls, i) => {
+    const el = document.querySelector('.falling-card.' + cls);
+    const m  = shuffled[i % shuffled.length];
+    if (el && m) el.style.backgroundImage = `url("${m.image_uri}")`;
+  });
+}
 function renderLeftTicker() {
   const target = document.getElementById('ticker-left-track');
   const wl = watchlistEntries();
@@ -720,6 +730,7 @@ function flashMsg(text) {
 updateWatchlistCount();
 renderRightTicker();
 renderLeftTicker();
+renderFallingCards();
 
 function applyFilters() { currentPage = 1; renderList(); }
 ['feed','rule','dir','minp','q'].forEach(id => document.getElementById(id).addEventListener('input', applyFilters));

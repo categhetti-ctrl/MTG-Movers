@@ -7,82 +7,109 @@
   <meta name="description" content="Daily mover snapshot for Magic: the Gathering cards." />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
-    body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; background:#0f1115; color:#eaeaea; }
+    body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; background:#000; color:#fff; }
     a { color:#9ecbff; }
-    header { padding: 1rem 1.5rem; background:#161a22; border-bottom:1px solid #232938; display:flex; align-items:baseline; gap:1.5rem; flex-wrap:wrap;}
+    header { padding: 1rem 1.5rem; background:#0d0d0d; border-bottom:1px solid #2a2a2a; display:flex; align-items:baseline; gap:1.5rem; flex-wrap:wrap;}
     header h1 { font-size: 1.1rem; margin: 0; }
-    header h1 a { color:#eaeaea; text-decoration:none; }
-    header .meta { color:#888; font-size:.85rem; }
+    header h1 a { color:#fff; text-decoration:none; }
+    header .meta { color:#aaa; font-size:.85rem; }
     main { padding: 1.25rem 1.5rem; max-width: 1280px; margin: 0 auto; }
     .toolbar { display:flex; gap:.75rem; margin-bottom:1rem; flex-wrap:wrap; align-items:center;}
-    .toolbar select, .toolbar input { background:#1b2030; color:#eaeaea; border:1px solid #2c3346; border-radius:6px; padding:.4rem .6rem;}
+    .toolbar select, .toolbar input { background:#141414; color:#fff; border:1px solid #2a2a2a; border-radius:6px; padding:.4rem .6rem;}
     table { width: 100%; border-collapse: collapse; font-size:.92rem; }
-    th, td { padding: .55rem .65rem; border-bottom: 1px solid #232938; text-align: left; vertical-align: middle;}
-    th { color:#9aa3b8; font-weight:500; }
+    th, td { padding: .55rem .65rem; border-bottom: 1px solid #2a2a2a; text-align: left; vertical-align: middle;}
+    th { color:#bbb; font-weight:500; }
     tr.row { cursor: pointer; }
-    tr.row:hover { background:#161a22; }
+    tr.row.up   { background: rgba(93, 211, 158, 0.12); }
+    tr.row.down { background: rgba(239, 111, 108, 0.12); }
+    tr.row.up:hover   { background: rgba(93, 211, 158, 0.22); }
+    tr.row.down:hover { background: rgba(239, 111, 108, 0.22); }
+    .logo { display:flex; align-items:center; flex-shrink:0;}
+    .logo svg { display:block; height:54px; width:auto;}
     .pos { color:#5dd39e; }
     .neg { color:#ef6f6c; }
-    .chip { display:inline-block; padding:.1rem .45rem; border-radius:999px; font-size:.72rem; background:#2c3346; white-space:nowrap;}
+    .chip { display:inline-block; padding:.1rem .45rem; border-radius:999px; font-size:.72rem; background:#2a2a2a; white-space:nowrap;}
     .chip.spike { background:#5b3a90; }
     .chip.crash { background:#7a1414; color:#ffe0e0; font-weight:600; }
     .chip.feed-pick { cursor:pointer; padding:.3rem .7rem; font-size:.78rem; border:1px solid transparent;}
-    .chip.feed-pick.active { border-color:#9ecbff; background:#1b2a45;}
+    .chip.feed-pick.active { border-color:#9ecbff; background:#1f1f1f;}
     .name a { color:#9ecbff; text-decoration:none; }
     img.thumb { height: 36px; vertical-align: middle; border-radius:3px; margin-right:.4rem; }
     .back { font-size:.85rem; color:#9ecbff; text-decoration:none; }
-    .detail-head { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap; padding:1rem 0 1.25rem; border-bottom:1px solid #232938; margin-bottom:1.25rem;}
+    .detail-head { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap; padding:1rem 0 1.25rem; border-bottom:1px solid #2a2a2a; margin-bottom:1.25rem;}
     .detail-head h2 { margin:0; font-size:1.5rem; color:#9ecbff; font-weight:600;}
-    .detail-head .sub { color:#888; font-size:.85rem; margin-top:.25rem;}
+    .detail-head .sub { color:#aaa; font-size:.85rem; margin-top:.25rem;}
     .price-summary { display:flex; gap:1.75rem; flex-wrap:wrap; }
     .price-summary .stat { text-align:center; }
-    .price-summary .stat .label { font-size:.7rem; color:#888; text-transform:uppercase; letter-spacing:.05em; }
+    .price-summary .stat .label { font-size:.7rem; color:#aaa; text-transform:uppercase; letter-spacing:.05em; }
     .price-summary .stat .val { font-size:1.4rem; font-weight:600; margin-top:.15rem;}
     .detail-body { display:grid; grid-template-columns: 280px 1fr; gap:1.5rem; align-items:start;}
     @media (max-width: 800px) { .detail-body { grid-template-columns: 1fr; } }
     .card-art img { width:100%; border-radius:10px; box-shadow:0 4px 16px rgba(0,0,0,.4);}
     .card-art .links { margin-top:1rem; display:flex; flex-direction:column; gap:.4rem;}
-    .card-art .links a { display:block; padding:.55rem .8rem; background:#1b2030; border:1px solid #2c3346; border-radius:6px; text-align:center; text-decoration:none; font-size:.88rem;}
-    .card-art .links a:hover { background:#222a3d;}
-    .panel { background:#161a22; border:1px solid #232938; border-radius:10px; padding:1rem 1.25rem; margin-bottom:1.25rem;}
-    .panel h3 { margin:0 0 .75rem; font-size:.95rem; color:#9aa3b8; font-weight:500;}
+    .card-art .links a { display:block; padding:.55rem .8rem; background:#141414; border:1px solid #2a2a2a; border-radius:6px; text-align:center; text-decoration:none; font-size:.88rem;}
+    .card-art .links a:hover { background:#1f1f1f;}
+    .panel { background:#0d0d0d; border:1px solid #2a2a2a; border-radius:10px; padding:1rem 1.25rem; margin-bottom:1.25rem;}
+    .panel h3 { margin:0 0 .75rem; font-size:.95rem; color:#bbb; font-weight:500;}
     .feed-picker { display:flex; gap:.5rem; flex-wrap:wrap; margin-bottom:1rem;}
     .stat-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap:.75rem;}
-    .stat-grid .cell { background:#1b2030; border:1px solid #2c3346; border-radius:8px; padding:.65rem .8rem;}
-    .stat-grid .cell .lbl { font-size:.7rem; color:#888; text-transform:uppercase; letter-spacing:.05em;}
+    .stat-grid .cell { background:#141414; border:1px solid #2a2a2a; border-radius:8px; padding:.65rem .8rem;}
+    .stat-grid .cell .lbl { font-size:.7rem; color:#aaa; text-transform:uppercase; letter-spacing:.05em;}
     .stat-grid .cell .v { font-size:1.05rem; font-weight:600; margin-top:.2rem;}
-    footer { color:#888; font-size:.78rem; padding: 1.5rem; text-align:center; border-top:1px solid #232938; margin-top:2rem;}
+    footer { color:#aaa; font-size:.78rem; padding: 1.5rem; text-align:center; border-top:1px solid #2a2a2a; margin-top:2rem;}
     .hidden { display:none !important; }
-    .wl-btn { background:#2c3346; color:#9ecbff; border:1px solid #3a4458; border-radius:6px; padding:.4rem .7rem; cursor:pointer; font-size:.85rem;}
-    .wl-btn:hover { background:#3a4458;}
-    .wl-toggle { display:inline-flex; align-items:center; gap:.4rem; padding:.4rem .6rem; background:#1b2030; border:1px solid #2c3346; border-radius:6px; font-size:.85rem; cursor:pointer;}
+    .wl-btn { background:#2a2a2a; color:#9ecbff; border:1px solid #2a2a2a; border-radius:6px; padding:.4rem .7rem; cursor:pointer; font-size:.85rem;}
+    .wl-btn:hover { background:#2a2a2a;}
+    .wl-toggle { display:inline-flex; align-items:center; gap:.4rem; padding:.4rem .6rem; background:#141414; border:1px solid #2a2a2a; border-radius:6px; font-size:.85rem; cursor:pointer;}
     .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.65); align-items:center; justify-content:center; z-index:50;}
     .modal.show { display:flex; }
-    .modal .panel { background:#161a22; border:1px solid #232938; border-radius:10px; padding:1.25rem 1.5rem; width:min(560px, 92vw); max-height:85vh; display:flex; flex-direction:column;}
-    .modal h3 { margin:0 0 .5rem; color:#eaeaea;}
-    .modal .help { color:#888; font-size:.85rem; margin-bottom:.75rem;}
-    .modal textarea { flex:1; min-height:240px; background:#0f1115; color:#eaeaea; border:1px solid #2c3346; border-radius:6px; padding:.6rem .75rem; font-family:inherit; font-size:.9rem; resize:vertical;}
+    .modal .panel { background:#0d0d0d; border:1px solid #2a2a2a; border-radius:10px; padding:1.25rem 1.5rem; width:min(560px, 92vw); max-height:85vh; display:flex; flex-direction:column;}
+    .modal h3 { margin:0 0 .5rem; color:#fff;}
+    .modal .help { color:#aaa; font-size:.85rem; margin-bottom:.75rem;}
+    .modal textarea { flex:1; min-height:240px; background:#000; color:#fff; border:1px solid #2a2a2a; border-radius:6px; padding:.6rem .75rem; font-family:inherit; font-size:.9rem; resize:vertical;}
     .modal .actions { display:flex; justify-content:flex-end; gap:.5rem; margin-top:.75rem;}
-    .modal .actions button { padding:.45rem .9rem; border-radius:6px; border:1px solid #2c3346; background:#1b2030; color:#eaeaea; cursor:pointer;}
-    .modal .actions .primary { background:#1f3a6e; border-color:#2e5099;}
+    .modal .actions button { padding:.45rem .9rem; border-radius:6px; border:1px solid #2a2a2a; background:#141414; color:#fff; cursor:pointer;}
+    .modal .actions .primary { background:#1a1a1a; border-color:#3a3a3a;}
     .wl-search { margin-bottom:.5rem;}
-    .wl-search input { width:100%; padding:.5rem .75rem; background:#0f1115; color:#eaeaea; border:1px solid #2c3346; border-radius:6px; font-size:.9rem; box-sizing:border-box;}
-    .wl-results { max-height:280px; overflow-y:auto; border:1px solid #2c3346; border-radius:6px; margin-top:.5rem; display:none; background:#0f1115;}
+    .wl-search input { width:100%; padding:.5rem .75rem; background:#000; color:#fff; border:1px solid #2a2a2a; border-radius:6px; font-size:.9rem; box-sizing:border-box;}
+    .wl-results { max-height:280px; overflow-y:auto; border:1px solid #2a2a2a; border-radius:6px; margin-top:.5rem; display:none; background:#000;}
     .wl-results.show { display:block;}
-    .wl-result { display:flex; align-items:center; gap:.75rem; padding:.5rem .75rem; cursor:pointer; border-bottom:1px solid #1b2030;}
-    .wl-result:hover { background:#1b2030;}
+    .wl-result { display:flex; align-items:center; gap:.75rem; padding:.5rem .75rem; cursor:pointer; border-bottom:1px solid #141414;}
+    .wl-result:hover { background:#141414;}
     .wl-result:last-child { border-bottom:none;}
     .wl-result img { height:48px; width:auto; border-radius:3px; flex-shrink:0;}
     .wl-result .info { flex:1; min-width:0;}
     .wl-result .nm { color:#9ecbff; font-size:.9rem; font-weight:500;}
-    .wl-result .meta-line { color:#888; font-size:.75rem; margin-top:.15rem;}
+    .wl-result .meta-line { color:#aaa; font-size:.75rem; margin-top:.15rem;}
     .wl-result .price { color:#5dd39e; font-size:.85rem; font-weight:500; white-space:nowrap;}
-    .wl-status { padding:.6rem .75rem; color:#888; font-size:.85rem;}
+    .wl-status { padding:.6rem .75rem; color:#aaa; font-size:.85rem;}
   </style>
 </head>
 <body>
 <header>
-  <h1><a href="#" onclick="goHome();return false;">MTG Price Movers</a></h1>
+  <a href="#" onclick="goHome();return false;" class="logo" aria-label="MTG Movers home">
+    <svg viewBox="0 0 230 70" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="MTG Movers truck logo">
+      <!-- cab -->
+      <path d="M5 52 L5 28 L26 28 L42 42 L62 42 L62 60 L5 60 Z"
+            fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/>
+      <!-- cab window -->
+      <path d="M9 32 L24 32 L34 40 L9 40 Z" fill="#fff" fill-opacity=".18"/>
+      <!-- cargo box -->
+      <rect x="64" y="10" width="160" height="50" fill="none" stroke="#fff" stroke-width="2.2" rx="2"/>
+      <!-- vertical seam on cargo box -->
+      <line x1="74" y1="14" x2="74" y2="56" stroke="#fff" stroke-width="1" opacity=".4"/>
+      <!-- text inside cargo box -->
+      <text x="146" y="40" text-anchor="middle"
+            font-family="-apple-system, Segoe UI, Roboto, sans-serif"
+            font-size="20" font-weight="800" fill="#fff"
+            letter-spacing=".5">MTG MOVERS</text>
+      <!-- wheels -->
+      <circle cx="22" cy="60" r="6" fill="#000" stroke="#fff" stroke-width="2"/>
+      <circle cx="52" cy="60" r="6" fill="#000" stroke="#fff" stroke-width="2"/>
+      <circle cx="180" cy="60" r="6" fill="#000" stroke="#fff" stroke-width="2"/>
+      <circle cx="208" cy="60" r="6" fill="#000" stroke="#fff" stroke-width="2"/>
+    </svg>
+  </a>
   <span class="meta" id="head-meta">Snapshot: <b>2026-05-06</b> &middot; 494 movers &middot; <b>USD</b> for TCGPlayer/CardKingdom &middot; <b>EUR</b> for Cardmarket</span>
 </header>
 <main>
@@ -221,7 +248,7 @@ function renderList() {
   document.getElementById('count').textContent = rows.length;
   const tbody = document.querySelector('#alerts tbody');
   tbody.innerHTML = rows.map(r => `
-    <tr class="row" onclick="goCard('${r.scryfall_id}','${r.finish}','${r.price_type}')">
+    <tr class="row ${r.pct_change >= 0 ? 'up' : 'down'}" onclick="goCard('${r.scryfall_id}','${r.finish}','${r.price_type}')">
       <td><span class="chip">${PT_LABELS[r.price_type] || r.price_type}</span></td>
       <td><span class="chip ${r.rule==='spike'?'spike':''}${r.rule==='crash'?'crash':''}">${r.rule}</span></td>
       <td class="name">${r.image_uri ? `<img class="thumb" src="${r.image_uri}" loading="lazy" />` : ''}<a>${r.name}</a></td>
@@ -350,8 +377,8 @@ function renderDetail(id, preferFinish, preferFeed) {
       maintainAspectRatio:false,
       plugins:{legend:{display:true, labels:{color:'#bbb'}}},
       scales:{
-        x:{ticks:{color:'#888', maxRotation:0, autoSkip:true, maxTicksLimit:8}, grid:{color:'#232938'}},
-        y:{ticks:{color:'#888'}, grid:{color:'#232938'}}
+        x:{ticks:{color:'#aaa', maxRotation:0, autoSkip:true, maxTicksLimit:8}, grid:{color:'#2a2a2a'}},
+        y:{ticks:{color:'#aaa'}, grid:{color:'#2a2a2a'}}
       }
     }
   });
@@ -514,7 +541,7 @@ function flashMsg(text) {
   if (!el) {
     el = document.createElement('div');
     el.id = 'flash';
-    el.style.cssText = 'position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#1f3a6e;color:#eaeaea;padding:.6rem 1rem;border-radius:6px;z-index:60;font-size:.9rem;box-shadow:0 4px 12px rgba(0,0,0,.4);';
+    el.style.cssText = 'position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:.6rem 1rem;border-radius:6px;z-index:60;font-size:.9rem;box-shadow:0 4px 12px rgba(0,0,0,.4);';
     document.body.appendChild(el);
   }
   el.textContent = text;

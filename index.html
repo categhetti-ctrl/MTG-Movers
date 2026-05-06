@@ -35,6 +35,11 @@
       .truck-anim { animation:none; left:50%; transform:translateX(-50%); }
       .falling-card { animation:none; opacity:0; }
     }
+    @media (max-width: 768px) {
+      .logo { height:62px; }
+      .truck-anim svg { height:62px; }
+      .falling-card { width:14px; height:19px; }
+    }
     .pos { color:#5dd39e; }
     .neg { color:#ef6f6c; }
     .chip { display:inline-block; padding:.1rem .45rem; border-radius:999px; font-size:.72rem; background:#2a2a2a; white-space:nowrap;}
@@ -587,21 +592,23 @@ function renderRightTicker() {
 }
 function renderFallingCards() {
   const stage = document.querySelector('.truck-anim');
-  if (!stage) return;
-  // Wipe any prior cards so re-runs (page hot-reloads) don't pile up.
+  const svg   = stage && stage.querySelector('svg');
+  if (!stage || !svg) return;
   stage.querySelectorAll('.falling-card').forEach(el => el.remove());
   const movers = topMoversFromRows(RAW, 25).filter(r => r.image_uri);
   if (!movers.length) return;
   const pickRandom = () => movers[Math.floor(Math.random() * movers.length)];
-  // Always 4 simultaneous falling cards. Each one cycles its image from the
-  // 25-card pool every time its animation loops, so over a few seconds you
-  // see the full pool drift past.
+  // Use the SVG's actual rendered size so spawn positions are correct at any
+  // viewport size (mobile scales the logo down to 62px height).
+  const h = svg.getBoundingClientRect().height || 108;
+  const w = h * (230 / 70);  // SVG aspect ratio
   for (let i = 0; i < 4; i++) {
     const card = document.createElement('span');
     card.className = 'falling-card';
     card.style.backgroundImage = `url("${pickRandom().image_uri}")`;
-    const left = 346 + Math.random() * 12;       // 346..358
-    const top  = 25  + Math.random() * 40;       // 25..65
+    // Cargo back wall is at viewBox x=224 of 230 = ~97% of width.
+    const left = w * 0.97 + Math.random() * (w * 0.04);
+    const top  = h * 0.25 + Math.random() * (h * 0.40);
     card.style.left = left.toFixed(1) + 'px';
     card.style.top  = top.toFixed(1)  + 'px';
     const delay    = (i * 0.4).toFixed(2);

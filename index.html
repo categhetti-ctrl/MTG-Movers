@@ -150,8 +150,12 @@
 <div id="wl-modal" class="modal" onclick="if(event.target.id==='wl-modal')closeWatchlist()">
   <div class="panel">
     <h3>Your watchlist</h3>
-    <div class="help">One card name per line. Matching is case-insensitive and forgiving (e.g. "Boseiju" matches "Boseiju, Who Endures"). Saved in your browser only - nothing leaves your device.</div>
-    <textarea id="wl-text" placeholder="Force of Will&#10;Mox Diamond&#10;Boseiju"></textarea>
+    <div class="help">One card per line. Optional set/printing qualifier in parentheses for version-specific tracking:<br>
+      <code>Force of Will</code> &mdash; any printing<br>
+      <code>Force of Will (MH3)</code> &mdash; only Modern Horizons 3<br>
+      <code>Force of Will (STA-12)</code> &mdash; only that exact printing (set + collector number)<br>
+      Saved in your browser only - nothing leaves your device.</div>
+    <textarea id="wl-text" placeholder="Force of Will&#10;Force of Will (STA-12)&#10;Boseiju"></textarea>
     <div class="actions">
       <button onclick="closeWatchlist()">Cancel</button>
       <button class="primary" onclick="saveWatchlist()">Save</button>
@@ -189,9 +193,9 @@ function renderList() {
   const minp = parseFloat(document.getElementById('minp').value || '0');
   const q    = document.getElementById('q').value.trim().toLowerCase();
   const wlOnly = document.getElementById('wl-only').checked;
-  const wl = wlOnly ? watchlistSet() : null;
+  const wl = wlOnly ? watchlistEntries() : null;
   let rows = RAW.filter(r => {
-    if (wl && !nameMatchesWatchlist(r.name, wl)) return false;
+    if (wl && !rowMatchesWatchlist(r, wl)) return false;
     if (feed && r.price_type !== feed) return false;
     if (rule && r.rule !== rule) return false;
     if (dir === 'up'   && r.pct_change <= 0) return false;
@@ -271,6 +275,8 @@ function latestPrice(card, pt, finish) {
 }
 function buildLinks(card) {
   const out = [];
+  const safeName = card.name.replace(/'/g, "\\\\'");
+  out.push(`<a href="#" onclick="addPrintingToWatchlist('${safeName}','${card.set_code||''}','${card.collector_no||''}');return false;">+ Add this printing to watchlist</a>`);
   if (card.purchase_uri) out.push(`<a href="${card.purchase_uri}" target="_blank" rel="noopener">Open on TCGPlayer &rarr;</a>`);
   const ckUrl = `https://www.cardkingdom.com/catalog/search?search=mtg&filter%5Bname%5D=${encodeURIComponent(card.name)}`;
   out.push(`<a href="${ckUrl}" target="_blank" rel="noopener">Search on CardKingdom &rarr;</a>`);
@@ -370,8 +376,22 @@ function loadWatchlist() {
   const raw = localStorage.getItem(WL_KEY) || '';
   return raw.split('\n').map(s => s.trim()).filter(Boolean);
 }
-function watchlistSet() {
-  return new Set(loadWatchlist().map(s => s.toLowerCase()));
+function parseWatchlistEntry(line) {
+  // "Boseiju" -> {name:'boseiju', set:null, num:null}
+  // "Force of Will (MH3)" -> {name:'force of will', set:'mh3', num:null}
+  // "Force of Will (STA-12)" or "Force of Will (sta 12)" -> {name, set:'sta', num:'12'}
+  const s = (line || '').trim();
+  if (!s) return null;
+  const m = s.match(/^(.+?)(?:\s*\(([A-Za-z0-9]+)(?:[-\s]+([A-Za-z0-9]+))?\))?\s*$/);
+  if (!m) return {name: s.toLowerCase(), set: null, num: null};
+  return {
+    name: m[1].trim().toLowerCase(),
+    set:  m[2] ? m[2].toLowerCase() : null,
+    num:  m[3] ? m[3].toLowerCase() : null,
+  };
+}
+function watchlistEntries() {
+  return loadWatchlist().map(parseWatchlistEntry).filter(Boolean);
 }
 function updateWatchlistCount() {
   document.getElementById('wl-count').textContent = loadWatchlist().length;
@@ -390,12 +410,42 @@ function saveWatchlist() {
   closeWatchlist();
   renderList();
 }
-function nameMatchesWatchlist(cardName, wl) {
-  const lower = (cardName || '').toLowerCase();
-  for (const entry of wl) {
-    if (lower.startsWith(entry)) return true;
+function rowMatchesWatchlist(r, entries) {
+  const name    = (r.name || '').toLowerCase();
+  const setCode = (r.set_code || '').toLowerCase();
+  const num     = (r.collector_no || '').toLowerCase();
+  for (const e of entries) {
+    if (!name.startsWith(e.name)) continue;
+    if (e.set && setCode !== e.set) continue;
+    if (e.num && num !== e.num) continue;
+    return true;
   }
   return false;
+}
+function addPrintingToWatchlist(name, setCode, num) {
+  const entry = `${name} (${(setCode||'').toUpperCase()}${num ? '-'+num : ''})`;
+  const list = loadWatchlist();
+  if (list.some(l => l.trim().toLowerCase() === entry.toLowerCase())) {
+    flashMsg(`Already in watchlist: ${entry}`);
+    return;
+  }
+  list.push(entry);
+  localStorage.setItem(WL_KEY, list.join('\n'));
+  updateWatchlistCount();
+  flashMsg(`Added to watchlist: ${entry}`);
+}
+function flashMsg(text) {
+  let el = document.getElementById('flash');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'flash';
+    el.style.cssText = 'position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#1f3a6e;color:#eaeaea;padding:.6rem 1rem;border-radius:6px;z-index:60;font-size:.9rem;box-shadow:0 4px 12px rgba(0,0,0,.4);';
+    document.body.appendChild(el);
+  }
+  el.textContent = text;
+  el.style.opacity = '1';
+  clearTimeout(flashMsg._t);
+  flashMsg._t = setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .4s'; }, 1800);
 }
 updateWatchlistCount();
 

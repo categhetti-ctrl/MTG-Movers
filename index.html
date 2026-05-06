@@ -65,6 +65,19 @@
     .modal .actions { display:flex; justify-content:flex-end; gap:.5rem; margin-top:.75rem;}
     .modal .actions button { padding:.45rem .9rem; border-radius:6px; border:1px solid #2c3346; background:#1b2030; color:#eaeaea; cursor:pointer;}
     .modal .actions .primary { background:#1f3a6e; border-color:#2e5099;}
+    .wl-search { margin-bottom:.5rem;}
+    .wl-search input { width:100%; padding:.5rem .75rem; background:#0f1115; color:#eaeaea; border:1px solid #2c3346; border-radius:6px; font-size:.9rem; box-sizing:border-box;}
+    .wl-results { max-height:280px; overflow-y:auto; border:1px solid #2c3346; border-radius:6px; margin-top:.5rem; display:none; background:#0f1115;}
+    .wl-results.show { display:block;}
+    .wl-result { display:flex; align-items:center; gap:.75rem; padding:.5rem .75rem; cursor:pointer; border-bottom:1px solid #1b2030;}
+    .wl-result:hover { background:#1b2030;}
+    .wl-result:last-child { border-bottom:none;}
+    .wl-result img { height:48px; width:auto; border-radius:3px; flex-shrink:0;}
+    .wl-result .info { flex:1; min-width:0;}
+    .wl-result .nm { color:#9ecbff; font-size:.9rem; font-weight:500;}
+    .wl-result .meta-line { color:#888; font-size:.75rem; margin-top:.15rem;}
+    .wl-result .price { color:#5dd39e; font-size:.85rem; font-weight:500; white-space:nowrap;}
+    .wl-status { padding:.6rem .75rem; color:#888; font-size:.85rem;}
   </style>
 </head>
 <body>
@@ -150,11 +163,11 @@
 <div id="wl-modal" class="modal" onclick="if(event.target.id==='wl-modal')closeWatchlist()">
   <div class="panel">
     <h3>Your watchlist</h3>
-    <div class="help">One card per line. Optional set/printing qualifier in parentheses for version-specific tracking:<br>
-      <code>Force of Will</code> &mdash; any printing<br>
-      <code>Force of Will (MH3)</code> &mdash; only Modern Horizons 3<br>
-      <code>Force of Will (STA-12)</code> &mdash; only that exact printing (set + collector number)<br>
-      Saved in your browser only - nothing leaves your device.</div>
+    <div class="help">Search to find a specific printing, or type / paste card names directly into the list below. Saved in your browser only - nothing leaves your device.</div>
+    <div class="wl-search">
+      <input id="wl-search" type="search" placeholder="Search printings (e.g. 'Force of Will')..." autocomplete="off" />
+      <div id="wl-results" class="wl-results"></div>
+    </div>
     <textarea id="wl-text" placeholder="Force of Will&#10;Force of Will (STA-12)&#10;Boseiju"></textarea>
     <div class="actions">
       <button onclick="closeWatchlist()">Cancel</button>
@@ -402,6 +415,10 @@ function openWatchlist() {
 }
 function closeWatchlist() {
   document.getElementById('wl-modal').classList.remove('show');
+  document.getElementById('wl-search').value = '';
+  const r = document.getElementById('wl-results');
+  r.innerHTML = '';
+  r.classList.remove('show');
 }
 function saveWatchlist() {
   const v = document.getElementById('wl-text').value;
@@ -432,7 +449,65 @@ function addPrintingToWatchlist(name, setCode, num) {
   list.push(entry);
   localStorage.setItem(WL_KEY, list.join('\n'));
   updateWatchlistCount();
-  flashMsg(`Added to watchlist: ${entry}`);
+  // If modal is open, mirror the new entry into the textarea so a Save
+  // doesn't accidentally erase it.
+  const ta = document.getElementById('wl-text');
+  const modal = document.getElementById('wl-modal');
+  if (ta && modal && modal.classList.contains('show')) {
+    ta.value = list.join('\n');
+  }
+  flashMsg(`Added: ${entry}`);
+}
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+let wlSearchTimer = null;
+function wlSearchInput() {
+  clearTimeout(wlSearchTimer);
+  wlSearchTimer = setTimeout(wlSearchRun, 350);
+}
+function wlSearchRun() {
+  const q = (document.getElementById('wl-search').value || '').trim();
+  const resultsEl = document.getElementById('wl-results');
+  if (q.length < 2) {
+    resultsEl.innerHTML = '';
+    resultsEl.classList.remove('show');
+    return;
+  }
+  resultsEl.innerHTML = '<div class="wl-status">Searching Scryfall...</div>';
+  resultsEl.classList.add('show');
+  const url = `https://api.scryfall.com/cards/search?q=${encodeURIComponent(q)}&unique=prints&order=released&dir=desc`;
+  fetch(url)
+    .then(r => r.status === 404 ? {data: []} : (r.ok ? r.json() : Promise.reject(r.status)))
+    .then(d => wlRenderResults(d.data || []))
+    .catch(err => {
+      resultsEl.innerHTML = `<div class="wl-status">Search error (${err}). Try again in a moment.</div>`;
+    });
+}
+function wlRenderResults(cards) {
+  const resultsEl = document.getElementById('wl-results');
+  if (!cards.length) {
+    resultsEl.innerHTML = '<div class="wl-status">No printings found.</div>';
+    return;
+  }
+  resultsEl.innerHTML = cards.slice(0, 50).map(c => {
+    const img = (c.image_uris && c.image_uris.small)
+              || (c.card_faces && c.card_faces[0] && c.card_faces[0].image_uris && c.card_faces[0].image_uris.small)
+              || '';
+    const usd = c.prices && c.prices.usd ? `$${c.prices.usd}` : '';
+    const safeName = (c.name || '').replace(/'/g, "\\\\'");
+    const setCode = (c.set || '').toUpperCase();
+    const collector = c.collector_number || '';
+    return `
+      <div class="wl-result" onclick="addPrintingToWatchlist('${safeName}','${c.set||''}','${collector}')">
+        ${img ? `<img src="${img}" loading="lazy" alt="" />` : ''}
+        <div class="info">
+          <div class="nm">${escapeHtml(c.name)}</div>
+          <div class="meta-line">${escapeHtml(c.set_name || '')} (${setCode}) #${escapeHtml(collector)} - ${escapeHtml(c.rarity || '')}</div>
+        </div>
+        <div class="price">${usd}</div>
+      </div>`;
+  }).join('');
 }
 function flashMsg(text) {
   let el = document.getElementById('flash');
@@ -451,6 +526,7 @@ updateWatchlistCount();
 
 ['feed','rule','dir','minp','q'].forEach(id => document.getElementById(id).addEventListener('input', renderList));
 document.getElementById('wl-only').addEventListener('change', renderList);
+document.getElementById('wl-search').addEventListener('input', wlSearchInput);
 window.addEventListener('hashchange', route);
 renderList();
 route();

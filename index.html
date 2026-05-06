@@ -31,8 +31,11 @@
     .chip { display:inline-block; padding:.1rem .45rem; border-radius:999px; font-size:.72rem; background:#2a2a2a; white-space:nowrap;}
     .chip.spike { background:#5b3a90; }
     .chip.crash { background:#7a1414; color:#ffe0e0; font-weight:600; }
+    .chip.feed-tcg { background:#b3261e; color:#fff; }
+    .chip.feed-ck  { background:#1f4f9c; color:#fff; }
+    .chip.feed-cm  { background:#b3661e; color:#fff; }
     .chip.feed-pick { cursor:pointer; padding:.3rem .7rem; font-size:.78rem; border:1px solid transparent;}
-    .chip.feed-pick.active { border-color:#9ecbff; background:#1f1f1f;}
+    .chip.feed-pick.active { background:#1f1f1f; color:#fff; border-color:#fff;}
     .name a { color:#9ecbff; text-decoration:none; }
     img.thumb { height: 36px; vertical-align: middle; border-radius:3px; margin-right:.4rem; }
     .back { font-size:.85rem; color:#9ecbff; text-decoration:none; }
@@ -222,6 +225,14 @@ const PT_LABELS = {
   "cm_avg":     "Cardmarket"
 };
 const isEur = pt => pt && pt.indexOf('cm_') === 0;
+function feedClass(pt) {
+  if (!pt) return '';
+  if (pt.indexOf('cm_') === 0) return 'feed-cm';
+  if (pt.indexOf('ck_') === 0) return 'feed-ck';
+  if (pt === 'market' || pt === 'mid' || pt === 'low' || pt === 'high'
+      || pt === 'tcg_market' || pt === 'direct_low' || pt === 'mtgjson_tcg') return 'feed-tcg';
+  return '';
+}
 const fmtPct = v => (v == null || isNaN(v)) ? '-' : (v*100).toFixed(1)+'%';
 const fmtPrice = (v, pt) => (v == null || isNaN(v)) ? '-' : (isEur(pt) ? '€' : '$') + Number(v).toFixed(2);
 const currencyOf = pt => isEur(pt) ? 'EUR' : 'USD';
@@ -249,7 +260,7 @@ function renderList() {
   const tbody = document.querySelector('#alerts tbody');
   tbody.innerHTML = rows.map(r => `
     <tr class="row ${r.pct_change >= 0 ? 'up' : 'down'}" onclick="goCard('${r.scryfall_id}','${r.finish}','${r.price_type}')">
-      <td><span class="chip">${PT_LABELS[r.price_type] || r.price_type}</span></td>
+      <td><span class="chip ${feedClass(r.price_type)}">${PT_LABELS[r.price_type] || r.price_type}</span></td>
       <td><span class="chip ${r.rule==='spike'?'spike':''}${r.rule==='crash'?'crash':''}">${r.rule}</span></td>
       <td class="name">${r.image_uri ? `<img class="thumb" src="${r.image_uri}" loading="lazy" />` : ''}<a>${r.name}</a></td>
       <td>${(r.set_code||'').toUpperCase()}</td>
@@ -354,7 +365,8 @@ function renderDetail(id, preferFinish, preferFeed) {
   document.getElementById('d-summary').innerHTML = summary;
   const finishesForPt = Object.keys(card.history[activePt] || {});
   const feedChips = Object.keys(card.history).map(pt => {
-    const cls = (pt === activePt) ? 'chip feed-pick active' : 'chip feed-pick';
+    const base = (pt === activePt) ? 'chip feed-pick active' : 'chip feed-pick';
+    const cls = `${base} ${feedClass(pt)}`;
     return `<span class="${cls}" onclick="goCard('${id}','${activeFinish}','${pt}')">${PT_LABELS[pt] || pt}</span>`;
   }).join('');
   const finishChips = finishesForPt.map(f => {

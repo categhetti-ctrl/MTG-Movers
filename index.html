@@ -30,11 +30,11 @@
     .truck-anim svg { display:block; height:108px; width:auto;}
     @keyframes truck-drive { 0% { left:100%; } 100% { left:-360px; } }
     .falling-card { position:absolute; width:14px; height:20px; background:linear-gradient(135deg, #d4a574 0%, #8b6f47 60%, #5e4a30 100%); border:1px solid #1a1a1a; border-radius:2px; box-shadow:0 1px 2px rgba(0,0,0,.5); opacity:0; will-change:transform,opacity;}
-    @keyframes card-fall { 0% { transform:translate(0,0) rotate(0deg); opacity:0; } 8% { transform:translate(2px,4px) rotate(-15deg); opacity:1; } 100% { transform:translate(22px,82px) rotate(160deg); opacity:0; } }
-    .falling-card.c1 { left:322px; top:28px; animation: card-fall 1.6s ease-in 0s    infinite; }
-    .falling-card.c2 { left:320px; top:32px; animation: card-fall 1.6s ease-in 0.4s  infinite; }
-    .falling-card.c3 { left:324px; top:26px; animation: card-fall 1.6s ease-in 0.8s  infinite; }
-    .falling-card.c4 { left:318px; top:34px; animation: card-fall 1.6s ease-in 1.2s  infinite; }
+    @keyframes card-fall { 0% { transform:translate(0,0) rotate(0deg); opacity:0; } 12% { transform:translate(6px,6px) rotate(-18deg); opacity:1; } 100% { transform:translate(46px,90px) rotate(200deg); opacity:0; } }
+    .falling-card.c1 { left:352px; top:34px; animation: card-fall 1.6s ease-in 0s    infinite; }
+    .falling-card.c2 { left:350px; top:50px; animation: card-fall 1.6s ease-in 0.4s  infinite; }
+    .falling-card.c3 { left:354px; top:42px; animation: card-fall 1.6s ease-in 0.8s  infinite; }
+    .falling-card.c4 { left:348px; top:60px; animation: card-fall 1.6s ease-in 1.2s  infinite; }
     @media (prefers-reduced-motion: reduce) {
       .truck-anim { animation:none; left:50%; transform:translateX(-50%); }
       .falling-card { animation:none; opacity:0; }

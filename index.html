@@ -9,7 +9,8 @@
   <style>
     body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; background:#000; color:#fff; }
     a { color:#9ecbff; }
-    header { padding: 1rem 1.5rem; background:#0d0d0d; border-bottom:1px solid #2a2a2a; display:flex; align-items:baseline; gap:1.5rem; flex-wrap:wrap;}
+    header { padding: 1rem 1.5rem; background:#0d0d0d; border-bottom:1px solid #2a2a2a; display:flex; align-items:center; justify-content:center; gap:1.5rem; flex-wrap:wrap;}
+    .footer-meta { color:#fff; font-size:.85rem; margin-bottom:.6rem;}
     header h1 { font-size: 1.1rem; margin: 0; }
     header h1 a { color:#fff; text-decoration:none; }
     header .meta { color:#aaa; font-size:.85rem; }
@@ -132,7 +133,6 @@
       <circle cx="208" cy="60" r="6" fill="#000" stroke="#fff" stroke-width="2"/>
     </svg>
   </a>
-  <span class="meta" id="head-meta">Snapshot: <b>2026-05-06</b> &middot; 494 movers &middot; <b>USD</b> for TCGPlayer/CardKingdom &middot; <b>EUR</b> for Cardmarket</span>
 </header>
 
 <aside class="ticker left">
@@ -240,6 +240,7 @@
 </div>
 
 <footer>
+  <div class="footer-meta">Snapshot: <b>2026-05-06</b> &middot; 494 movers &middot; <b>USD</b> for TCGPlayer/CardKingdom &middot; <b>EUR</b> for Cardmarket</div>
   Card data and TCGPlayer market prices are sourced from
   <a href="https://scryfall.com" target="_blank" rel="noopener">Scryfall</a>
   under their
@@ -311,13 +312,11 @@ function goCard(id, finish, pt) {
 function showList() {
   document.getElementById('view-list').classList.remove('hidden');
   document.getElementById('view-detail').classList.add('hidden');
-  document.getElementById('head-meta').classList.remove('hidden');
   window.scrollTo(0,0);
 }
 function showDetail() {
   document.getElementById('view-list').classList.add('hidden');
   document.getElementById('view-detail').classList.remove('hidden');
-  document.getElementById('head-meta').classList.add('hidden');
   window.scrollTo(0,0);
 }
 function route() {

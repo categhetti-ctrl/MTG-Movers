@@ -592,20 +592,24 @@ function renderFallingCards() {
   stage.querySelectorAll('.falling-card').forEach(el => el.remove());
   const movers = topMoversFromRows(RAW, 25).filter(r => r.image_uri);
   if (!movers.length) return;
-  const count = 4 + Math.floor(Math.random() * 22);  // 4..25 inclusive
-  for (let i = 0; i < count; i++) {
+  const pickRandom = () => movers[Math.floor(Math.random() * movers.length)];
+  // Always 4 simultaneous falling cards. Each one cycles its image from the
+  // 25-card pool every time its animation loops, so over a few seconds you
+  // see the full pool drift past.
+  for (let i = 0; i < 4; i++) {
     const card = document.createElement('span');
     card.className = 'falling-card';
-    const m = movers[Math.floor(Math.random() * movers.length)];
-    card.style.backgroundImage = `url("${m.image_uri}")`;
-    // Slight jitter around the cargo-back spawn point.
+    card.style.backgroundImage = `url("${pickRandom().image_uri}")`;
     const left = 346 + Math.random() * 12;       // 346..358
     const top  = 25  + Math.random() * 40;       // 25..65
     card.style.left = left.toFixed(1) + 'px';
     card.style.top  = top.toFixed(1)  + 'px';
-    const delay    = (Math.random() * 2.5).toFixed(2);  // 0..2.5s
-    const duration = (1.4 + Math.random() * 0.8).toFixed(2); // 1.4..2.2s
+    const delay    = (i * 0.4).toFixed(2);
+    const duration = (1.4 + Math.random() * 0.4).toFixed(2);
     card.style.animation = `card-fall ${duration}s ease-in ${delay}s infinite`;
+    card.addEventListener('animationiteration', () => {
+      card.style.backgroundImage = `url("${pickRandom().image_uri}")`;
+    });
     stage.appendChild(card);
   }
 }

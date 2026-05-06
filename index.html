@@ -86,6 +86,25 @@
     .wl-result .meta-line { color:#aaa; font-size:.75rem; margin-top:.15rem;}
     .wl-result .price { color:#5dd39e; font-size:.85rem; font-weight:500; white-space:nowrap;}
     .wl-status { padding:.6rem .75rem; color:#aaa; font-size:.85rem;}
+    /* ---- Side tickers ---- */
+    .ticker { display:none; position:fixed; top:80px; bottom:0; width:200px; background:#050505; overflow:hidden; z-index:5; flex-direction:column;}
+    .ticker.left  { left:0;  border-right:1px solid #1a1a1a;}
+    .ticker.right { right:0; border-left: 1px solid #1a1a1a;}
+    .ticker-header { flex-shrink:0; background:#0a0a0a; border-bottom:1px solid #2a2a2a; padding:.55rem .5rem; text-align:center; font-size:.7rem; text-transform:uppercase; letter-spacing:.08em; color:#aaa; font-weight:600;}
+    .ticker-viewport { flex:1; overflow:hidden; position:relative;}
+    .ticker-track { animation: ticker-scroll 140s linear infinite;}
+    .ticker-track:hover { animation-play-state: paused;}
+    @keyframes ticker-scroll { from { transform: translateY(0); } to { transform: translateY(-50%); } }
+    .ticker-item { padding:.5rem .4rem; border-bottom:1px solid #141414; display:flex; flex-direction:column; align-items:center; text-align:center; cursor:pointer;}
+    .ticker-item:hover { background:#0d0d0d;}
+    .ticker-item img { width:130px; max-width:100%; border-radius:6px; margin-bottom:.35rem; display:block;}
+    .ticker-item .nm { font-size:.7rem; color:#fff; margin-bottom:.15rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; width:100%;}
+    .ticker-item .pct { font-size:.95rem; font-weight:700;}
+    .ticker-empty { padding:1rem .75rem; text-align:center; color:#888; font-size:.78rem; line-height:1.5;}
+    @media (min-width: 1280px) {
+      body { padding-left:200px; padding-right:200px;}
+      .ticker { display:flex;}
+    }
   </style>
 </head>
 <body>
@@ -115,6 +134,20 @@
   </a>
   <span class="meta" id="head-meta">Snapshot: <b>2026-05-06</b> &middot; 494 movers &middot; <b>USD</b> for TCGPlayer/CardKingdom &middot; <b>EUR</b> for Cardmarket</span>
 </header>
+
+<aside class="ticker left">
+  <div class="ticker-header">Your watchlist</div>
+  <div class="ticker-viewport">
+    <div class="ticker-track" id="ticker-left-track"></div>
+  </div>
+</aside>
+<aside class="ticker right">
+  <div class="ticker-header">Top movers</div>
+  <div class="ticker-viewport">
+    <div class="ticker-track" id="ticker-right-track"></div>
+  </div>
+</aside>
+
 <main>
   <section id="view-list">
     <div class="toolbar">
@@ -465,6 +498,58 @@ function saveWatchlist() {
   updateWatchlistCount();
   closeWatchlist();
   renderList();
+  renderLeftTicker();
+}
+
+// ---- TICKERS --------------------------------------------------------------
+function topMoversFromRows(rows, n) {
+  const byId = {};
+  for (const r of rows) {
+    const cur = byId[r.scryfall_id];
+    if (!cur || Math.abs(r.pct_change) > Math.abs(cur.pct_change)) byId[r.scryfall_id] = r;
+  }
+  return Object.values(byId)
+    .filter(r => r.image_uri)
+    .sort((a, b) => Math.abs(b.pct_change) - Math.abs(a.pct_change))
+    .slice(0, n);
+}
+function tickerItemHtml(r) {
+  const dirCls = r.pct_change >= 0 ? 'pos' : 'neg';
+  const safeId = (r.scryfall_id || '').replace(/'/g, "\\\\'");
+  const safeFin = (r.finish || '').replace(/'/g, "\\\\'");
+  const safePt = (r.price_type || '').replace(/'/g, "\\\\'");
+  return `
+    <div class="ticker-item" onclick="goCard('${safeId}','${safeFin}','${safePt}')">
+      <img src="${r.image_uri}" loading="lazy" alt="" />
+      <div class="nm">${escapeHtml(r.name)}</div>
+      <div class="pct ${dirCls}">${fmtPct(r.pct_change)}</div>
+    </div>`;
+}
+function renderRightTicker() {
+  const items = topMoversFromRows(RAW, 40);
+  const target = document.getElementById('ticker-right-track');
+  if (!items.length) {
+    target.innerHTML = '<div class="ticker-empty">No movers today.</div>';
+    return;
+  }
+  const html = items.map(tickerItemHtml).join('');
+  target.innerHTML = html + html;  // duplicate for seamless scroll
+}
+function renderLeftTicker() {
+  const target = document.getElementById('ticker-left-track');
+  const wl = watchlistEntries();
+  if (!wl.length) {
+    target.innerHTML = '<div class="ticker-empty">Your watchlist is empty.<br>Click "Watchlist" to add cards.</div>';
+    return;
+  }
+  const matched = RAW.filter(r => rowMatchesWatchlist(r, wl));
+  const items = topMoversFromRows(matched, 40);
+  if (!items.length) {
+    target.innerHTML = '<div class="ticker-empty">No movers in your watchlist today.</div>';
+    return;
+  }
+  const html = items.map(tickerItemHtml).join('');
+  target.innerHTML = html + html;
 }
 function rowMatchesWatchlist(r, entries) {
   const name    = (r.name || '').toLowerCase();
@@ -553,7 +638,7 @@ function flashMsg(text) {
   if (!el) {
     el = document.createElement('div');
     el.id = 'flash';
-    el.style.cssText = 'position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:.6rem 1rem;border-radius:6px;z-index:60;font-size:.9rem;box-shadow:0 4px 12px rgba(0,0,0,.4);';
+    el.style.cssText = 'position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:.6rem 1rem;border-radius:6px;z-index:60;font-size:.9rem;box-shadow:0 4px 12px rgba(0,0,0,.4);border:1px solid #2a2a2a;';
     document.body.appendChild(el);
   }
   el.textContent = text;
@@ -561,7 +646,22 @@ function flashMsg(text) {
   clearTimeout(flashMsg._t);
   flashMsg._t = setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .4s'; }, 1800);
 }
+
+// Populate feed dropdown from whatever feeds actually appear in today's data
+(function () {
+  const feedSel = document.getElementById('feed');
+  const seen = Array.from(new Set(RAW.map(r => r.price_type))).sort();
+  for (const pt of seen) {
+    const opt = document.createElement('option');
+    opt.value = pt;
+    opt.textContent = PT_LABELS[pt] || pt;
+    feedSel.appendChild(opt);
+  }
+})();
+
 updateWatchlistCount();
+renderRightTicker();
+renderLeftTicker();
 
 ['feed','rule','dir','minp','q'].forEach(id => document.getElementById(id).addEventListener('input', renderList));
 document.getElementById('wl-only').addEventListener('change', renderList);

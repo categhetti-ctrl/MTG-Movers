@@ -53,6 +53,18 @@
     .stat-grid .cell .v { font-size:1.05rem; font-weight:600; margin-top:.2rem;}
     footer { color:#888; font-size:.78rem; padding: 1.5rem; text-align:center; border-top:1px solid #232938; margin-top:2rem;}
     .hidden { display:none !important; }
+    .wl-btn { background:#2c3346; color:#9ecbff; border:1px solid #3a4458; border-radius:6px; padding:.4rem .7rem; cursor:pointer; font-size:.85rem;}
+    .wl-btn:hover { background:#3a4458;}
+    .wl-toggle { display:inline-flex; align-items:center; gap:.4rem; padding:.4rem .6rem; background:#1b2030; border:1px solid #2c3346; border-radius:6px; font-size:.85rem; cursor:pointer;}
+    .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.65); align-items:center; justify-content:center; z-index:50;}
+    .modal.show { display:flex; }
+    .modal .panel { background:#161a22; border:1px solid #232938; border-radius:10px; padding:1.25rem 1.5rem; width:min(560px, 92vw); max-height:85vh; display:flex; flex-direction:column;}
+    .modal h3 { margin:0 0 .5rem; color:#eaeaea;}
+    .modal .help { color:#888; font-size:.85rem; margin-bottom:.75rem;}
+    .modal textarea { flex:1; min-height:240px; background:#0f1115; color:#eaeaea; border:1px solid #2c3346; border-radius:6px; padding:.6rem .75rem; font-family:inherit; font-size:.9rem; resize:vertical;}
+    .modal .actions { display:flex; justify-content:flex-end; gap:.5rem; margin-top:.75rem;}
+    .modal .actions button { padding:.45rem .9rem; border-radius:6px; border:1px solid #2c3346; background:#1b2030; color:#eaeaea; cursor:pointer;}
+    .modal .actions .primary { background:#1f3a6e; border-color:#2e5099;}
   </style>
 </head>
 <body>
@@ -91,6 +103,8 @@
       <label>Search
         <input id="q" type="search" placeholder="card name..." />
       </label>
+      <button type="button" class="wl-btn" onclick="openWatchlist()">Watchlist (<span id="wl-count">0</span>)</button>
+      <label class="wl-toggle"><input type="checkbox" id="wl-only" /> Only watchlist</label>
       <span style="margin-left:auto" class="meta">Showing <span id="count">-</span></span>
     </div>
     <table id="alerts">
@@ -132,6 +146,19 @@
     </div>
   </section>
 </main>
+
+<div id="wl-modal" class="modal" onclick="if(event.target.id==='wl-modal')closeWatchlist()">
+  <div class="panel">
+    <h3>Your watchlist</h3>
+    <div class="help">One card name per line. Matching is case-insensitive and forgiving (e.g. "Boseiju" matches "Boseiju, Who Endures"). Saved in your browser only - nothing leaves your device.</div>
+    <textarea id="wl-text" placeholder="Force of Will&#10;Mox Diamond&#10;Boseiju"></textarea>
+    <div class="actions">
+      <button onclick="closeWatchlist()">Cancel</button>
+      <button class="primary" onclick="saveWatchlist()">Save</button>
+    </div>
+  </div>
+</div>
+
 <footer>
   Card data and TCGPlayer market prices are sourced from
   <a href="https://scryfall.com" target="_blank" rel="noopener">Scryfall</a>
@@ -161,7 +188,10 @@ function renderList() {
   const dir  = document.getElementById('dir').value;
   const minp = parseFloat(document.getElementById('minp').value || '0');
   const q    = document.getElementById('q').value.trim().toLowerCase();
+  const wlOnly = document.getElementById('wl-only').checked;
+  const wl = wlOnly ? watchlistSet() : null;
   let rows = RAW.filter(r => {
+    if (wl && !nameMatchesWatchlist(r.name, wl)) return false;
     if (feed && r.price_type !== feed) return false;
     if (rule && r.rule !== rule) return false;
     if (dir === 'up'   && r.pct_change <= 0) return false;
@@ -333,7 +363,44 @@ function renderDetail(id, preferFinish, preferFeed) {
     feedSel.appendChild(opt);
   }
 })();
+
+// ---- WATCHLIST (browser-local) -------------------------------------------
+const WL_KEY = 'mtg-movers-watchlist-v1';
+function loadWatchlist() {
+  const raw = localStorage.getItem(WL_KEY) || '';
+  return raw.split('\n').map(s => s.trim()).filter(Boolean);
+}
+function watchlistSet() {
+  return new Set(loadWatchlist().map(s => s.toLowerCase()));
+}
+function updateWatchlistCount() {
+  document.getElementById('wl-count').textContent = loadWatchlist().length;
+}
+function openWatchlist() {
+  document.getElementById('wl-text').value = loadWatchlist().join('\n');
+  document.getElementById('wl-modal').classList.add('show');
+}
+function closeWatchlist() {
+  document.getElementById('wl-modal').classList.remove('show');
+}
+function saveWatchlist() {
+  const v = document.getElementById('wl-text').value;
+  localStorage.setItem(WL_KEY, v);
+  updateWatchlistCount();
+  closeWatchlist();
+  renderList();
+}
+function nameMatchesWatchlist(cardName, wl) {
+  const lower = (cardName || '').toLowerCase();
+  for (const entry of wl) {
+    if (lower.startsWith(entry)) return true;
+  }
+  return false;
+}
+updateWatchlistCount();
+
 ['feed','rule','dir','minp','q'].forEach(id => document.getElementById(id).addEventListener('input', renderList));
+document.getElementById('wl-only').addEventListener('change', renderList);
 window.addEventListener('hashchange', route);
 renderList();
 route();

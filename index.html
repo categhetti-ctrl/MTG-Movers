@@ -62,6 +62,12 @@
     .stat-grid .cell .v { font-size:1.05rem; font-weight:600; margin-top:.2rem;}
     footer { color:#aaa; font-size:.78rem; padding: 1.5rem; text-align:center; border-top:1px solid #2a2a2a; margin-top:2rem;}
     .hidden { display:none !important; }
+    .pagination { display:none; justify-content:center; align-items:center; gap:1rem; margin:1.5rem 0;}
+    .pagination.show { display:flex;}
+    .pagination button { background:#141414; color:#fff; border:1px solid #2a2a2a; border-radius:6px; padding:.5rem .9rem; cursor:pointer; font-size:.9rem;}
+    .pagination button:hover:not(:disabled) { background:#1f1f1f;}
+    .pagination button:disabled { opacity:.4; cursor:not-allowed;}
+    .pagination .info { color:#aaa; font-size:.9rem;}
     .wl-btn { background:#2a2a2a; color:#9ecbff; border:1px solid #2a2a2a; border-radius:6px; padding:.4rem .7rem; cursor:pointer; font-size:.85rem;}
     .wl-btn:hover { background:#2a2a2a;}
     .wl-toggle { display:inline-flex; align-items:center; gap:.4rem; padding:.4rem .6rem; background:#141414; border:1px solid #2a2a2a; border-radius:6px; font-size:.85rem; cursor:pointer;}
@@ -193,6 +199,11 @@
       </tr></thead>
       <tbody></tbody>
     </table>
+    <div class="pagination" id="pagination">
+      <button id="page-prev" onclick="changePage(-1)">&larr; Prev</button>
+      <span class="info" id="page-info">Page 1 of 1</span>
+      <button id="page-next" onclick="changePage(1)">Next &rarr;</button>
+    </div>
   </section>
   <section id="view-detail" class="hidden">
     <a href="#" class="back" onclick="goHome();return false;">&larr; back to movers</a>
@@ -278,6 +289,14 @@ const fmtPct = v => (v == null || isNaN(v)) ? '-' : (v*100).toFixed(1)+'%';
 const fmtPrice = (v, pt) => (v == null || isNaN(v)) ? '-' : (isEur(pt) ? '€' : '$') + Number(v).toFixed(2);
 const currencyOf = pt => isEur(pt) ? 'EUR' : 'USD';
 let chart = null;
+const PAGE_SIZE = 100;
+let currentPage = 1;
+function changePage(delta) {
+  currentPage += delta;
+  renderList();
+  const tbl = document.getElementById('alerts');
+  if (tbl) tbl.scrollIntoView({behavior:'smooth', block:'start'});
+}
 function renderList() {
   const feed = document.getElementById('feed').value;
   const rule = document.getElementById('rule').value;
@@ -297,9 +316,24 @@ function renderList() {
     return true;
   });
   rows.sort((a,b) => Math.abs(b.pct_change) - Math.abs(a.pct_change));
-  document.getElementById('count').textContent = rows.length;
+  const total = rows.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (currentPage > totalPages) currentPage = totalPages;
+  if (currentPage < 1) currentPage = 1;
+  const pageRows = rows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  document.getElementById('count').textContent = total
+    ? `${pageRows.length} of ${total}` : '0';
+  const pag = document.getElementById('pagination');
+  if (totalPages > 1) {
+    pag.classList.add('show');
+    document.getElementById('page-info').textContent = `Page ${currentPage} of ${totalPages}`;
+    document.getElementById('page-prev').disabled = currentPage <= 1;
+    document.getElementById('page-next').disabled = currentPage >= totalPages;
+  } else {
+    pag.classList.remove('show');
+  }
   const tbody = document.querySelector('#alerts tbody');
-  tbody.innerHTML = rows.map(r => `
+  tbody.innerHTML = pageRows.map(r => `
     <tr class="row ${r.pct_change >= 0 ? 'up' : 'down'}" onclick="goCard('${r.scryfall_id}','${r.finish}','${r.price_type}')">
       <td><span class="chip ${feedClass(r.price_type)}">${PT_LABELS[r.price_type] || r.price_type}</span></td>
       <td><span class="chip ${r.rule==='spike'?'spike':''}${r.rule==='crash'?'crash':''}">${RULE_LABELS[r.rule] || r.rule}</span></td>
@@ -669,8 +703,9 @@ updateWatchlistCount();
 renderRightTicker();
 renderLeftTicker();
 
-['feed','rule','dir','minp','q'].forEach(id => document.getElementById(id).addEventListener('input', renderList));
-document.getElementById('wl-only').addEventListener('change', renderList);
+function applyFilters() { currentPage = 1; renderList(); }
+['feed','rule','dir','minp','q'].forEach(id => document.getElementById(id).addEventListener('input', applyFilters));
+document.getElementById('wl-only').addEventListener('change', applyFilters);
 document.getElementById('wl-search').addEventListener('input', wlSearchInput);
 window.addEventListener('hashchange', route);
 renderList();

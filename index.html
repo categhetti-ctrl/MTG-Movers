@@ -556,30 +556,55 @@ function closeWatchlist() {
 function importDeckList() {
   const ta = document.getElementById('wl-text');
   if (!ta) return;
+  // Handles formats:
+  //   "1 Aetherize"                 -> Aetherize
+  //   "1 Aetherize (RVR) 33"        -> Aetherize (RVR-33)        (Arena/Moxfield)
+  //   "4x Lightning Bolt (M21) 162" -> Lightning Bolt (M21-162)
+  //   "1 Force of Will (STA-12)"    -> Force of Will (STA-12)    (already-qualified)
+  //   "Force of Will"               -> Force of Will
+  //   "1 Lightning Bolt *F*"        -> Lightning Bolt            (foil marker dropped)
+  // Set/printing info is preserved when present, so matching stays version-specific.
+  const re = /^(?:(\d+)\s*x?\s+)?(.+?)(?:\s*\(([A-Za-z0-9]+)(?:[-\s]+([A-Za-z0-9]+))?\)\s*([A-Za-z0-9]+)?)?\s*$/i;
   const lines = ta.value.split('\n');
   const out = [];
   const seen = new Set();
   let stripped = 0;
+  let withSet = 0;
   let skipped = 0;
   for (let raw of lines) {
     let line = raw.trim();
     if (!line) continue;
     if (line.startsWith('//') || line.startsWith('#')) continue;
     if (/^(sideboard|maybeboard|commander|companion|deck|main|mainboard)\b/i.test(line)) { skipped++; continue; }
-    // Strip leading count: "1 Forest", "4x Lightning Bolt", "10 Mountain"
-    const m = line.match(/^(\d+)\s*x?\s+(.+)$/i);
-    if (m) { line = m[2].trim(); stripped++; }
+    // Drop foil/etched markers (TappedOut style: *F* *E*)
+    line = line.replace(/\s*\*[A-Za-z]+\*\s*/g, ' ').trim();
     if (!line) continue;
-    const key = line.toLowerCase();
+    const m = line.match(re);
+    if (!m) continue;
+    const count      = m[1];
+    const name       = (m[2] || '').trim();
+    const setRaw     = m[3];
+    const numInside  = m[4];
+    const numOutside = m[5];
+    if (!name) continue;
+    const set = setRaw ? setRaw.toUpperCase() : null;
+    const num = numInside || numOutside || null;
+    let entry = name;
+    if (set) {
+      entry += num ? ` (${set}-${num})` : ` (${set})`;
+      withSet++;
+    }
+    if (count) stripped++;
+    const key = entry.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    out.push(line);
+    out.push(entry);
   }
   ta.value = out.join('\n');
-  const parts = [];
-  parts.push(`${out.length} unique`);
+  const parts = [`${out.length} unique`];
   if (stripped) parts.push(`${stripped} count${stripped === 1 ? '' : 's'} stripped`);
-  if (skipped)  parts.push(`${skipped} section header${skipped === 1 ? '' : 's'} skipped`);
+  if (withSet)  parts.push(`${withSet} with set`);
+  if (skipped)  parts.push(`${skipped} header${skipped === 1 ? '' : 's'} skipped`);
   flashMsg(parts.join(', '));
 }
 function saveWatchlist() {

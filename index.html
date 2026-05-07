@@ -257,13 +257,14 @@
 <div id="wl-modal" class="modal" onclick="if(event.target.id==='wl-modal')closeWatchlist()">
   <div class="panel">
     <h3>Your watchlist</h3>
-    <div class="help">Search to find a specific printing, or type / paste card names directly into the list below. Saved in your browser only - nothing leaves your device.</div>
+    <div class="help">Search to find a specific printing, or type / paste card names directly into the list below. To bulk-import a deck list (e.g. <code>1 Aetherize</code> / <code>4 Lightning Bolt</code>), paste it below and click <b>Import deck list</b> - leading counts and section headers (Sideboard, Commander, etc.) get stripped automatically. Saved in your browser only - nothing leaves your device.</div>
     <div class="wl-search">
       <input id="wl-search" type="search" placeholder="Search printings (e.g. 'Force of Will')..." autocomplete="off" />
       <div id="wl-results" class="wl-results"></div>
     </div>
     <textarea id="wl-text" placeholder="Force of Will&#10;Force of Will (STA-12)&#10;Boseiju"></textarea>
     <div class="actions">
+      <button onclick="importDeckList()" style="margin-right:auto" title="Strip counts and dedupe entries above">Import deck list</button>
       <button onclick="closeWatchlist()">Cancel</button>
       <button class="primary" onclick="saveWatchlist()">Save</button>
     </div>
@@ -551,6 +552,35 @@ function closeWatchlist() {
   const r = document.getElementById('wl-results');
   r.innerHTML = '';
   r.classList.remove('show');
+}
+function importDeckList() {
+  const ta = document.getElementById('wl-text');
+  if (!ta) return;
+  const lines = ta.value.split('\n');
+  const out = [];
+  const seen = new Set();
+  let stripped = 0;
+  let skipped = 0;
+  for (let raw of lines) {
+    let line = raw.trim();
+    if (!line) continue;
+    if (line.startsWith('//') || line.startsWith('#')) continue;
+    if (/^(sideboard|maybeboard|commander|companion|deck|main|mainboard)\b/i.test(line)) { skipped++; continue; }
+    // Strip leading count: "1 Forest", "4x Lightning Bolt", "10 Mountain"
+    const m = line.match(/^(\d+)\s*x?\s+(.+)$/i);
+    if (m) { line = m[2].trim(); stripped++; }
+    if (!line) continue;
+    const key = line.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(line);
+  }
+  ta.value = out.join('\n');
+  const parts = [];
+  parts.push(`${out.length} unique`);
+  if (stripped) parts.push(`${stripped} count${stripped === 1 ? '' : 's'} stripped`);
+  if (skipped)  parts.push(`${skipped} section header${skipped === 1 ? '' : 's'} skipped`);
+  flashMsg(parts.join(', '));
 }
 function saveWatchlist() {
   const v = document.getElementById('wl-text').value;

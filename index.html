@@ -640,15 +640,24 @@ function tickerItemHtml(r) {
       <div class="pct ${dirCls}">${fmtPct(r.pct_change)}</div>
     </div>`;
 }
+function applyTickerSpeed(track, secsPerItem) {
+  if (!track) return;
+  const items = track.querySelectorAll('.ticker-item').length;
+  if (items === 0) { track.style.animation = 'none'; return; }
+  const dur = Math.max(24, items * (secsPerItem || 3));
+  track.style.animation = `ticker-scroll ${dur}s linear infinite`;
+}
 function renderRightTicker() {
   const items = topMoversFromRows(RAW, 40);
   const target = document.getElementById('ticker-right-track');
   if (!items.length) {
     target.innerHTML = '<div class="ticker-empty">No movers today.</div>';
+    applyTickerSpeed(target);
     return;
   }
   const html = items.map(tickerItemHtml).join('');
   target.innerHTML = html + html;  // duplicate for seamless scroll
+  applyTickerSpeed(target);
 }
 function renderFallingCards() {
   const stage = document.querySelector('.truck-anim');
@@ -685,16 +694,19 @@ function renderLeftTicker() {
   const wl = watchlistEntries();
   if (!wl.length) {
     target.innerHTML = '<div class="ticker-empty">Your watchlist is empty.<br>Click "Watchlist" to add cards.</div>';
+    applyTickerSpeed(target);
     return;
   }
   const matched = RAW.filter(r => rowMatchesWatchlist(r, wl));
   const items = topMoversFromRows(matched, 40);
   if (!items.length) {
     target.innerHTML = '<div class="ticker-empty">No movers in your watchlist today.</div>';
+    applyTickerSpeed(target);
     return;
   }
   const html = items.map(tickerItemHtml).join('');
   target.innerHTML = html + html;
+  applyTickerSpeed(target);
 }
 function rowMatchesWatchlist(r, entries) {
   const name    = (r.name || '').toLowerCase();

@@ -486,7 +486,7 @@
       <span class="info" id="binder-info">Page 1 of 1</span>
       <button id="binder-next" onclick="binderTurn(1)">Next &rarr;</button>
       <label style="color:#bbb; font-size:.85rem; margin-left:1rem;">Color
-        <select id="binder-color" style="background:#141414; color:#fff; border:1px solid #2a2a2a; border-radius:6px; padding:.4rem .55rem; margin-left:.4rem;">
+        <select id="binder-color" onchange="setBinderColorFilter(this.value)" style="background:#141414; color:#fff; border:1px solid #2a2a2a; border-radius:6px; padding:.4rem .55rem; margin-left:.4rem;">
           <option value="all">All</option>
           <option value="W">White</option>
           <option value="U">Blue</option>
@@ -498,7 +498,7 @@
         </select>
       </label>
       <label style="color:#bbb; font-size:.85rem;">Sort
-        <select id="binder-sort" style="background:#141414; color:#fff; border:1px solid #2a2a2a; border-radius:6px; padding:.4rem .55rem; margin-left:.4rem;">
+        <select id="binder-sort" onchange="setBinderSortBy(this.value)" style="background:#141414; color:#fff; border:1px solid #2a2a2a; border-radius:6px; padding:.4rem .55rem; margin-left:.4rem;">
           <option value="custom">Watchlist order</option>
           <option value="highest">Highest value</option>
           <option value="lowest">Lowest value</option>
@@ -1228,6 +1228,18 @@ function resetBinderColors() {
 }
 function toggleCustomize() {
   document.getElementById('binder-customize').classList.toggle('show');
+}
+function setBinderColorFilter(value) {
+  binderColorFilter = value;
+  binderPage = 0;
+  if (typeof prefetchAllBinderData === 'function') prefetchAllBinderData().then(() => renderBinder());
+  renderBinder();
+}
+function setBinderSortBy(value) {
+  binderSortBy = value;
+  binderPage = 0;
+  if (typeof prefetchAllBinderData === 'function') prefetchAllBinderData().then(() => renderBinder());
+  renderBinder();
 }
 function initBinderFilters() {
   const colorSel = document.getElementById('binder-color');

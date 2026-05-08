@@ -832,17 +832,24 @@ function loadWatchlist() {
   return raw.split('\n').map(s => s.trim()).filter(Boolean);
 }
 function parseWatchlistEntry(line) {
-  // "Boseiju" -> {name:'boseiju', set:null, num:null}
-  // "Force of Will (MH3)" -> {name:'force of will', set:'mh3', num:null}
-  // "Force of Will (STA-12)" or "Force of Will (sta 12)" -> {name, set:'sta', num:'12'}
+  // Supported entry formats:
+  //   "Boseiju"                              -> {name, set:null, num:null}
+  //   "Force of Will (MH3)"                  -> {name, set:'mh3', num:null}
+  //   "Force of Will (STA-12)"               -> {name, set:'sta', num:'12'}
+  //   "Force of Will (sta 12)"               -> {name, set:'sta', num:'12'}
+  //   "Telepathy (9ED) 101★"                 -> {name, set:'9ed', num:'101★'}   (Arena/Moxfield)
+  //   "Cultivate (PLST) C18-138"             -> {name, set:'plst', num:'c18-138'}
   const s = (line || '').trim();
   if (!s) return null;
-  const m = s.match(/^(.+?)(?:\s*\(([A-Za-z0-9]+)(?:[-\s]+([A-Za-z0-9]+))?\))?\s*$/);
+  // \S+ captures any non-whitespace token after the parens, which handles
+  // collector numbers with hyphens, stars, daggers, foil markers, etc.
+  const m = s.match(/^(.+?)(?:\s*\(([A-Za-z0-9]+)(?:[-\s]+(\S+))?\)\s*(\S+)?)?\s*$/);
   if (!m) return {name: s.toLowerCase(), set: null, num: null};
+  const num = m[3] || m[4] || null;
   return {
     name: m[1].trim().toLowerCase(),
     set:  m[2] ? m[2].toLowerCase() : null,
-    num:  m[3] ? m[3].toLowerCase() : null,
+    num:  num ? num.toLowerCase() : null,
   };
 }
 function watchlistEntries() {

@@ -485,7 +485,27 @@
       <button id="binder-prev" onclick="binderTurn(-1)">&larr; Prev</button>
       <span class="info" id="binder-info">Page 1 of 1</span>
       <button id="binder-next" onclick="binderTurn(1)">Next &rarr;</button>
-      <button onclick="openWatchlist()" style="margin-left:1.5rem">Edit list</button>
+      <label style="color:#bbb; font-size:.85rem; margin-left:1rem;">Color
+        <select id="binder-color" style="background:#141414; color:#fff; border:1px solid #2a2a2a; border-radius:6px; padding:.4rem .55rem; margin-left:.4rem;">
+          <option value="all">All</option>
+          <option value="W">White</option>
+          <option value="U">Blue</option>
+          <option value="B">Black</option>
+          <option value="R">Red</option>
+          <option value="G">Green</option>
+          <option value="C">Colorless</option>
+          <option value="M">Multicolor</option>
+        </select>
+      </label>
+      <label style="color:#bbb; font-size:.85rem;">Sort
+        <select id="binder-sort" style="background:#141414; color:#fff; border:1px solid #2a2a2a; border-radius:6px; padding:.4rem .55rem; margin-left:.4rem;">
+          <option value="custom">Watchlist order</option>
+          <option value="highest">Highest value</option>
+          <option value="lowest">Lowest value</option>
+          <option value="alpha">A &ndash; Z</option>
+        </select>
+      </label>
+      <button onclick="openWatchlist()" style="margin-left:1rem">Edit list</button>
       <button onclick="toggleCustomize()">Customize</button>
     </div>
 
@@ -909,6 +929,9 @@ const BINDER_CACHE_KEY = 'binder-cache-v1';
 const BINDER_HISTORY_KEY = 'binder-history-v1';
 const BINDER_CACHE_TTL_MS = 12 * 3600 * 1000;
 let binderPage = 0;
+let binderColorFilter = 'all';
+let binderSortBy = 'custom';
+let binderPrefetchInFlight = false;
 
 function binderRecordPrice(id, price) {
   if (!id || price == null || isNaN(price)) return;
@@ -1011,7 +1034,9 @@ async function binderFetchEntry(entryStr) {
         img,
         price_usd: c.prices && c.prices.usd ? parseFloat(c.prices.usd) : null,
         price_usd_foil: c.prices && c.prices.usd_foil ? parseFloat(c.prices.usd_foil) : null,
-        purchase_uri: (c.purchase_uris && c.purchase_uris.tcgplayer) || ''
+        purchase_uri: (c.purchase_uris && c.purchase_uris.tcgplayer) || '',
+        color_identity: Array.isArray(c.color_identity) ? c.color_identity.slice() : [],
+        type_line: c.type_line || ''
       };
       binderCacheSet(entryStr, data);
       binderRecordPrice(data.id, data.price_usd);
@@ -1022,8 +1047,59 @@ async function binderFetchEntry(entryStr) {
   }
   return null;
 }
+function binderEntryColorMatches(entryStr, filter) {
+  if (filter === 'all') return true;
+  const data = binderCacheGet(entryStr);
+  if (!data) return false;  // unknown -> drop from filtered view
+  const ci = data.color_identity || [];
+  if (filter === 'C') return ci.length === 0;
+  if (filter === 'M') return ci.length >= 2;
+  return ci.length === 1 && ci[0] === filter;
+}
+function binderApplyFilterSort(list) {
+  let filtered = list;
+  if (binderColorFilter !== 'all') {
+    filtered = filtered.filter(e => binderEntryColorMatches(e, binderColorFilter));
+  }
+  if (binderSortBy !== 'custom') {
+    const enriched = filtered.map(e => ({e, d: binderCacheGet(e)}));
+    if (binderSortBy === 'highest') {
+      enriched.sort((a,b) => ((b.d && b.d.price_usd) || 0) - ((a.d && a.d.price_usd) || 0));
+    } else if (binderSortBy === 'lowest') {
+      enriched.sort((a,b) => {
+        const ap = (a.d && a.d.price_usd != null) ? a.d.price_usd : Infinity;
+        const bp = (b.d && b.d.price_usd != null) ? b.d.price_usd : Infinity;
+        return ap - bp;
+      });
+    } else if (binderSortBy === 'alpha') {
+      enriched.sort((a,b) => ((a.d && a.d.name) || a.e).localeCompare((b.d && b.d.name) || b.e));
+    }
+    filtered = enriched.map(x => x.e);
+  }
+  return filtered;
+}
+async function prefetchAllBinderData() {
+  if (binderPrefetchInFlight) return;
+  binderPrefetchInFlight = true;
+  try {
+    const list = loadWatchlist();
+    const todo = list.filter(e => !binderCacheGet(e));
+    if (!todo.length) return;
+    const concurrency = 5;
+    let i = 0;
+    async function worker() {
+      while (i < todo.length) {
+        const idx = i++;
+        await binderFetchEntry(todo[idx]);
+      }
+    }
+    await Promise.all(Array(concurrency).fill(0).map(worker));
+  } finally {
+    binderPrefetchInFlight = false;
+  }
+}
 function renderBinder() {
-  const list = loadWatchlist();
+  const list = binderApplyFilterSort(loadWatchlist());
   const totalSpreads = Math.max(1, Math.ceil(list.length / BINDER_PAGE_SIZE));
   if (binderPage >= totalSpreads) binderPage = totalSpreads - 1;
   if (binderPage < 0) binderPage = 0;
@@ -1143,6 +1219,27 @@ function resetBinderColors() {
 }
 function toggleCustomize() {
   document.getElementById('binder-customize').classList.toggle('show');
+}
+function initBinderFilters() {
+  const colorSel = document.getElementById('binder-color');
+  const sortSel  = document.getElementById('binder-sort');
+  if (colorSel) {
+    colorSel.addEventListener('change', e => {
+      binderColorFilter = e.target.value;
+      binderPage = 0;
+      // Pre-fetch the whole watchlist so filtering covers cards on other spreads.
+      prefetchAllBinderData().then(() => renderBinder());
+      renderBinder();
+    });
+  }
+  if (sortSel) {
+    sortSel.addEventListener('change', e => {
+      binderSortBy = e.target.value;
+      binderPage = 0;
+      prefetchAllBinderData().then(() => renderBinder());
+      renderBinder();
+    });
+  }
 }
 function initBinderCustomize() {
   document.querySelectorAll('#cover-presets .preset, #page-presets .preset').forEach(btn => {

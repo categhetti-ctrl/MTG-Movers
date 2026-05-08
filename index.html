@@ -506,6 +506,7 @@
         </select>
       </label>
       <button onclick="openWatchlist()" style="margin-left:1rem">Edit list</button>
+      <button onclick="showMissingCards()" title="List watchlist entries Scryfall couldn't match">Find missing</button>
       <button onclick="toggleCustomize()">Customize</button>
     </div>
 
@@ -1004,19 +1005,66 @@ function binderCacheSet(key, data) {
   } catch (err) {}
 }
 function binderScryfallUrls(parsed) {
-  // Returns an ordered list of fallback URLs from most-specific to most-generic.
-  // We try each in turn and stop at the first that returns a card; this means
-  // a watchlist entry that points at a missing collector number / wrong set
-  // still shows ~the same card (just a different printing's art).
+  // Ordered list of fallback URLs, most-specific first. We try each in turn
+  // and stop at the first match. Aggressive cleaning here = more hits on
+  // imports with quirky formatting, foil markers, split cards, etc.
   const urls = [];
-  const name = encodeURIComponent(parsed.name);
-  const set  = parsed.set ? encodeURIComponent(parsed.set) : '';
-  const num  = parsed.num ? encodeURIComponent(parsed.num) : '';
+  const rawName = parsed.name || '';
+  // Strip trailing parenthetical noise that's NOT a set code (e.g. "(Foil)",
+  // "(Promo)", "(Borderless)") - the watchlist parser already pulled true
+  // set codes out into parsed.set.
+  const cleanedName = rawName.replace(/\s*\([^)]*\)\s*$/, '').trim();
+  // Split-card front-face only (e.g. "Fire // Ice" -> "Fire").
+  const splitFront = rawName.includes('//') ? rawName.split('//')[0].trim() : '';
+  // Numeric-only collector number (strip suffixes like ★, a, p, †).
+  const numStripped = (parsed.num || '').replace(/[^0-9]/g, '');
+
+  const enc = s => encodeURIComponent(s);
+  const set = parsed.set ? enc(parsed.set) : '';
+  const num = parsed.num ? enc(parsed.num) : '';
+
+  // 1. Most specific: exact set + exact collector number
   if (set && num) urls.push(`https://api.scryfall.com/cards/${set}/${num}`);
-  if (set)        urls.push(`https://api.scryfall.com/cards/named?exact=${name}&set=${set}`);
-  urls.push(`https://api.scryfall.com/cards/named?exact=${name}`);
-  urls.push(`https://api.scryfall.com/cards/named?fuzzy=${name}`);
+  // 1b. Same set but with the suffix stripped from the number
+  if (set && numStripped && numStripped !== parsed.num) {
+    urls.push(`https://api.scryfall.com/cards/${set}/${enc(numStripped)}`);
+  }
+  // 2. Name + set
+  if (set) urls.push(`https://api.scryfall.com/cards/named?exact=${enc(rawName)}&set=${set}`);
+  if (set && cleanedName !== rawName) {
+    urls.push(`https://api.scryfall.com/cards/named?exact=${enc(cleanedName)}&set=${set}`);
+  }
+  // 3. Exact name, any printing
+  urls.push(`https://api.scryfall.com/cards/named?exact=${enc(rawName)}`);
+  if (cleanedName !== rawName) {
+    urls.push(`https://api.scryfall.com/cards/named?exact=${enc(cleanedName)}`);
+  }
+  if (splitFront) {
+    urls.push(`https://api.scryfall.com/cards/named?exact=${enc(splitFront)}`);
+  }
+  // 4. Fuzzy match (handles typos and partials)
+  urls.push(`https://api.scryfall.com/cards/named?fuzzy=${enc(rawName)}`);
+  if (cleanedName !== rawName) {
+    urls.push(`https://api.scryfall.com/cards/named?fuzzy=${enc(cleanedName)}`);
+  }
+  if (splitFront) {
+    urls.push(`https://api.scryfall.com/cards/named?fuzzy=${enc(splitFront)}`);
+  }
   return urls;
+}
+function showMissingCards() {
+  const list = loadWatchlist();
+  const missing = list.filter(e => !binderCacheGet(e));
+  if (!missing.length) {
+    flashMsg(`All ${list.length} watchlist cards loaded.`);
+    return;
+  }
+  // Render an alert dialog with the missing entries so user can edit them.
+  const msg = `Couldn't match ${missing.length} of ${list.length} entries on Scryfall:\n\n` +
+              missing.map((e, i) => `${i + 1}. ${e}`).join('\n') +
+              `\n\nCheck for typos or unsupported formatting and edit the watchlist to fix.`;
+  console.warn('Missing binder entries:', missing);
+  alert(msg);
 }
 async function binderFetchEntry(entryStr) {
   const cached = binderCacheGet(entryStr);
@@ -1054,6 +1102,7 @@ async function binderFetchEntry(entryStr) {
       // try next URL in the fallback chain
     }
   }
+  console.warn('Binder: no Scryfall match for', JSON.stringify(entryStr));
   return null;
 }
 function binderEntryColorMatches(entryStr, filter) {

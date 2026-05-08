@@ -276,6 +276,14 @@
       animation: binder-pop .55s cubic-bezier(.22, .9, .32, 1.08) forwards;
       z-index:20;
     }
+    /* Fade out the sleeve gloss elements as the card pops out, so the card
+       appears to leave the plastic behind instead of dragging its sheen with it. */
+    .binder-slot.popping::before,
+    .binder-slot.popping::after,
+    .binder-slot.popping .gloss-streak {
+      opacity: 0;
+      transition: opacity .28s ease-out;
+    }
     @keyframes binder-pop {
       0%   { transform: translateY(0) translateX(0) rotate(0deg) scale(1); }
       18%  { transform: translateY(-4px) translateX(0) rotate(-.5deg) scale(1.02);

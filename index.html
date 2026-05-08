@@ -139,21 +139,37 @@
     .binder-slot.error { background:#1a0a0a; }
     .binder-slot.filled:hover { transform: translateY(-3px); box-shadow:0 8px 18px rgba(0,0,0,.7), inset 0 0 0 1px rgba(0,0,0,.6); filter: brightness(1.06); }
     .binder-slot img { width:100%; height:100%; object-fit:cover; display:block; }
-    /* Plastic sleeve glossy overlay - diagonal sheen on top-left */
+    /* Plastic sleeve glossy overlay - stronger diagonal sheen on top-left,
+       softer one bottom-right; simulates light catching real card sleeves. */
     .binder-slot.filled::before, .binder-slot.error::before {
       content:"";
       position:absolute; inset:0;
-      background: linear-gradient(118deg,
-        rgba(255,255,255,.18) 0%,
-        rgba(255,255,255,.06) 18%,
-        rgba(255,255,255,0) 38%,
-        rgba(255,255,255,0) 78%,
-        rgba(255,255,255,.04) 95%,
-        rgba(255,255,255,.10) 100%);
+      background:
+        linear-gradient(118deg,
+          rgba(255,255,255,.42) 0%,
+          rgba(255,255,255,.22) 10%,
+          rgba(255,255,255,.08) 24%,
+          rgba(255,255,255,0) 46%,
+          rgba(255,255,255,0) 68%,
+          rgba(255,255,255,.06) 84%,
+          rgba(255,255,255,.18) 96%,
+          rgba(255,255,255,.30) 100%);
       pointer-events:none;
       border-radius:inherit;
       mix-blend-mode: screen;
       z-index:2;
+    }
+    /* Secondary horizontal "shine streak" near the top */
+    .binder-slot.filled .gloss-streak, .binder-slot.error .gloss-streak {
+      position:absolute; left:8%; right:8%; top:8%; height:18%;
+      background: linear-gradient(180deg,
+        rgba(255,255,255,.18) 0%,
+        rgba(255,255,255,.05) 60%,
+        transparent 100%);
+      filter: blur(2px);
+      border-radius: 50%;
+      pointer-events:none;
+      z-index:3;
     }
     /* A subtle inner ring to suggest the slot edge */
     .binder-slot.filled::after, .binder-slot.error::after {
@@ -176,18 +192,23 @@
     .binder-slot.loading::after { content:""; position:absolute; inset:35%; border:3px solid #2a2a2a; border-top-color:#9ecbff; border-radius:50%; animation: spin 1s linear infinite; z-index:1;}
     @keyframes spin { to { transform: rotate(360deg); } }
     .binder-slot .err-label { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:.5rem; text-align:center; font-size:.65rem; color:#ef6f6c; z-index:4;}
-    /* Click animation - "pull the card out of the sleeve" */
+    /* Click animation - card slides up out of its sleeve like a top-loaded
+       binder page. Lifts, tilts slightly, then translates upward beyond the
+       slot's height, leaving the empty slot visible underneath. */
     .binder-slot.popping {
-      animation: binder-pop .42s cubic-bezier(.34, 1.56, .64, 1) forwards;
+      animation: binder-pop .55s cubic-bezier(.22, .9, .32, 1.08) forwards;
       z-index:20;
     }
     @keyframes binder-pop {
-      0%   { transform: scale(1) translateY(0); }
-      55%  { transform: scale(1.14) translateY(-16px); box-shadow:0 14px 28px rgba(0,0,0,.78);}
-      100% { transform: scale(1.22) translateY(-26px); box-shadow:0 22px 40px rgba(0,0,0,.85);}
+      0%   { transform: translateY(0) translateX(0) rotate(0deg) scale(1); }
+      18%  { transform: translateY(-4px) translateX(0) rotate(-.5deg) scale(1.02);
+              box-shadow:0 8px 18px rgba(0,0,0,.6);}
+      100% { transform: translateY(-118%) translateX(6px) rotate(-4deg) scale(1.06);
+              box-shadow:0 22px 38px rgba(0,0,0,.85);
+              filter: brightness(1.08);}
     }
     @media (prefers-reduced-motion: reduce) {
-      .binder-slot.popping { animation:none; transform: scale(1.05); }
+      .binder-slot.popping { animation:none; transform: translateY(-12px) scale(1.04); }
     }
     .binder-controls { display:flex; align-items:center; justify-content:center; gap:1rem; margin-top:1.25rem; flex-wrap:wrap; }
     .binder-controls button { background:#141414; color:#fff; border:1px solid #2a2a2a; border-radius:6px; padding:.55rem 1rem; cursor:pointer; font-size:.9rem;}
@@ -765,8 +786,54 @@ function saveWatchlist() {
 // ---- BINDER (browser-side, fetches from Scryfall) ------------------------
 const BINDER_PAGE_SIZE = 16;
 const BINDER_CACHE_KEY = 'binder-cache-v1';
+const BINDER_HISTORY_KEY = 'binder-history-v1';
 const BINDER_CACHE_TTL_MS = 12 * 3600 * 1000;
 let binderPage = 0;
+
+function binderRecordPrice(id, price) {
+  if (!id || price == null || isNaN(price)) return;
+  try {
+    const all = JSON.parse(localStorage.getItem(BINDER_HISTORY_KEY) || '{}');
+    const today = new Date().toISOString().slice(0, 10);
+    if (!all[id]) all[id] = [];
+    const last = all[id][all[id].length - 1];
+    if (last && last[0] === today) {
+      last[1] = price;          // overwrite today's price if visited again
+    } else {
+      all[id].push([today, price]);
+    }
+    if (all[id].length > 90) all[id] = all[id].slice(-90);  // 3-month cap
+    localStorage.setItem(BINDER_HISTORY_KEY, JSON.stringify(all));
+  } catch (e) {}
+}
+function binderGetHistory(id) {
+  try {
+    const all = JSON.parse(localStorage.getItem(BINDER_HISTORY_KEY) || '{}');
+    return all[id] || [];
+  } catch (e) { return []; }
+}
+function injectBinderIntoHistory(data) {
+  // Build a HISTORY[id] entry on the fly so the existing detail view (chart,
+  // links, stats) can render a binder card even if it never fired an alert.
+  if (!data || !data.id) return;
+  const today = new Date().toISOString().slice(0, 10);
+  const recorded = binderGetHistory(data.id);
+  // If we have only the cached single price, seed it.
+  let series = recorded.slice();
+  if (!series.length && data.price_usd != null) {
+    series = [[today, data.price_usd]];
+  }
+  HISTORY[data.id] = {
+    name: data.name,
+    set_code: (data.set || '').toLowerCase(),
+    set_name: data.set_name,
+    collector_no: data.collector_number,
+    rarity: '',
+    image_uri: data.img,
+    purchase_uri: data.purchase_uri,
+    history: series.length ? { market: { normal: series } } : {}
+  };
+}
 
 function binderCacheGet(key) {
   try {
@@ -818,6 +885,7 @@ async function binderFetchEntry(entryStr) {
       purchase_uri: (c.purchase_uris && c.purchase_uris.tcgplayer) || ''
     };
     binderCacheSet(entryStr, data);
+    binderRecordPrice(data.id, data.price_usd);
     return data;
   } catch (err) {
     return null;
@@ -865,19 +933,21 @@ function renderBinder() {
       const priceText = data.price_usd != null ? `$${data.price_usd.toFixed(2)}` : '—';
       slot.innerHTML =
         `<img src="${data.img}" alt="${escapeHtml(data.name)}" loading="lazy" />` +
+        `<span class="gloss-streak"></span>` +
         `<div class="price-overlay">` +
           `<span class="set-tag">${data.set} #${escapeHtml(data.collector_number)}</span>` +
           `<span class="price-usd">${priceText}</span>` +
         `</div>`;
       slot.onclick = () => {
         slot.classList.add('popping');
-        // Wait for the pop animation, then navigate. setTimeout lets the
-        // CSS animation run; the route change re-renders the binder so
-        // .popping doesn't persist next time the user comes back.
         setTimeout(() => {
-          if (HISTORY[data.id]) goCard(data.id, 'normal', 'market');
-          else if (data.purchase_uri) window.open(data.purchase_uri, '_blank', 'noopener');
-        }, 380);
+          // Synthesize a HISTORY entry so the chart-driven detail view always
+          // works for binder cards, even ones that never fired alerts.
+          injectBinderIntoHistory(data);
+          // Record today's price so the per-card chart accumulates over time.
+          binderRecordPrice(data.id, data.price_usd);
+          goCard(data.id, 'normal', 'market');
+        }, 480);
       };
     });
   });

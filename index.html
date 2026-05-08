@@ -675,6 +675,12 @@ function showBinder() {
   document.getElementById('view-detail').classList.add('hidden');
   document.getElementById('view-binder').classList.remove('hidden');
   window.scrollTo(0,0);
+  // Fire-and-forget prefetch so filters/sorts work across the full watchlist
+  // even on cards that aren't on the visible spread. After it finishes we
+  // re-render so the page reflects newly available data.
+  if (typeof prefetchAllBinderData === 'function') {
+    prefetchAllBinderData().then(() => { if (typeof renderBinder === 'function') renderBinder(); });
+  }
 }
 function route() {
   const m = location.hash.match(/^#card\/([^\/]+)(?:\/([^\/]*)(?:\/([^\/]*))?)?/);
@@ -984,6 +990,9 @@ function binderCacheGet(key) {
     const e = cache[key];
     if (!e) return null;
     if (Date.now() - e.t > BINDER_CACHE_TTL_MS) return null;
+    // Require fields added in newer versions; treat older entries as stale so
+    // they get refetched and become filterable (color_identity, type_line).
+    if (!e.d || !Array.isArray(e.d.color_identity)) return null;
     return e.d;
   } catch (err) { return null; }
 }

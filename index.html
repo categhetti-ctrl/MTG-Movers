@@ -87,23 +87,108 @@
     .pagination button:disabled { opacity:.4; cursor:not-allowed;}
     .pagination .info { color:#aaa; font-size:.9rem;}
     /* ---- Binder ---- */
-    .binder-wrap { background: linear-gradient(135deg, #2a1a08 0%, #160c04 100%); border-radius:14px; padding:1.5rem 1.25rem; box-shadow:0 8px 32px rgba(0,0,0,.55), inset 0 0 0 1px rgba(120,80,30,.2); margin-top:1rem;}
-    .binder-page { display:grid; grid-template-columns: repeat(3, 1fr); gap:1rem; }
-    @media (max-width: 600px) { .binder-page { gap:.6rem; } }
-    .binder-slot { position:relative; aspect-ratio: 5/7; background:#000; border:2px dashed #3a2914; border-radius:10px; overflow:hidden; cursor:pointer; transition: transform .15s ease, box-shadow .15s ease; }
-    .binder-slot:hover { transform: translateY(-2px); box-shadow:0 8px 16px rgba(0,0,0,.6); }
-    .binder-slot.empty { cursor:default; }
-    .binder-slot.empty:hover { transform:none; box-shadow:none; }
+    .binder-wrap {
+      background:
+        linear-gradient(135deg, #3b2510 0%, #1f1308 60%, #110803 100%);
+      border-radius:14px;
+      padding: 1.75rem 1.5rem;
+      box-shadow:
+        0 14px 36px rgba(0,0,0,.65),
+        inset 0 1px 0 rgba(255,200,140,.08),
+        inset 0 0 0 1px rgba(110,70,28,.35);
+      margin-top:1rem;
+      position:relative;
+    }
+    /* Inner "page" - the cream/dark-mat plastic page sheet that holds the slots */
+    .binder-page {
+      display:grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.25rem 1.1rem;
+      background:
+        radial-gradient(ellipse at top, #1a1a1a 0%, #0a0a0a 80%);
+      padding: 1.25rem 1.1rem;
+      border-radius:10px;
+      box-shadow:
+        inset 0 0 0 1px rgba(0,0,0,.55),
+        inset 0 4px 18px rgba(0,0,0,.7);
+    }
+    @media (max-width: 800px) { .binder-page { grid-template-columns: repeat(3, 1fr); gap:.85rem; padding:.85rem; } }
+    @media (max-width: 480px) { .binder-page { grid-template-columns: repeat(2, 1fr); } }
+    .binder-slot {
+      position:relative;
+      aspect-ratio: 5/7;
+      background:#000;
+      border-radius:8px;
+      overflow:hidden;
+      cursor:pointer;
+      transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+      box-shadow:
+        inset 0 0 0 1px rgba(0,0,0,.6),
+        0 1px 2px rgba(0,0,0,.5);
+    }
+    .binder-slot.empty {
+      background: rgba(0,0,0,.6);
+      cursor:default;
+      box-shadow:
+        inset 0 2px 6px rgba(0,0,0,.7),
+        inset 0 0 0 1px rgba(40,28,14,.6);
+    }
+    .binder-slot.empty:hover { transform:none; box-shadow:inset 0 2px 6px rgba(0,0,0,.7), inset 0 0 0 1px rgba(40,28,14,.6); }
     .binder-slot.loading { background:#0a0a0a; }
-    .binder-slot.filled { border-style:solid; border-color:#2a1a08; background:#000; }
-    .binder-slot.error { border-color:#7a1414; }
+    .binder-slot.filled { background:#000; }
+    .binder-slot.error { background:#1a0a0a; }
+    .binder-slot.filled:hover { transform: translateY(-3px); box-shadow:0 8px 18px rgba(0,0,0,.7), inset 0 0 0 1px rgba(0,0,0,.6); filter: brightness(1.06); }
     .binder-slot img { width:100%; height:100%; object-fit:cover; display:block; }
-    .binder-slot .price-overlay { position:absolute; left:0; right:0; bottom:0; background:linear-gradient(to top, rgba(0,0,0,.92) 0%, rgba(0,0,0,.7) 70%, transparent 100%); padding:.7rem .5rem .4rem; display:flex; justify-content:space-between; align-items:baseline; gap:.4rem; }
-    .binder-slot .price-usd { font-size:.95rem; font-weight:700; color:#5dd39e;}
-    .binder-slot .set-tag { font-size:.65rem; color:#bbb; text-transform:uppercase; letter-spacing:.05em;}
-    .binder-slot.loading::after { content:""; position:absolute; inset:30%; border:3px solid #2a2a2a; border-top-color:#9ecbff; border-radius:50%; animation: spin 1s linear infinite;}
+    /* Plastic sleeve glossy overlay - diagonal sheen on top-left */
+    .binder-slot.filled::before, .binder-slot.error::before {
+      content:"";
+      position:absolute; inset:0;
+      background: linear-gradient(118deg,
+        rgba(255,255,255,.18) 0%,
+        rgba(255,255,255,.06) 18%,
+        rgba(255,255,255,0) 38%,
+        rgba(255,255,255,0) 78%,
+        rgba(255,255,255,.04) 95%,
+        rgba(255,255,255,.10) 100%);
+      pointer-events:none;
+      border-radius:inherit;
+      mix-blend-mode: screen;
+      z-index:2;
+    }
+    /* A subtle inner ring to suggest the slot edge */
+    .binder-slot.filled::after, .binder-slot.error::after {
+      content:"";
+      position:absolute; inset:0;
+      pointer-events:none;
+      border-radius:inherit;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
+      z-index:3;
+    }
+    .binder-slot .price-overlay {
+      position:absolute; left:0; right:0; bottom:0;
+      background: linear-gradient(to top, rgba(0,0,0,.94) 0%, rgba(0,0,0,.65) 70%, transparent 100%);
+      padding: .7rem .55rem .4rem;
+      display:flex; justify-content:space-between; align-items:baseline; gap:.4rem;
+      z-index:4;
+    }
+    .binder-slot .price-usd { font-size:.85rem; font-weight:700; color:#5dd39e;}
+    .binder-slot .set-tag { font-size:.6rem; color:#bbb; text-transform:uppercase; letter-spacing:.05em;}
+    .binder-slot.loading::after { content:""; position:absolute; inset:35%; border:3px solid #2a2a2a; border-top-color:#9ecbff; border-radius:50%; animation: spin 1s linear infinite; z-index:1;}
     @keyframes spin { to { transform: rotate(360deg); } }
-    .binder-slot .err-label { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:.5rem; text-align:center; font-size:.7rem; color:#ef6f6c; }
+    .binder-slot .err-label { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:.5rem; text-align:center; font-size:.65rem; color:#ef6f6c; z-index:4;}
+    /* Click animation - "pull the card out of the sleeve" */
+    .binder-slot.popping {
+      animation: binder-pop .42s cubic-bezier(.34, 1.56, .64, 1) forwards;
+      z-index:20;
+    }
+    @keyframes binder-pop {
+      0%   { transform: scale(1) translateY(0); }
+      55%  { transform: scale(1.14) translateY(-16px); box-shadow:0 14px 28px rgba(0,0,0,.78);}
+      100% { transform: scale(1.22) translateY(-26px); box-shadow:0 22px 40px rgba(0,0,0,.85);}
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .binder-slot.popping { animation:none; transform: scale(1.05); }
+    }
     .binder-controls { display:flex; align-items:center; justify-content:center; gap:1rem; margin-top:1.25rem; flex-wrap:wrap; }
     .binder-controls button { background:#141414; color:#fff; border:1px solid #2a2a2a; border-radius:6px; padding:.55rem 1rem; cursor:pointer; font-size:.9rem;}
     .binder-controls button:hover:not(:disabled) { background:#1f1f1f;}
@@ -678,7 +763,7 @@ function saveWatchlist() {
 }
 
 // ---- BINDER (browser-side, fetches from Scryfall) ------------------------
-const BINDER_PAGE_SIZE = 9;
+const BINDER_PAGE_SIZE = 16;
 const BINDER_CACHE_KEY = 'binder-cache-v1';
 const BINDER_CACHE_TTL_MS = 12 * 3600 * 1000;
 let binderPage = 0;
@@ -785,8 +870,14 @@ function renderBinder() {
           `<span class="price-usd">${priceText}</span>` +
         `</div>`;
       slot.onclick = () => {
-        if (HISTORY[data.id]) goCard(data.id, 'normal', 'market');
-        else if (data.purchase_uri) window.open(data.purchase_uri, '_blank', 'noopener');
+        slot.classList.add('popping');
+        // Wait for the pop animation, then navigate. setTimeout lets the
+        // CSS animation run; the route change re-renders the binder so
+        // .popping doesn't persist next time the user comes back.
+        setTimeout(() => {
+          if (HISTORY[data.id]) goCard(data.id, 'normal', 'market');
+          else if (data.purchase_uri) window.open(data.purchase_uri, '_blank', 'noopener');
+        }, 380);
       };
     });
   });

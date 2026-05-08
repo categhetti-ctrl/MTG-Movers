@@ -88,14 +88,19 @@
     .pagination .info { color:#aaa; font-size:.9rem;}
     /* ---- Binder ---- */
     .binder-wrap {
+      --cover: #3b2510;
+      --page: #1a1a1a;
       background:
-        linear-gradient(135deg, #3b2510 0%, #1f1308 60%, #110803 100%);
+        linear-gradient(135deg,
+          var(--cover) 0%,
+          color-mix(in srgb, var(--cover), black 45%) 60%,
+          color-mix(in srgb, var(--cover), black 75%) 100%);
       border-radius:14px;
       padding: 1.75rem 1.5rem;
       box-shadow:
         0 14px 36px rgba(0,0,0,.65),
-        inset 0 1px 0 rgba(255,200,140,.08),
-        inset 0 0 0 1px rgba(110,70,28,.35);
+        inset 0 1px 0 rgba(255,255,255,.06),
+        inset 0 0 0 1px rgba(0,0,0,.35);
       margin-top:1rem;
       position:relative;
     }
@@ -127,19 +132,21 @@
     }
     .binder-page {
       display:grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 0.5rem 0.45rem;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.6rem 0.55rem;
       background:
-        radial-gradient(ellipse at center, #1a1a1a 0%, #0a0a0a 80%);
-      padding: 0.85rem;
+        radial-gradient(ellipse at center,
+          var(--page, #1a1a1a) 0%,
+          color-mix(in srgb, var(--page, #1a1a1a), black 55%) 80%);
+      padding: 0.95rem;
       border-radius:10px;
       box-shadow:
         inset 0 0 0 1px rgba(0,0,0,.55),
         inset 0 4px 18px rgba(0,0,0,.7);
       backface-visibility:hidden;
     }
-    .binder-page-left  { transform-origin: right center; animation: page-open-left  .85s cubic-bezier(.34, 1.05, .64, 1) forwards; }
-    .binder-page-right { transform-origin: left  center; animation: page-open-right .85s cubic-bezier(.34, 1.05, .64, 1) forwards; }
+    .binder-page-left  { transform-origin: right center; animation: page-open-left  1.06s cubic-bezier(.34, 1.05, .64, 1) forwards; }
+    .binder-page-right { transform-origin: left  center; animation: page-open-right 1.06s cubic-bezier(.34, 1.05, .64, 1) forwards; }
     @keyframes page-open-left  { from { transform: rotateY(82deg); opacity:.4; } to { transform: rotateY(0); opacity:1; } }
     @keyframes page-open-right { from { transform: rotateY(-82deg); opacity:.4; } to { transform: rotateY(0); opacity:1; } }
     @media (max-width: 700px) {
@@ -177,22 +184,27 @@
     }
     .binder-slot.empty:hover { transform:none; box-shadow:inset 0 2px 6px rgba(0,0,0,.7), inset 0 0 0 1px rgba(40,28,14,.6); }
     .binder-slot.loading { background:#0a0a0a; overflow:hidden;}
-    /* Filled slot = sleeve binding edge (dark crimped stitch look) around the card */
+    /* Filled slot = heat-sealed sleeve pocket. Layered inset shadows simulate
+       the raised plastic crimp at every edge of a real binder page pocket:
+       a subtle highlight along the top, a dark valley, then an inner highlight. */
     .binder-slot.filled, .binder-slot.error {
       background:#040404;
-      border: 1px solid #0d0d0d;
       box-shadow:
-        0 1px 3px rgba(0,0,0,.7),
-        inset 0 0 0 1px rgba(255,255,255,.04);
+        0 1px 3px rgba(0,0,0,.75),
+        inset 0  1px 0 rgba(255,255,255,.22),
+        inset 0 -1px 0 rgba(255,255,255,.08),
+        inset  1px 0 0 rgba(255,255,255,.12),
+        inset -1px 0 0 rgba(255,255,255,.12),
+        inset 0 0 0 3px rgba(0,0,0,.78),
+        inset 0 0 0 4px rgba(255,255,255,.05);
     }
-    .binder-slot.filled:hover { transform: translateY(-3px); box-shadow:0 8px 18px rgba(0,0,0,.8), inset 0 0 0 1px rgba(255,255,255,.08); filter: brightness(1.05); }
-    /* Card image is inset just 3px so the binding edge reads as a thin sleeve crimp,
-       like the heat-sealed pocket edges on a real binder page. */
+    .binder-slot.filled:hover { transform: translateY(-3px); box-shadow:0 10px 22px rgba(0,0,0,.82), inset 0 1px 0 rgba(255,255,255,.28), inset 0 -1px 0 rgba(255,255,255,.10), inset 1px 0 0 rgba(255,255,255,.16), inset -1px 0 0 rgba(255,255,255,.16), inset 0 0 0 3px rgba(0,0,0,.82), inset 0 0 0 4px rgba(255,255,255,.08); filter: brightness(1.05); }
+    /* Card image inset 4px so the crimped lip reads as a thin raised pocket edge. */
     .binder-slot.filled img, .binder-slot.error img {
       position:absolute;
-      inset: 3px;
-      width: calc(100% - 6px);
-      height: calc(100% - 6px);
+      inset: 4px;
+      width: calc(100% - 8px);
+      height: calc(100% - 8px);
       border-radius:3px;
       object-fit:cover;
       display:block;
@@ -276,6 +288,21 @@
     .binder-controls .info { color:#bbb; font-size:.95rem;}
     .binder-empty { text-align:center; padding:3rem 1rem; color:#888;}
     .binder-empty a { color:#9ecbff;}
+    /* Customize panel */
+    .binder-customize { display:none; margin: 1rem auto 0; max-width: 720px; background:#0d0d0d; border:1px solid #2a2a2a; border-radius:10px; padding:1rem 1.25rem; }
+    .binder-customize.show { display:block; }
+    .binder-customize h4 { margin:0 0 .5rem; color:#bbb; font-size:.78rem; text-transform:uppercase; letter-spacing:.08em; font-weight:600; }
+    .binder-customize .row { display:flex; gap:.45rem; flex-wrap:wrap; align-items:center; margin-bottom:1rem; }
+    .binder-customize .row:last-child { margin-bottom:0;}
+    .binder-customize .preset { width:34px; height:34px; border-radius:50%; border:2px solid #2a2a2a; cursor:pointer; padding:0; box-shadow: inset 0 1px 2px rgba(255,255,255,.15), inset 0 -1px 2px rgba(0,0,0,.4); transition: transform .15s ease, border-color .15s ease;}
+    .binder-customize .preset:hover { transform: scale(1.1);}
+    .binder-customize .preset.active { border-color:#fff; }
+    .binder-customize .swatch-label { color:#aaa; font-size:.78rem; margin-right:.5rem; min-width:55px; }
+    .binder-customize input[type="color"] { width:34px; height:34px; padding:0; border:2px solid #2a2a2a; border-radius:50%; cursor:pointer; background:transparent; }
+    .binder-customize input[type="color"]::-webkit-color-swatch-wrapper { padding:0;}
+    .binder-customize input[type="color"]::-webkit-color-swatch { border:none; border-radius:50%;}
+    .binder-customize .reset { background:transparent; color:#9ecbff; border:none; cursor:pointer; font-size:.85rem; margin-left:auto; padding:.4rem .6rem; }
+    .binder-customize .reset:hover { text-decoration:underline; }
     .wl-btn { background:#2a2a2a; color:#9ecbff; border:1px solid #2a2a2a; border-radius:6px; padding:.4rem .7rem; cursor:pointer; font-size:.85rem;}
     .wl-btn:hover { background:#2a2a2a;}
     .wl-toggle { display:inline-flex; align-items:center; gap:.4rem; padding:.4rem .6rem; background:#141414; border:1px solid #2a2a2a; border-radius:6px; font-size:.85rem; cursor:pointer;}
@@ -459,7 +486,37 @@
       <span class="info" id="binder-info">Page 1 of 1</span>
       <button id="binder-next" onclick="binderTurn(1)">Next &rarr;</button>
       <button onclick="openWatchlist()" style="margin-left:1.5rem">Edit list</button>
+      <button onclick="toggleCustomize()">Customize</button>
     </div>
+
+    <div id="binder-customize" class="binder-customize">
+      <h4>Cover</h4>
+      <div class="row" id="cover-presets">
+        <span class="swatch-label">Presets</span>
+        <button class="preset" data-c="cover" data-v="#3b2510" style="background:#3b2510" title="Brown"></button>
+        <button class="preset" data-c="cover" data-v="#1e3a8a" style="background:#1e3a8a" title="Navy"></button>
+        <button class="preset" data-c="cover" data-v="#7f1d1d" style="background:#7f1d1d" title="Burgundy"></button>
+        <button class="preset" data-c="cover" data-v="#14532d" style="background:#14532d" title="Forest"></button>
+        <button class="preset" data-c="cover" data-v="#1a1a1a" style="background:#1a1a1a" title="Black"></button>
+        <button class="preset" data-c="cover" data-v="#6b21a8" style="background:#6b21a8" title="Royal"></button>
+        <button class="preset" data-c="cover" data-v="#0f4f4f" style="background:#0f4f4f" title="Teal"></button>
+        <input type="color" id="cover-custom" title="Custom color" />
+      </div>
+      <h4>Page</h4>
+      <div class="row" id="page-presets">
+        <span class="swatch-label">Presets</span>
+        <button class="preset" data-c="page" data-v="#1a1a1a" style="background:#1a1a1a" title="Charcoal"></button>
+        <button class="preset" data-c="page" data-v="#2d2418" style="background:#2d2418" title="Cream-dark"></button>
+        <button class="preset" data-c="page" data-v="#1c2d3d" style="background:#1c2d3d" title="Slate"></button>
+        <button class="preset" data-c="page" data-v="#1c3d2a" style="background:#1c3d2a" title="Forest"></button>
+        <button class="preset" data-c="page" data-v="#3d1c2a" style="background:#3d1c2a" title="Wine"></button>
+        <button class="preset" data-c="page" data-v="#1a1a3d" style="background:#1a1a3d" title="Midnight"></button>
+        <button class="preset" data-c="page" data-v="#3d2818" style="background:#3d2818" title="Tobacco"></button>
+        <input type="color" id="page-custom" title="Custom color" />
+        <button class="reset" onclick="resetBinderColors()">Reset</button>
+      </div>
+    </div>
+
     <p class="meta" style="text-align:center; margin-top:.75rem; color:#aaa; font-size:.8rem;">Card images and prices fetched from <a href="https://scryfall.com" target="_blank" rel="noopener" style="color:#9ecbff">Scryfall</a> on demand and cached in your browser for 12 hours.</p>
   </section>
 </main>
@@ -846,8 +903,8 @@ function saveWatchlist() {
 }
 
 // ---- BINDER (browser-side, fetches from Scryfall) ------------------------
-const BINDER_PAGE_SIZE = 24;     // 12 left + 12 right per spread
-const BINDER_HALF_SIZE = 12;
+const BINDER_PAGE_SIZE = 18;     // 9 left + 9 right per spread (3x3 each)
+const BINDER_HALF_SIZE = 9;
 const BINDER_CACHE_KEY = 'binder-cache-v1';
 const BINDER_HISTORY_KEY = 'binder-history-v1';
 const BINDER_CACHE_TTL_MS = 12 * 3600 * 1000;
@@ -1045,6 +1102,47 @@ function renderBinder() {
     })(entry, i, pageEl);
   });
 }
+// ---- Binder color customization ------------------------------------------
+const BINDER_COLOR_KEY = 'binder-colors-v1';
+const BINDER_DEFAULTS = { cover: '#3b2510', page: '#1a1a1a' };
+function loadBinderColors() {
+  try { return Object.assign({}, BINDER_DEFAULTS, JSON.parse(localStorage.getItem(BINDER_COLOR_KEY) || '{}')); }
+  catch (e) { return Object.assign({}, BINDER_DEFAULTS); }
+}
+function applyBinderColors(c) {
+  const wrap = document.querySelector('.binder-wrap');
+  if (!wrap) return;
+  if (c.cover) wrap.style.setProperty('--cover', c.cover);
+  if (c.page)  wrap.querySelectorAll('.binder-page').forEach(p => p.style.setProperty('--page', c.page));
+  // Sync the active state of preset chips and the custom color picker.
+  document.querySelectorAll('#cover-presets .preset').forEach(b => b.classList.toggle('active', b.dataset.v.toLowerCase() === (c.cover||'').toLowerCase()));
+  document.querySelectorAll('#page-presets .preset').forEach(b => b.classList.toggle('active', b.dataset.v.toLowerCase() === (c.page||'').toLowerCase()));
+  const cc = document.getElementById('cover-custom'); if (cc) cc.value = c.cover;
+  const pc = document.getElementById('page-custom');  if (pc) pc.value = c.page;
+}
+function setBinderColor(which, value) {
+  const c = loadBinderColors();
+  c[which] = value;
+  localStorage.setItem(BINDER_COLOR_KEY, JSON.stringify(c));
+  applyBinderColors(c);
+}
+function resetBinderColors() {
+  localStorage.removeItem(BINDER_COLOR_KEY);
+  applyBinderColors(BINDER_DEFAULTS);
+}
+function toggleCustomize() {
+  document.getElementById('binder-customize').classList.toggle('show');
+}
+function initBinderCustomize() {
+  document.querySelectorAll('#cover-presets .preset, #page-presets .preset').forEach(btn => {
+    btn.addEventListener('click', () => setBinderColor(btn.dataset.c, btn.dataset.v));
+  });
+  const cc = document.getElementById('cover-custom');
+  const pc = document.getElementById('page-custom');
+  if (cc) cc.addEventListener('input', e => setBinderColor('cover', e.target.value));
+  if (pc) pc.addEventListener('input', e => setBinderColor('page',  e.target.value));
+  applyBinderColors(loadBinderColors());
+}
 function goBinder(page) {
   binderPage = page || 0;
   location.hash = page ? `binder/${page}` : 'binder';
@@ -1215,7 +1313,7 @@ function wlRenderResults(cards) {
               || (c.card_faces && c.card_faces[0] && c.card_faces[0].image_uris && c.card_faces[0].image_uris.small)
               || '';
     const usd = c.prices && c.prices.usd ? `$${c.prices.usd}` : '';
-    const safeName = (c.name || '').replace(/'/g, "\\\\'");
+    const safeName = (c.name || '').replace(/'/g, "\\'");
     const setCode = (c.set || '').toUpperCase();
     const collector = c.collector_number || '';
     return `
@@ -1243,7 +1341,6 @@ function flashMsg(text) {
   flashMsg._t = setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .4s'; }, 1800);
 }
 
-// Populate feed dropdown from whatever feeds actually appear in today's data
 (function () {
   const feedSel = document.getElementById('feed');
   const seen = Array.from(new Set(RAW.map(r => r.price_type))).sort();
@@ -1259,6 +1356,7 @@ updateWatchlistCount();
 renderRightTicker();
 renderLeftTicker();
 renderFallingCards();
+initBinderCustomize();
 
 function applyFilters() { currentPage = 1; renderList(); }
 ['feed','rule','dir','minp','q'].forEach(id => document.getElementById(id).addEventListener('input', applyFilters));

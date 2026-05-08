@@ -90,11 +90,17 @@
     .binder-wrap {
       --cover: #3b2510;
       --page: #1a1a1a;
-      background:
+      /* Leather-grain texture + base color gradient. The SVG noise layer
+         blends over the gradient via background-blend-mode: overlay, giving
+         a subtle pebbled look that adapts to whatever cover color the user
+         picks. */
+      background-image:
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='2' stitchTiles='stitch' seed='5'/></filter><rect width='180' height='180' filter='url(%23n)' opacity='0.55'/></svg>"),
         linear-gradient(135deg,
           var(--cover) 0%,
           color-mix(in srgb, var(--cover), black 45%) 60%,
           color-mix(in srgb, var(--cover), black 75%) 100%);
+      background-blend-mode: overlay, normal;
       border-radius:14px;
       padding: 1.75rem 1.5rem;
       box-shadow:

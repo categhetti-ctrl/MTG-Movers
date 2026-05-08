@@ -971,45 +971,56 @@ function binderCacheSet(key, data) {
     localStorage.setItem(BINDER_CACHE_KEY, JSON.stringify(cache));
   } catch (err) {}
 }
-function binderScryfallUrl(parsed) {
-  if (parsed.set && parsed.num) {
-    return `https://api.scryfall.com/cards/${encodeURIComponent(parsed.set)}/${encodeURIComponent(parsed.num)}`;
-  }
-  if (parsed.set) {
-    return `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(parsed.name)}&set=${encodeURIComponent(parsed.set)}`;
-  }
-  return `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(parsed.name)}`;
+function binderScryfallUrls(parsed) {
+  // Returns an ordered list of fallback URLs from most-specific to most-generic.
+  // We try each in turn and stop at the first that returns a card; this means
+  // a watchlist entry that points at a missing collector number / wrong set
+  // still shows ~the same card (just a different printing's art).
+  const urls = [];
+  const name = encodeURIComponent(parsed.name);
+  const set  = parsed.set ? encodeURIComponent(parsed.set) : '';
+  const num  = parsed.num ? encodeURIComponent(parsed.num) : '';
+  if (set && num) urls.push(`https://api.scryfall.com/cards/${set}/${num}`);
+  if (set)        urls.push(`https://api.scryfall.com/cards/named?exact=${name}&set=${set}`);
+  urls.push(`https://api.scryfall.com/cards/named?exact=${name}`);
+  urls.push(`https://api.scryfall.com/cards/named?fuzzy=${name}`);
+  return urls;
 }
 async function binderFetchEntry(entryStr) {
   const cached = binderCacheGet(entryStr);
   if (cached) return cached;
   const parsed = parseWatchlistEntry(entryStr);
   if (!parsed) return null;
-  try {
-    const r = await fetch(binderScryfallUrl(parsed));
-    if (!r.ok) return null;
-    const c = await r.json();
-    const img = (c.image_uris && c.image_uris.normal)
-             || (c.card_faces && c.card_faces[0] && c.card_faces[0].image_uris && c.card_faces[0].image_uris.normal)
-             || (c.image_uris && c.image_uris.large)
-             || '';
-    const data = {
-      id: c.id,
-      name: c.name || '',
-      set: (c.set || '').toUpperCase(),
-      set_name: c.set_name || '',
-      collector_number: c.collector_number || '',
-      img,
-      price_usd: c.prices && c.prices.usd ? parseFloat(c.prices.usd) : null,
-      price_usd_foil: c.prices && c.prices.usd_foil ? parseFloat(c.prices.usd_foil) : null,
-      purchase_uri: (c.purchase_uris && c.purchase_uris.tcgplayer) || ''
-    };
-    binderCacheSet(entryStr, data);
-    binderRecordPrice(data.id, data.price_usd);
-    return data;
-  } catch (err) {
-    return null;
+  const urls = binderScryfallUrls(parsed);
+  for (const url of urls) {
+    try {
+      const r = await fetch(url);
+      if (!r.ok) continue;
+      const c = await r.json();
+      if (!c || !c.id) continue;
+      const img = (c.image_uris && c.image_uris.normal)
+               || (c.card_faces && c.card_faces[0] && c.card_faces[0].image_uris && c.card_faces[0].image_uris.normal)
+               || (c.image_uris && c.image_uris.large)
+               || '';
+      const data = {
+        id: c.id,
+        name: c.name || '',
+        set: (c.set || '').toUpperCase(),
+        set_name: c.set_name || '',
+        collector_number: c.collector_number || '',
+        img,
+        price_usd: c.prices && c.prices.usd ? parseFloat(c.prices.usd) : null,
+        price_usd_foil: c.prices && c.prices.usd_foil ? parseFloat(c.prices.usd_foil) : null,
+        purchase_uri: (c.purchase_uris && c.purchase_uris.tcgplayer) || ''
+      };
+      binderCacheSet(entryStr, data);
+      binderRecordPrice(data.id, data.price_usd);
+      return data;
+    } catch (err) {
+      // try next URL in the fallback chain
+    }
   }
+  return null;
 }
 function renderBinder() {
   const list = loadWatchlist();

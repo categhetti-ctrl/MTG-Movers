@@ -483,7 +483,15 @@
     </div>
     <div class="binder-controls">
       <button id="binder-prev" onclick="binderTurn(-1)">&larr; Prev</button>
-      <span class="info" id="binder-info">Page 1 of 1</span>
+      <span class="info">
+        Spread
+        <input id="binder-page-input" type="number" min="1" value="1"
+               style="width:4em; background:#141414; color:#fff; border:1px solid #2a2a2a; border-radius:4px; padding:.25rem .35rem; text-align:center; margin:0 .2rem; font-size:.95rem;"
+               onchange="binderJumpToSpread(this.value)"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();binderJumpToSpread(this.value);this.blur();}" />
+        of <span id="binder-total-spreads">1</span>
+        <span id="binder-info" style="margin-left:.6rem; color:#888; font-size:.85rem;"></span>
+      </span>
       <button id="binder-next" onclick="binderTurn(1)">Next &rarr;</button>
       <label style="color:#bbb; font-size:.85rem; margin-left:1rem;">Color
         <select id="binder-color" onchange="setBinderColorFilter(this.value)" style="background:#141414; color:#fff; border:1px solid #2a2a2a; border-radius:6px; padding:.4rem .55rem; margin-left:.4rem;">
@@ -1229,8 +1237,15 @@ function renderBinder() {
   const totalSpreads = Math.max(1, Math.ceil(list.length / BINDER_PAGE_SIZE));
   if (binderPage >= totalSpreads) binderPage = totalSpreads - 1;
   if (binderPage < 0) binderPage = 0;
+  const pageInput = document.getElementById('binder-page-input');
+  if (pageInput) {
+    pageInput.value = binderPage + 1;
+    pageInput.max   = totalSpreads;
+  }
+  const totEl = document.getElementById('binder-total-spreads');
+  if (totEl) totEl.textContent = totalSpreads;
   document.getElementById('binder-info').textContent = list.length
-    ? `Spread ${binderPage + 1} of ${totalSpreads} (${list.length} card${list.length === 1 ? '' : 's'})`
+    ? `(${list.length} card${list.length === 1 ? '' : 's'})`
     : 'Empty';
   document.getElementById('binder-prev').disabled = binderPage <= 0;
   document.getElementById('binder-next').disabled = binderPage >= totalSpreads - 1;
@@ -1346,17 +1361,46 @@ function resetBinderColors() {
 function toggleCustomize() {
   document.getElementById('binder-customize').classList.toggle('show');
 }
+const BINDER_PREFS_KEY = 'binder-prefs-v1';
+function saveBinderPrefs() {
+  try {
+    localStorage.setItem(BINDER_PREFS_KEY, JSON.stringify({
+      color: binderColorFilter,
+      sort:  binderSortBy,
+    }));
+  } catch (e) {}
+}
+function loadBinderPrefs() {
+  try {
+    return JSON.parse(localStorage.getItem(BINDER_PREFS_KEY) || '{}');
+  } catch (e) { return {}; }
+}
 function setBinderColorFilter(value) {
   binderColorFilter = value;
   binderPage = 0;
+  saveBinderPrefs();
   if (typeof prefetchAllBinderData === 'function') prefetchAllBinderData().then(() => renderBinder());
   renderBinder();
 }
 function setBinderSortBy(value) {
   binderSortBy = value;
   binderPage = 0;
+  saveBinderPrefs();
   if (typeof prefetchAllBinderData === 'function') prefetchAllBinderData().then(() => renderBinder());
   renderBinder();
+}
+function initBinderPrefs() {
+  const p = loadBinderPrefs();
+  if (p.color) {
+    binderColorFilter = p.color;
+    const sel = document.getElementById('binder-color');
+    if (sel) sel.value = p.color;
+  }
+  if (p.sort) {
+    binderSortBy = p.sort;
+    const sel = document.getElementById('binder-sort');
+    if (sel) sel.value = p.sort;
+  }
 }
 function initBinderFilters() {
   const colorSel = document.getElementById('binder-color');
@@ -1395,6 +1439,19 @@ function goBinder(page) {
 }
 function binderTurn(delta) {
   binderPage += delta;
+  renderBinder();
+  history.replaceState(null, '', '#binder' + (binderPage > 0 ? `/${binderPage}` : ''));
+}
+function binderJumpToSpread(value) {
+  const list = binderApplyFilterSort(loadWatchlist());
+  const totalSpreads = Math.max(1, Math.ceil(list.length / BINDER_PAGE_SIZE));
+  let n = parseInt(value, 10);
+  if (isNaN(n)) {
+    document.getElementById('binder-page-input').value = binderPage + 1;
+    return;
+  }
+  n = Math.max(1, Math.min(totalSpreads, n));
+  binderPage = n - 1;
   renderBinder();
   history.replaceState(null, '', '#binder' + (binderPage > 0 ? `/${binderPage}` : ''));
 }
@@ -1603,6 +1660,7 @@ renderRightTicker();
 renderLeftTicker();
 renderFallingCards();
 initBinderCustomize();
+initBinderPrefs();
 
 function applyFilters() { currentPage = 1; renderList(); }
 ['feed','rule','dir','minp','q'].forEach(id => document.getElementById(id).addEventListener('input', applyFilters));

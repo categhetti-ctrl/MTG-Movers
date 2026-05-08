@@ -205,12 +205,21 @@
         inset 0 0 0 4px rgba(255,255,255,.05);
     }
     .binder-slot.filled:hover { transform: translateY(-3px); box-shadow:0 10px 22px rgba(0,0,0,.82), inset 0 1px 0 rgba(255,255,255,.28), inset 0 -1px 0 rgba(255,255,255,.10), inset 1px 0 0 rgba(255,255,255,.16), inset -1px 0 0 rgba(255,255,255,.16), inset 0 0 0 3px rgba(0,0,0,.82), inset 0 0 0 4px rgba(255,255,255,.08); filter: brightness(1.05); }
-    /* Card image inset 4px so the crimped lip reads as a thin raised pocket edge. */
-    .binder-slot.filled img, .binder-slot.error img {
+    /* The card itself is wrapped in a .binder-card so it can animate
+       independently of the sleeve. The slot (sleeve + crimping) stays
+       still during pop; only the .binder-card lifts out. */
+    .binder-slot .binder-card {
       position:absolute;
       inset: 4px;
-      width: calc(100% - 8px);
-      height: calc(100% - 8px);
+      border-radius:3px;
+      pointer-events:none;
+      will-change: transform;
+    }
+    .binder-slot.filled .binder-card img, .binder-slot.error .binder-card img {
+      position:absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
       border-radius:3px;
       object-fit:cover;
       display:block;
@@ -256,8 +265,8 @@
       box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
       z-index:3;
     }
-    .binder-slot .price-overlay {
-      position:absolute; left:3px; right:3px; bottom:3px;
+    .binder-slot .binder-card .price-overlay {
+      position:absolute; left:0; right:0; bottom:0;
       border-radius: 0 0 3px 3px;
       background: linear-gradient(to top, rgba(0,0,0,.94) 0%, rgba(0,0,0,.65) 75%, transparent 100%);
       padding: .55rem .4rem .3rem;
@@ -272,9 +281,13 @@
     /* Click animation - card slides up out of its sleeve like a top-loaded
        binder page. Lifts, tilts slightly, then translates upward beyond the
        slot's height, leaving the empty slot visible underneath. */
-    .binder-slot.popping {
+    /* The slot itself stays in place (so the empty sleeve remains visible);
+       only the inner .binder-card lifts out. Slot's z-index goes up so the
+       lifting card overlaps neighboring slots. */
+    .binder-slot.popping { z-index: 20; }
+    .binder-slot.popping .binder-card {
       animation: binder-pop .55s cubic-bezier(.22, .9, .32, 1.08) forwards;
-      z-index:20;
+      z-index: 30;
     }
     /* Fade out the sleeve gloss elements as the card pops out, so the card
        appears to leave the plastic behind instead of dragging its sheen with it. */
@@ -293,7 +306,7 @@
               filter: brightness(1.08);}
     }
     @media (prefers-reduced-motion: reduce) {
-      .binder-slot.popping { animation:none; transform: translateY(-12px) scale(1.04); }
+      .binder-slot.popping .binder-card { animation:none; transform: translateY(-12px) scale(1.04); }
     }
     .binder-controls { display:flex; align-items:center; justify-content:center; gap:1rem; margin-top:1.25rem; flex-wrap:wrap; }
     .binder-controls button { background:#141414; color:#fff; border:1px solid #2a2a2a; border-radius:6px; padding:.55rem 1rem; cursor:pointer; font-size:.9rem;}
@@ -1323,11 +1336,13 @@ function renderBinder() {
       slot.classList.add('filled');
       const priceText = data.price_usd != null ? `$${data.price_usd.toFixed(2)}` : '—';
       slot.innerHTML =
-        `<img src="${data.img}" alt="${escapeHtml(data.name)}" loading="lazy" />` +
         `<span class="gloss-streak"></span>` +
-        `<div class="price-overlay">` +
-          `<span class="set-tag">${data.set} #${escapeHtml(data.collector_number)}</span>` +
-          `<span class="price-usd">${priceText}</span>` +
+        `<div class="binder-card">` +
+          `<img src="${data.img}" alt="${escapeHtml(data.name)}" loading="lazy" />` +
+          `<div class="price-overlay">` +
+            `<span class="set-tag">${data.set} #${escapeHtml(data.collector_number)}</span>` +
+            `<span class="price-usd">${priceText}</span>` +
+          `</div>` +
         `</div>`;
       slot.onclick = () => {
         slot.classList.add('popping');

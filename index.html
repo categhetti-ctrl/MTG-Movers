@@ -99,23 +99,61 @@
       margin-top:1rem;
       position:relative;
     }
-    /* Inner "page" - the dark plastic page sheet that holds the slots */
+    /* Two-page spread, like a real binder open with both pages visible */
+    .binder-spread {
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      position:relative;
+      perspective: 1800px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    /* Spine - a darker gutter where the pages meet */
+    .binder-spread::before {
+      content:"";
+      position:absolute;
+      left:50%; top:-6px; bottom:-6px;
+      width: 18px;
+      transform: translateX(-50%);
+      background: linear-gradient(to right,
+        transparent 0%,
+        rgba(0,0,0,.45) 30%,
+        rgba(0,0,0,.85) 50%,
+        rgba(0,0,0,.45) 70%,
+        transparent 100%);
+      pointer-events:none;
+      z-index:1;
+    }
     .binder-page {
       display:grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 0.5rem 0.45rem;
-      max-width: 880px;
-      margin: 0 auto;
       background:
-        radial-gradient(ellipse at top, #1a1a1a 0%, #0a0a0a 80%);
+        radial-gradient(ellipse at center, #1a1a1a 0%, #0a0a0a 80%);
       padding: 0.85rem;
       border-radius:10px;
       box-shadow:
         inset 0 0 0 1px rgba(0,0,0,.55),
         inset 0 4px 18px rgba(0,0,0,.7);
+      backface-visibility:hidden;
     }
-    @media (max-width: 700px) { .binder-page { grid-template-columns: repeat(3, 1fr); gap: 0.4rem; padding: 0.6rem; } }
-    @media (max-width: 480px) { .binder-page { grid-template-columns: repeat(2, 1fr); gap: 0.4rem; padding: 0.5rem; } }
+    .binder-page-left  { transform-origin: right center; animation: page-open-left  .85s cubic-bezier(.34, 1.05, .64, 1) forwards; }
+    .binder-page-right { transform-origin: left  center; animation: page-open-right .85s cubic-bezier(.34, 1.05, .64, 1) forwards; }
+    @keyframes page-open-left  { from { transform: rotateY(82deg); opacity:.4; } to { transform: rotateY(0); opacity:1; } }
+    @keyframes page-open-right { from { transform: rotateY(-82deg); opacity:.4; } to { transform: rotateY(0); opacity:1; } }
+    @media (max-width: 700px) {
+      .binder-spread { grid-template-columns: 1fr; gap: 0.6rem; perspective:none; }
+      .binder-spread::before { display:none; }
+      .binder-page { grid-template-columns: repeat(3, 1fr); gap: 0.4rem; padding: 0.6rem; }
+      .binder-page-left, .binder-page-right { animation:none; transform:none; }
+    }
+    @media (max-width: 480px) {
+      .binder-page { grid-template-columns: repeat(2, 1fr); gap: 0.4rem; padding: 0.5rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .binder-page-left, .binder-page-right { animation:none; transform:none; }
+    }
     .binder-slot {
       position:relative;
       aspect-ratio: 5/7;
@@ -411,7 +449,10 @@
     <a href="#" class="back" onclick="goHome();return false;">&larr; back to movers</a>
     <h2 style="margin:.75rem 0 1rem; color:#9ecbff;">Your Binder</h2>
     <div class="binder-wrap">
-      <div class="binder-page" id="binder-page"></div>
+      <div class="binder-spread">
+        <div class="binder-page binder-page-left" id="binder-page-left"></div>
+        <div class="binder-page binder-page-right" id="binder-page-right"></div>
+      </div>
     </div>
     <div class="binder-controls">
       <button id="binder-prev" onclick="binderTurn(-1)">&larr; Prev</button>
@@ -805,7 +846,8 @@ function saveWatchlist() {
 }
 
 // ---- BINDER (browser-side, fetches from Scryfall) ------------------------
-const BINDER_PAGE_SIZE = 12;
+const BINDER_PAGE_SIZE = 24;     // 12 left + 12 right per spread
+const BINDER_HALF_SIZE = 12;
 const BINDER_CACHE_KEY = 'binder-cache-v1';
 const BINDER_HISTORY_KEY = 'binder-history-v1';
 const BINDER_CACHE_TTL_MS = 12 * 3600 * 1000;
@@ -914,33 +956,62 @@ async function binderFetchEntry(entryStr) {
 }
 function renderBinder() {
   const list = loadWatchlist();
-  const totalPages = Math.max(1, Math.ceil(list.length / BINDER_PAGE_SIZE));
-  if (binderPage >= totalPages) binderPage = totalPages - 1;
+  const totalSpreads = Math.max(1, Math.ceil(list.length / BINDER_PAGE_SIZE));
+  if (binderPage >= totalSpreads) binderPage = totalSpreads - 1;
   if (binderPage < 0) binderPage = 0;
   document.getElementById('binder-info').textContent = list.length
-    ? `Page ${binderPage + 1} of ${totalPages} (${list.length} card${list.length === 1 ? '' : 's'})`
+    ? `Spread ${binderPage + 1} of ${totalSpreads} (${list.length} card${list.length === 1 ? '' : 's'})`
     : 'Empty';
   document.getElementById('binder-prev').disabled = binderPage <= 0;
-  document.getElementById('binder-next').disabled = binderPage >= totalPages - 1;
-  const pageEl = document.getElementById('binder-page');
+  document.getElementById('binder-next').disabled = binderPage >= totalSpreads - 1;
+  const leftEl  = document.getElementById('binder-page-left');
+  const rightEl = document.getElementById('binder-page-right');
+
   if (!list.length) {
-    pageEl.innerHTML = '<div class="binder-empty" style="grid-column:1/-1;">Your watchlist is empty.<br><a href="#" onclick="openWatchlist();return false;">Add some cards</a> to start your binder.</div>';
+    leftEl.innerHTML = '<div class="binder-empty" style="grid-column:1/-1;">Your watchlist is empty.<br><a href="#" onclick="openWatchlist();return false;">Add some cards</a> to start your binder.</div>';
+    rightEl.innerHTML = '';
     return;
   }
+
+  // Restart the page-open CSS animation by removing & reattaching the elements
+  // (or by toggling the class). Easiest: clone-replace which resets animations.
+  const restartAnim = el => {
+    el.style.animation = 'none';
+    el.offsetHeight;          // force reflow
+    el.style.animation = '';
+  };
+  restartAnim(leftEl);
+  restartAnim(rightEl);
+
   const start = binderPage * BINDER_PAGE_SIZE;
   const slice = list.slice(start, start + BINDER_PAGE_SIZE);
-  pageEl.innerHTML = '';
-  for (let i = 0; i < BINDER_PAGE_SIZE; i++) {
-    const slot = document.createElement('div');
-    if (i < slice.length) {
-      slot.className = 'binder-slot loading';
-      slot.dataset.entry = slice[i];
-    } else {
-      slot.className = 'binder-slot empty';
+
+  // Build slots into both halves (12 each).
+  const buildSlots = (parent, items) => {
+    parent.innerHTML = '';
+    for (let i = 0; i < BINDER_HALF_SIZE; i++) {
+      const slot = document.createElement('div');
+      if (i < items.length) {
+        slot.className = 'binder-slot loading';
+        slot.dataset.entry = items[i];
+      } else {
+        slot.className = 'binder-slot empty';
+      }
+      parent.appendChild(slot);
     }
-    pageEl.appendChild(slot);
-  }
-  slice.forEach((entry, i) => {
+  };
+  buildSlots(leftEl,  slice.slice(0, BINDER_HALF_SIZE));
+  buildSlots(rightEl, slice.slice(BINDER_HALF_SIZE));
+
+  // Hydrate each slot with its Scryfall data (same code as before, just walks
+  // both halves now).
+  slice.forEach((entry, idx) => {
+    const isLeft = idx < BINDER_HALF_SIZE;
+    const localIdx = isLeft ? idx : idx - BINDER_HALF_SIZE;
+    const parent = isLeft ? leftEl : rightEl;
+    const i = localIdx;
+    const pageEl = parent;
+    (function (entry, i, pageEl) {
     binderFetchEntry(entry).then(data => {
       const slot = pageEl.children[i];
       if (!slot || slot.dataset.entry !== entry) return;  // page may have turned
@@ -971,6 +1042,7 @@ function renderBinder() {
         }, 480);
       };
     });
+    })(entry, i, pageEl);
   });
 }
 function goBinder(page) {

@@ -1004,12 +1004,20 @@ function binderCacheSet(key, data) {
     localStorage.setItem(BINDER_CACHE_KEY, JSON.stringify(cache));
   } catch (err) {}
 }
+// Common set-code mismatches between deck-export tools and Scryfall.
+const BINDER_SET_ALIASES = {
+  'plst': 'plist',  // Moxfield/Archidekt -> Scryfall: The List
+};
 function binderScryfallUrls(parsed) {
   // Ordered list of fallback URLs, most-specific first. We try each in turn
   // and stop at the first match. Aggressive cleaning here = more hits on
   // imports with quirky formatting, foil markers, split cards, etc.
   const urls = [];
   const rawName = parsed.name || '';
+  // Resolve set alias (some tools use a different code than Scryfall does).
+  const setLower   = (parsed.set || '').toLowerCase();
+  const aliasedSet = BINDER_SET_ALIASES[setLower] || setLower;
+  parsed = Object.assign({}, parsed, { set: aliasedSet });
   // Strip trailing parenthetical noise that's NOT a set code (e.g. "(Foil)",
   // "(Promo)", "(Borderless)") - the watchlist parser already pulled true
   // set codes out into parsed.set.
@@ -1059,12 +1067,26 @@ function showMissingCards() {
     flashMsg(`All ${list.length} watchlist cards loaded.`);
     return;
   }
-  // Render an alert dialog with the missing entries so user can edit them.
+  console.warn('Missing binder entries:', missing);
   const msg = `Couldn't match ${missing.length} of ${list.length} entries on Scryfall:\n\n` +
               missing.map((e, i) => `${i + 1}. ${e}`).join('\n') +
-              `\n\nCheck for typos or unsupported formatting and edit the watchlist to fix.`;
-  console.warn('Missing binder entries:', missing);
-  alert(msg);
+              `\n\nClick OK to retry these entries with the latest fallback chain, or Cancel to leave them.`;
+  if (!confirm(msg)) return;
+  // Retry just the missing entries in parallel (small batch, polite to Scryfall).
+  flashMsg(`Retrying ${missing.length} entries...`);
+  let i = 0, done = 0;
+  async function worker() {
+    while (i < missing.length) {
+      const idx = i++;
+      await binderFetchEntry(missing[idx]);
+      done++;
+    }
+  }
+  Promise.all([0,0,0].map(worker)).then(() => {
+    const stillMissing = loadWatchlist().filter(e => !binderCacheGet(e));
+    flashMsg(`Retry done. ${missing.length - stillMissing.length} loaded, ${stillMissing.length} still missing.`);
+    renderBinder();
+  });
 }
 async function binderFetchEntry(entryStr) {
   const cached = binderCacheGet(entryStr);
@@ -1102,6 +1124,45 @@ async function binderFetchEntry(entryStr) {
       // try next URL in the fallback chain
     }
   }
+  // Last-resort: ask Scryfall's autocomplete endpoint for likely candidates,
+  // then look up the first suggestion. Catches typos like "Telepath" -> "Telepathy"
+  // and ambiguous fuzzy queries that earlier fallbacks would 422 on.
+  try {
+    const acUrl = `https://api.scryfall.com/cards/autocomplete?q=${encodeURIComponent(parsed.name || '')}`;
+    const acR = await fetch(acUrl);
+    if (acR.ok) {
+      const aj = await acR.json();
+      const cand = aj && aj.data && aj.data[0];
+      if (cand) {
+        const r = await fetch(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(cand)}`);
+        if (r.ok) {
+          const c = await r.json();
+          if (c && c.id) {
+            const img = (c.image_uris && c.image_uris.normal)
+                     || (c.card_faces && c.card_faces[0] && c.card_faces[0].image_uris && c.card_faces[0].image_uris.normal)
+                     || (c.image_uris && c.image_uris.large)
+                     || '';
+            const data = {
+              id: c.id,
+              name: c.name || '',
+              set: (c.set || '').toUpperCase(),
+              set_name: c.set_name || '',
+              collector_number: c.collector_number || '',
+              img,
+              price_usd: c.prices && c.prices.usd ? parseFloat(c.prices.usd) : null,
+              price_usd_foil: c.prices && c.prices.usd_foil ? parseFloat(c.prices.usd_foil) : null,
+              purchase_uri: (c.purchase_uris && c.purchase_uris.tcgplayer) || '',
+              color_identity: Array.isArray(c.color_identity) ? c.color_identity.slice() : [],
+              type_line: c.type_line || ''
+            };
+            binderCacheSet(entryStr, data);
+            binderRecordPrice(data.id, data.price_usd);
+            return data;
+          }
+        }
+      }
+    }
+  } catch (err) {}
   console.warn('Binder: no Scryfall match for', JSON.stringify(entryStr));
   return null;
 }

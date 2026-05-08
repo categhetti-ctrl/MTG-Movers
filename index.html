@@ -102,24 +102,25 @@
     /* Inner "page" - the cream/dark-mat plastic page sheet that holds the slots */
     .binder-page {
       display:grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1.25rem 1.1rem;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.75rem 1.5rem;
       background:
         radial-gradient(ellipse at top, #1a1a1a 0%, #0a0a0a 80%);
-      padding: 1.25rem 1.1rem;
+      padding: 1.75rem 1.5rem;
       border-radius:10px;
       box-shadow:
         inset 0 0 0 1px rgba(0,0,0,.55),
         inset 0 4px 18px rgba(0,0,0,.7);
     }
-    @media (max-width: 800px) { .binder-page { grid-template-columns: repeat(3, 1fr); gap:.85rem; padding:.85rem; } }
-    @media (max-width: 480px) { .binder-page { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 700px) { .binder-page { grid-template-columns: repeat(2, 1fr); gap:1.25rem; padding:1.1rem; } }
     .binder-slot {
       position:relative;
       aspect-ratio: 5/7;
+      max-width: 220px;
+      width: 100%;
+      margin: 0 auto;
       background:#000;
-      border-radius:8px;
-      overflow:hidden;
+      border-radius:9px;
       cursor:pointer;
       transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
       box-shadow:
@@ -134,11 +135,32 @@
         inset 0 0 0 1px rgba(40,28,14,.6);
     }
     .binder-slot.empty:hover { transform:none; box-shadow:inset 0 2px 6px rgba(0,0,0,.7), inset 0 0 0 1px rgba(40,28,14,.6); }
-    .binder-slot.loading { background:#0a0a0a; }
-    .binder-slot.filled { background:#000; }
-    .binder-slot.error { background:#1a0a0a; }
-    .binder-slot.filled:hover { transform: translateY(-3px); box-shadow:0 8px 18px rgba(0,0,0,.7), inset 0 0 0 1px rgba(0,0,0,.6); filter: brightness(1.06); }
-    .binder-slot img { width:100%; height:100%; object-fit:cover; display:block; }
+    .binder-slot.loading { background:#0a0a0a; overflow:hidden;}
+    /* Filled = translucent plastic sleeve frame around the card */
+    .binder-slot.filled, .binder-slot.error {
+      background:
+        linear-gradient(135deg,
+          rgba(255,255,255,.22) 0%,
+          rgba(255,255,255,.10) 30%,
+          rgba(255,255,255,.04) 50%,
+          rgba(255,255,255,.10) 70%,
+          rgba(255,255,255,.22) 100%);
+      border: 1px solid rgba(255,255,255,.18);
+      box-shadow:
+        0 4px 10px rgba(0,0,0,.6),
+        inset 0 0 8px rgba(255,255,255,.05);
+    }
+    .binder-slot.filled:hover { transform: translateY(-3px); box-shadow:0 10px 22px rgba(0,0,0,.78), inset 0 0 8px rgba(255,255,255,.08); filter: brightness(1.06); }
+    /* Card image is inset 6px from each edge so the translucent sleeve shows around it */
+    .binder-slot.filled img, .binder-slot.error img {
+      position:absolute;
+      inset: 6px;
+      width: calc(100% - 12px);
+      height: calc(100% - 12px);
+      border-radius:6px;
+      object-fit:cover;
+      display:block;
+    }
     /* Plastic sleeve glossy overlay - stronger diagonal sheen on top-left,
        softer one bottom-right; simulates light catching real card sleeves. */
     .binder-slot.filled::before, .binder-slot.error::before {
@@ -181,7 +203,8 @@
       z-index:3;
     }
     .binder-slot .price-overlay {
-      position:absolute; left:0; right:0; bottom:0;
+      position:absolute; left:6px; right:6px; bottom:6px;
+      border-radius: 0 0 6px 6px;
       background: linear-gradient(to top, rgba(0,0,0,.94) 0%, rgba(0,0,0,.65) 70%, transparent 100%);
       padding: .7rem .55rem .4rem;
       display:flex; justify-content:space-between; align-items:baseline; gap:.4rem;
@@ -784,7 +807,7 @@ function saveWatchlist() {
 }
 
 // ---- BINDER (browser-side, fetches from Scryfall) ------------------------
-const BINDER_PAGE_SIZE = 16;
+const BINDER_PAGE_SIZE = 9;
 const BINDER_CACHE_KEY = 'binder-cache-v1';
 const BINDER_HISTORY_KEY = 'binder-history-v1';
 const BINDER_CACHE_TTL_MS = 12 * 3600 * 1000;

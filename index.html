@@ -315,6 +315,18 @@
     .binder-controls .info { color:#bbb; font-size:.95rem;}
     .binder-empty { text-align:center; padding:3rem 1rem; color:#888;}
     .binder-empty a { color:#9ecbff;}
+    /* Binder total value panel (sits between the header and the binder). */
+    .binder-total { background:#0d0d0d; border:1px solid #2a2a2a; border-radius:10px; padding:1rem 1.25rem; margin: 1rem auto; max-width: 760px; display:flex; justify-content:space-between; align-items:center; gap:1.5rem; flex-wrap:wrap;}
+    .binder-total .bt-left { display:flex; flex-direction:column; gap:.15rem;}
+    .binder-total .bt-label { font-size:.68rem; color:#aaa; text-transform:uppercase; letter-spacing:.07em; font-weight:600;}
+    .binder-total .bt-amount { font-size:1.8rem; font-weight:700; color:#fff; line-height:1.1;}
+    .binder-total .bt-right { display:flex; flex-direction:column; align-items:flex-end; gap:.4rem;}
+    .binder-total .bt-toggle { display:flex; gap:.3rem;}
+    .binder-total .bt-toggle button { background:#141414; border:1px solid #2a2a2a; color:#aaa; padding:.3rem .65rem; border-radius:6px; cursor:pointer; font-size:.78rem;}
+    .binder-total .bt-toggle button.active { background:#1f3a6e; border-color:#2e5099; color:#fff;}
+    .binder-total .bt-delta { font-size:1rem; font-weight:600; color:#aaa;}
+    .binder-total .bt-delta.pos { color:#5dd39e;}
+    .binder-total .bt-delta.neg { color:#ef6f6c;}
     /* Customize panel */
     .binder-customize { display:none; margin: 1rem auto 0; max-width: 720px; background:#0d0d0d; border:1px solid #2a2a2a; border-radius:10px; padding:1rem 1.25rem; }
     .binder-customize.show { display:block; }
@@ -502,6 +514,20 @@
   <section id="view-binder" class="hidden">
     <a href="#" class="back" onclick="goHome();return false;">&larr; back to movers</a>
     <h2 style="margin:.75rem 0 1rem; color:#9ecbff;">Your Binder</h2>
+    <div class="binder-total">
+      <div class="bt-left">
+        <div class="bt-label">Total binder value</div>
+        <div class="bt-amount" id="bt-amount">$0.00</div>
+      </div>
+      <div class="bt-right">
+        <div class="bt-toggle">
+          <button class="bt-period" data-d="1" onclick="setBinderTotalPeriod(1)">1d</button>
+          <button class="bt-period" data-d="7" onclick="setBinderTotalPeriod(7)">7d</button>
+          <button class="bt-period active" data-d="30" onclick="setBinderTotalPeriod(30)">30d</button>
+        </div>
+        <div class="bt-delta" id="bt-delta">&mdash;</div>
+      </div>
+    </div>
     <div class="binder-wrap">
       <div class="binder-spread">
         <div class="binder-page binder-page-left" id="binder-page-left"></div>
@@ -719,7 +745,11 @@ function showBinder() {
   }
   // Bulk price history (30 days, all cards) - lets the detail view show a
   // real chart on day 1 for any binder card with data in the local DB.
-  if (typeof loadBinderBulkPrices === 'function') loadBinderBulkPrices();
+  if (typeof loadBinderBulkPrices === 'function') {
+    loadBinderBulkPrices().then(() => {
+      if (typeof renderBinderTotal === 'function') renderBinderTotal();
+    });
+  }
 }
 function route() {
   const m = location.hash.match(/^#card\/([^\/]+)(?:\/([^\/]*)(?:\/([^\/]*))?)?/);
@@ -1302,7 +1332,57 @@ async function prefetchAllBinderData() {
     binderPrefetchInFlight = false;
   }
 }
+let binderTotalPeriod = 30;
+function calculateBinderTotal(daysAgo) {
+  const list = loadWatchlist();
+  let total = 0;
+  for (const entry of list) {
+    const data = binderCacheGet(entry);
+    if (!data || !data.id) continue;
+    if (daysAgo === 0) {
+      if (data.price_usd != null) total += data.price_usd;
+      continue;
+    }
+    // Use bulk price history (prices.json) when available.
+    const series = getBulkPriceSeries(data.id);
+    if (series && series.length > 0) {
+      const idx = series.length - 1 - daysAgo;
+      if (idx >= 0 && series[idx] && series[idx][1] != null) {
+        total += series[idx][1];
+        continue;
+      }
+    }
+    // Fallback: use current cached price (no history available).
+    if (data.price_usd != null) total += data.price_usd;
+  }
+  return total;
+}
+function renderBinderTotal() {
+  const today = calculateBinderTotal(0);
+  const past  = calculateBinderTotal(binderTotalPeriod);
+  const fmtUSD = new Intl.NumberFormat('en-US', { style:'currency', currency:'USD' });
+  document.getElementById('bt-amount').textContent = fmtUSD.format(today);
+  const deltaEl = document.getElementById('bt-delta');
+  if (past <= 0 || !isFinite(past)) {
+    deltaEl.textContent = '—';
+    deltaEl.className = 'bt-delta';
+    return;
+  }
+  const delta = today - past;
+  const pct = (delta / past) * 100;
+  const sign = delta >= 0 ? '+' : '-';
+  deltaEl.textContent = `${sign}${fmtUSD.format(Math.abs(delta))} (${sign}${Math.abs(pct).toFixed(1)}% over ${binderTotalPeriod}d)`;
+  deltaEl.className = 'bt-delta ' + (delta >= 0 ? 'pos' : 'neg');
+}
+function setBinderTotalPeriod(d) {
+  binderTotalPeriod = parseInt(d, 10) || 30;
+  document.querySelectorAll('.binder-total .bt-toggle button').forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.d, 10) === binderTotalPeriod);
+  });
+  renderBinderTotal();
+}
 function renderBinder() {
+  renderBinderTotal();
   const list = binderApplyFilterSort(loadWatchlist());
   const totalSpreads = Math.max(1, Math.ceil(list.length / BINDER_PAGE_SIZE));
   if (binderPage >= totalSpreads) binderPage = totalSpreads - 1;

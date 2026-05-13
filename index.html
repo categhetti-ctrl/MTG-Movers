@@ -327,6 +327,8 @@
     .binder-total .bt-delta { font-size:1rem; font-weight:600; color:#aaa;}
     .binder-total .bt-delta.pos { color:#5dd39e;}
     .binder-total .bt-delta.neg { color:#ef6f6c;}
+    .binder-total .bt-row { display:flex; justify-content:space-between; align-items:center; gap:1.5rem; flex-wrap:wrap; width:100%;}
+    .binder-total .bt-chart-wrap { width:100%; height:90px; margin-top:.75rem; }
     /* Customize panel */
     .binder-customize { display:none; margin: 1rem auto 0; max-width: 720px; background:#0d0d0d; border:1px solid #2a2a2a; border-radius:10px; padding:1rem 1.25rem; }
     .binder-customize.show { display:block; }
@@ -515,18 +517,21 @@
     <a href="#" class="back" onclick="goHome();return false;">&larr; back to movers</a>
     <h2 style="margin:.75rem 0 1rem; color:#9ecbff;">Your Binder</h2>
     <div class="binder-total">
-      <div class="bt-left">
-        <div class="bt-label">Total binder value</div>
-        <div class="bt-amount" id="bt-amount">$0.00</div>
-      </div>
-      <div class="bt-right">
-        <div class="bt-toggle">
-          <button class="bt-period" data-d="1" onclick="setBinderTotalPeriod(1)">1d</button>
-          <button class="bt-period" data-d="7" onclick="setBinderTotalPeriod(7)">7d</button>
-          <button class="bt-period active" data-d="30" onclick="setBinderTotalPeriod(30)">30d</button>
+      <div class="bt-row">
+        <div class="bt-left">
+          <div class="bt-label">Total binder value</div>
+          <div class="bt-amount" id="bt-amount">$0.00</div>
         </div>
-        <div class="bt-delta" id="bt-delta">&mdash;</div>
+        <div class="bt-right">
+          <div class="bt-toggle">
+            <button class="bt-period" data-d="1" onclick="setBinderTotalPeriod(1)">1d</button>
+            <button class="bt-period" data-d="7" onclick="setBinderTotalPeriod(7)">7d</button>
+            <button class="bt-period active" data-d="30" onclick="setBinderTotalPeriod(30)">30d</button>
+          </div>
+          <div class="bt-delta" id="bt-delta">&mdash;</div>
+        </div>
       </div>
+      <div class="bt-chart-wrap"><canvas id="bt-chart"></canvas></div>
     </div>
     <div class="binder-wrap">
       <div class="binder-spread">
@@ -1357,7 +1362,64 @@ function calculateBinderTotal(daysAgo) {
   }
   return total;
 }
+function calculateBinderTotalHistory() {
+  // Sum the watchlist's value for each day in the bulk-prices window.
+  if (!_binderBulkPrices || !_binderBulkPrices.cards) return null;
+  const days  = _binderBulkPrices.days  || 30;
+  const start = _binderBulkPrices.start;
+  if (!start) return null;
+  const list = loadWatchlist();
+  const totals = new Array(days).fill(0);
+  const counts = new Array(days).fill(0);
+  for (const entry of list) {
+    const data = binderCacheGet(entry);
+    if (!data || !data.id) continue;
+    const arr = _binderBulkPrices.cards[data.id];
+    if (!arr) continue;
+    for (let i = 0; i < days && i < arr.length; i++) {
+      if (arr[i] != null) { totals[i] += arr[i]; counts[i]++; }
+    }
+  }
+  const startMs = Date.parse(start);
+  const out = [];
+  for (let i = 0; i < days; i++) {
+    if (counts[i] > 0) out.push([new Date(startMs + i * 86400000).toISOString().slice(0, 10), totals[i]]);
+  }
+  return out;
+}
+let _binderTotalChart = null;
+function renderBinderTotalChart() {
+  const canvas = document.getElementById('bt-chart');
+  if (!canvas) return;
+  const history = calculateBinderTotalHistory();
+  if (!history || history.length < 2) {
+    if (_binderTotalChart) { _binderTotalChart.destroy(); _binderTotalChart = null; }
+    return;
+  }
+  const labels = history.map(p => p[0]);
+  const prices = history.map(p => p[1]);
+  if (_binderTotalChart) _binderTotalChart.destroy();
+  _binderTotalChart = new Chart(canvas, {
+    type: 'line',
+    data: { labels, datasets: [{
+      label: 'Total value (USD)',
+      data: prices,
+      borderColor: '#9ecbff',
+      backgroundColor: 'rgba(158,203,255,.14)',
+      fill: true, tension: .25, pointRadius: 0, borderWidth: 2,
+    }] },
+    options: {
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => '$' + ctx.parsed.y.toFixed(2) } } },
+      scales: {
+        x: { ticks: { color: '#888', maxRotation: 0, autoSkip: true, maxTicksLimit: 6 }, grid: { color: '#232938' } },
+        y: { ticks: { color: '#888', callback: v => '$' + Math.round(v).toLocaleString() }, grid: { color: '#232938' } }
+      }
+    }
+  });
+}
 function renderBinderTotal() {
+  renderBinderTotalChart();
   const today = calculateBinderTotal(0);
   const past  = calculateBinderTotal(binderTotalPeriod);
   const fmtUSD = new Intl.NumberFormat('en-US', { style:'currency', currency:'USD' });

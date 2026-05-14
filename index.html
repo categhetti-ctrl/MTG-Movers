@@ -331,7 +331,21 @@
     .binder-total .bt-delta.pos { color:#5dd39e;}
     .binder-total .bt-delta.neg { color:#ef6f6c;}
     .binder-total .bt-row { display:flex; justify-content:space-between; align-items:center; gap:1.5rem; flex-wrap:wrap; width:100%;}
-    .binder-total .bt-chart-wrap { width:100%; height:90px; margin-top:.75rem; }
+    .binder-total .bt-chart-wrap { width:100%; height:90px; margin-top:.75rem; cursor:pointer; position:relative;}
+    .binder-total .bt-chart-hint { position:absolute; top:.25rem; right:.25rem; color:#888; font-size:.7rem; pointer-events:none; opacity:.8;}
+    /* Movers modal rows */
+    .bt-mover-row { display:flex; align-items:center; gap:.75rem; padding:.55rem .65rem; border-bottom:1px solid #1a1a1a; cursor:pointer;}
+    .bt-mover-row:hover { background:#161616; }
+    .bt-mover-row:last-child { border-bottom:none; }
+    .bt-mover-row img { width:36px; height:50px; object-fit:cover; border-radius:3px; flex-shrink:0; background:#000;}
+    .bt-mover-row .info { flex:1; min-width:0;}
+    .bt-mover-row .name { color:#9ecbff; font-size:.88rem; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    .bt-mover-row .prices { color:#aaa; font-size:.72rem; margin-top:.15rem;}
+    .bt-mover-row .delta { text-align:right; flex-shrink:0; }
+    .bt-mover-row .delta .amount { font-size:.95rem; font-weight:700; line-height:1.2;}
+    .bt-mover-row .delta .pct { font-size:.72rem;}
+    .bt-mover-row .delta.pos { color:#5dd39e; }
+    .bt-mover-row .delta.neg { color:#ef6f6c; }
     /* Customize panel */
     .binder-customize { display:none; margin: 1rem auto 0; max-width: 720px; background:#0d0d0d; border:1px solid #2a2a2a; border-radius:10px; padding:1rem 1.25rem; }
     .binder-customize.show { display:block; }
@@ -534,7 +548,7 @@
           <div class="bt-delta" id="bt-delta">&mdash;</div>
         </div>
       </div>
-      <div class="bt-chart-wrap"><canvas id="bt-chart"></canvas></div>
+      <div class="bt-chart-wrap" onclick="showBinderMovers()" title="Click to see which cards moved"><canvas id="bt-chart"></canvas><span class="bt-chart-hint">Click for movers &rarr;</span></div>
     </div>
     <div class="binder-wrap">
       <div class="binder-spread">
@@ -624,6 +638,28 @@
       <button onclick="importDeckList()" style="margin-right:auto" title="Strip counts and dedupe entries above">Import deck list</button>
       <button onclick="closeWatchlist()">Cancel</button>
       <button class="primary" onclick="saveWatchlist()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div id="bt-movers-modal" class="modal" onclick="if(event.target.id==='bt-movers-modal')closeBinderMovers()">
+  <div class="panel" style="width:min(640px, 94vw);">
+    <h3 style="display:flex; align-items:center; justify-content:space-between; gap:1rem;">
+      <span>What moved in your binder</span>
+      <span id="bt-movers-net" style="font-size:.95rem; font-weight:600;"></span>
+    </h3>
+    <div class="help" style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap;">
+      <span>Period:</span>
+      <div class="bt-toggle" style="display:flex; gap:.3rem;">
+        <button class="btm-period" data-d="1" onclick="setBinderMoversPeriod(1)" style="background:#141414; border:1px solid #2a2a2a; color:#aaa; padding:.25rem .6rem; border-radius:6px; cursor:pointer; font-size:.78rem;">1d</button>
+        <button class="btm-period" data-d="7" onclick="setBinderMoversPeriod(7)" style="background:#141414; border:1px solid #2a2a2a; color:#aaa; padding:.25rem .6rem; border-radius:6px; cursor:pointer; font-size:.78rem;">7d</button>
+        <button class="btm-period" data-d="30" onclick="setBinderMoversPeriod(30)" style="background:#141414; border:1px solid #2a2a2a; color:#aaa; padding:.25rem .6rem; border-radius:6px; cursor:pointer; font-size:.78rem;">30d</button>
+      </div>
+      <span id="bt-movers-meta" style="margin-left:auto; color:#888; font-size:.78rem;"></span>
+    </div>
+    <div id="bt-movers-list" style="flex:1; overflow-y:auto; margin-top:.5rem; border-top:1px solid #1a1a1a;"></div>
+    <div class="actions">
+      <button class="primary" onclick="closeBinderMovers()">Close</button>
     </div>
   </div>
 </div>
@@ -1509,6 +1545,148 @@ function setBinderTotalPeriod(d) {
   });
   renderBinderTotal();
 }
+
+/* -------------- Binder movers (drill-down) -------------- */
+let binderMoversPeriod = 30;
+function _priceForEntryDaysAgo(parsed, data, daysAgo) {
+  // Mirror calculateBinderTotal's logic but per-card: return the unit price
+  // (already qty-multiplied at the caller) we should use for "daysAgo" back.
+  if (!data) return null;
+  if (daysAgo === 0) return pickPriceForEntry(parsed, data);
+  // Foils don't have bulk history; flat-line today's foil price.
+  if (parsed.foil) return pickPriceForEntry(parsed, data);
+  const series = getBulkPriceSeries(data.id);
+  if (series && series.length > 0) {
+    const idx = series.length - daysAgo;
+    if (idx >= 0 && idx < series.length && series[idx] && series[idx][1] != null) {
+      return series[idx][1];
+    }
+  }
+  // Fallback: today's nonfoil price (flat - no historical data for cheap cards)
+  return pickPriceForEntry(parsed, data);
+}
+function calculateBinderMovers(daysAgo) {
+  // Return [{entry, name, set, num, img, qty, unitNow, unitPast, deltaTotal,
+  //          pct, hasHistory}, ...] sorted by absolute dollar delta desc.
+  const list = loadWatchlist();
+  const rows = [];
+  for (const entry of list) {
+    const parsed = parseWatchlistEntry(entry);
+    if (!parsed) continue;
+    const data = binderCacheGet(entry);
+    if (!data || !data.id) continue;
+    const qty = parsed.count || 1;
+    const unitNow  = pickPriceForEntry(parsed, data);
+    const unitPast = _priceForEntryDaysAgo(parsed, data, daysAgo);
+    if (unitNow == null || unitPast == null) continue;
+    // hasHistory = we actually pulled from the bulk series (not just today flat).
+    let hasHistory = false;
+    if (!parsed.foil) {
+      const s = getBulkPriceSeries(data.id);
+      if (s && s.length > 0) {
+        const idx = s.length - daysAgo;
+        if (idx >= 0 && idx < s.length && s[idx] && s[idx][1] != null) hasHistory = true;
+      }
+    }
+    const deltaTotal = (unitNow - unitPast) * qty;
+    const pct = unitPast > 0 ? (unitNow - unitPast) / unitPast : 0;
+    rows.push({
+      entry, name: data.name, set: data.set,
+      num: data.collector_number, img: data.img,
+      qty, foil: !!parsed.foil,
+      unitNow, unitPast, deltaTotal, pct, hasHistory,
+    });
+  }
+  rows.sort((a, b) => Math.abs(b.deltaTotal) - Math.abs(a.deltaTotal));
+  return rows;
+}
+function renderBinderMovers() {
+  document.querySelectorAll('#bt-movers-modal .btm-period').forEach(b => {
+    const on = parseInt(b.dataset.d, 10) === binderMoversPeriod;
+    b.style.background    = on ? '#1f3a6e' : '#141414';
+    b.style.borderColor   = on ? '#2e5099' : '#2a2a2a';
+    b.style.color         = on ? '#fff'    : '#aaa';
+  });
+  const rows = calculateBinderMovers(binderMoversPeriod);
+  const list = document.getElementById('bt-movers-list');
+  const netEl = document.getElementById('bt-movers-net');
+  const metaEl = document.getElementById('bt-movers-meta');
+  const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+  if (!rows.length) {
+    list.innerHTML = '<div style="padding:1rem; color:#888; text-align:center;">No price changes available yet. (Need cached price data and bulk history.)</div>';
+    if (netEl)  netEl.textContent  = '';
+    if (metaEl) metaEl.textContent = '';
+    return;
+  }
+  const net = rows.reduce((s, r) => s + r.deltaTotal, 0);
+  const sign = net >= 0 ? '+' : '-';
+  netEl.textContent = `${sign}${fmt.format(Math.abs(net))}`;
+  netEl.style.color = net >= 0 ? '#5dd39e' : '#ef6f6c';
+  const movedCount = rows.filter(r => Math.abs(r.deltaTotal) >= 0.005).length;
+  const noHistCount = rows.filter(r => !r.hasHistory).length;
+  metaEl.textContent = `${rows.length} card${rows.length===1?'':'s'}` +
+    (noHistCount ? ` · ${noHistCount} flat-priced (no bulk history)` : '');
+  // Build rows
+  const buf = [];
+  for (const r of rows) {
+    const cls = r.deltaTotal >= 0 ? 'pos' : 'neg';
+    const dsign = r.deltaTotal >= 0 ? '+' : '-';
+    const psign = r.pct >= 0 ? '+' : '-';
+    const flat = !r.hasHistory && !r.foil
+      ? ` <span style="color:#666; font-size:.7rem;">(no history)</span>` : '';
+    const foilTag = r.foil
+      ? ` <span style="color:#c9a227; font-size:.65rem; font-weight:700;">FOIL</span>` : '';
+    const qtyTag  = r.qty > 1
+      ? ` <span style="color:#aaa; font-size:.7rem;">×${r.qty}</span>` : '';
+    const setStr = (r.set || '').toUpperCase();
+    buf.push(
+      `<div class="bt-mover-row" onclick="binderJumpToEntry('${escapeJs(r.entry)}')">` +
+        `<img src="${r.img || ''}" alt="" loading="lazy" />` +
+        `<div class="info">` +
+          `<div class="name">${escapeHtml(r.name)}${qtyTag}${foilTag}</div>` +
+          `<div class="prices">${setStr} #${escapeHtml(r.num || '')} · ` +
+            `$${r.unitPast.toFixed(2)} → $${r.unitNow.toFixed(2)}${flat}</div>` +
+        `</div>` +
+        `<div class="delta ${cls}">` +
+          `<div class="amount">${dsign}${fmt.format(Math.abs(r.deltaTotal))}</div>` +
+          `<div class="pct">${psign}${(Math.abs(r.pct)*100).toFixed(1)}%</div>` +
+        `</div>` +
+      `</div>`
+    );
+  }
+  list.innerHTML = buf.join('');
+}
+function showBinderMovers() {
+  // Seed the modal period from the current binder-total period so the user's
+  // chart context carries through.
+  binderMoversPeriod = binderTotalPeriod;
+  document.getElementById('bt-movers-modal').classList.add('show');
+  renderBinderMovers();
+}
+function closeBinderMovers() {
+  document.getElementById('bt-movers-modal').classList.remove('show');
+}
+function setBinderMoversPeriod(d) {
+  binderMoversPeriod = parseInt(d, 10) || 30;
+  renderBinderMovers();
+}
+function escapeJs(s) {
+  // Safe inside a single-quoted onclick="..." HTML attribute. Escape backslash,
+  // single-quote, and any embedded quote chars that would break out.
+  return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+function binderJumpToEntry(entry) {
+  const list = binderApplyFilterSort(loadWatchlist());
+  const idx = list.indexOf(entry);
+  if (idx < 0) { closeBinderMovers(); return; }
+  binderPage = Math.floor(idx / BINDER_PAGE_SIZE);
+  closeBinderMovers();
+  renderBinder();
+  // Scroll to the binder section.
+  const sec = document.querySelector('.binder-wrap');
+  if (sec && sec.scrollIntoView) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 function renderBinder() {
   renderBinderTotal();
   const list = binderApplyFilterSort(loadWatchlist());
@@ -1960,3 +2138,4 @@ renderList();
 route();
 </script>
 </body></html>
+

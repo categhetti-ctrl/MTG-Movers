@@ -1423,10 +1423,16 @@ function calculateBinderTotal(daysAgo) {
     // Nonfoil: pull from the bulk price history. The bulk file's last entry
     // is yesterday (today's MTGJSON snapshot isn't out yet most days), so
     // daysAgo=1 -> last index (yesterday), daysAgo=7 -> 7 entries back, etc.
+    // CLAMP: if the requested daysAgo exceeds available history (e.g. card
+    // only has 12 days of data but we asked for 30), use the OLDEST available
+    // value rather than falling back to today's price. Otherwise short-history
+    // cards short-circuit the delta to 0 and the 30d % collapses.
     const series = getBulkPriceSeries(data.id);
     if (series && series.length > 0) {
-      const idx = series.length - daysAgo;
-      if (idx >= 0 && idx < series.length && series[idx] && series[idx][1] != null) {
+      let idx = series.length - daysAgo;
+      if (idx < 0) idx = 0;
+      if (idx >= series.length) idx = series.length - 1;
+      if (series[idx] && series[idx][1] != null) {
         total += series[idx][1] * count;
         continue;
       }
@@ -1549,25 +1555,37 @@ function setBinderTotalPeriod(d) {
 /* -------------- Binder movers (drill-down) -------------- */
 let binderMoversPeriod = 30;
 function _priceForEntryDaysAgo(parsed, data, daysAgo) {
-  // Mirror calculateBinderTotal's logic but per-card: return the unit price
-  // (already qty-multiplied at the caller) we should use for "daysAgo" back.
+  // Returns { price, actualDaysAgo } where actualDaysAgo is how far back the
+  // returned price truly is (may be less than requested if history is short).
+  // Mirrors calculateBinderTotal's clamping behaviour so the modal's per-card
+  // deltas and the binder-total bt-delta agree.
   if (!data) return null;
-  if (daysAgo === 0) return pickPriceForEntry(parsed, data);
-  // Foils don't have bulk history; flat-line today's foil price.
-  if (parsed.foil) return pickPriceForEntry(parsed, data);
+  if (daysAgo === 0) {
+    const p = pickPriceForEntry(parsed, data);
+    return p == null ? null : { price: p, actualDaysAgo: 0 };
+  }
+  if (parsed.foil) {
+    // Foils don't have bulk history; flat-line today's foil price.
+    const p = pickPriceForEntry(parsed, data);
+    return p == null ? null : { price: p, actualDaysAgo: 0 };
+  }
   const series = getBulkPriceSeries(data.id);
   if (series && series.length > 0) {
-    const idx = series.length - daysAgo;
-    if (idx >= 0 && idx < series.length && series[idx] && series[idx][1] != null) {
-      return series[idx][1];
+    let idx = series.length - daysAgo;
+    if (idx < 0) idx = 0;
+    if (idx >= series.length) idx = series.length - 1;
+    if (series[idx] && series[idx][1] != null) {
+      // actualDaysAgo = series.length - idx (entries-from-end is days-from-today)
+      return { price: series[idx][1], actualDaysAgo: series.length - idx };
     }
   }
-  // Fallback: today's nonfoil price (flat - no historical data for cheap cards)
-  return pickPriceForEntry(parsed, data);
+  // Fallback: no usable bulk data; use today's nonfoil price flat (delta=0).
+  const p = pickPriceForEntry(parsed, data);
+  return p == null ? null : { price: p, actualDaysAgo: 0 };
 }
 function calculateBinderMovers(daysAgo) {
   // Return [{entry, name, set, num, img, qty, unitNow, unitPast, deltaTotal,
-  //          pct, hasHistory}, ...] sorted by absolute dollar delta desc.
+  //          pct, hasHistory, actualDaysAgo}, ...] sorted by abs $ delta desc.
   const list = loadWatchlist();
   const rows = [];
   for (const entry of list) {
@@ -1577,24 +1595,19 @@ function calculateBinderMovers(daysAgo) {
     if (!data || !data.id) continue;
     const qty = parsed.count || 1;
     const unitNow  = pickPriceForEntry(parsed, data);
-    const unitPast = _priceForEntryDaysAgo(parsed, data, daysAgo);
-    if (unitNow == null || unitPast == null) continue;
-    // hasHistory = we actually pulled from the bulk series (not just today flat).
-    let hasHistory = false;
-    if (!parsed.foil) {
-      const s = getBulkPriceSeries(data.id);
-      if (s && s.length > 0) {
-        const idx = s.length - daysAgo;
-        if (idx >= 0 && idx < s.length && s[idx] && s[idx][1] != null) hasHistory = true;
-      }
-    }
+    const pastInfo = _priceForEntryDaysAgo(parsed, data, daysAgo);
+    if (unitNow == null || !pastInfo) continue;
+    const unitPast = pastInfo.price;
+    const actualDaysAgo = pastInfo.actualDaysAgo;
+    // hasHistory: pastInfo came from bulk series, not today-fallback.
+    const hasHistory = !parsed.foil && actualDaysAgo > 0;
     const deltaTotal = (unitNow - unitPast) * qty;
     const pct = unitPast > 0 ? (unitNow - unitPast) / unitPast : 0;
     rows.push({
       entry, name: data.name, set: data.set,
       num: data.collector_number, img: data.img,
       qty, foil: !!parsed.foil,
-      unitNow, unitPast, deltaTotal, pct, hasHistory,
+      unitNow, unitPast, deltaTotal, pct, hasHistory, actualDaysAgo,
     });
   }
   rows.sort((a, b) => Math.abs(b.deltaTotal) - Math.abs(a.deltaTotal));
@@ -1622,18 +1635,23 @@ function renderBinderMovers() {
   const sign = net >= 0 ? '+' : '-';
   netEl.textContent = `${sign}${fmt.format(Math.abs(net))}`;
   netEl.style.color = net >= 0 ? '#5dd39e' : '#ef6f6c';
-  const movedCount = rows.filter(r => Math.abs(r.deltaTotal) >= 0.005).length;
-  const noHistCount = rows.filter(r => !r.hasHistory).length;
+  const noHistCount = rows.filter(r => !r.hasHistory && !r.foil).length;
+  const truncCount = rows.filter(r => r.hasHistory && r.actualDaysAgo < binderMoversPeriod).length;
   metaEl.textContent = `${rows.length} card${rows.length===1?'':'s'}` +
-    (noHistCount ? ` · ${noHistCount} flat-priced (no bulk history)` : '');
+    (noHistCount ? ` · ${noHistCount} flat-priced (no bulk history)` : '') +
+    (truncCount  ? ` · ${truncCount} truncated to shorter window` : '');
   // Build rows
   const buf = [];
   for (const r of rows) {
     const cls = r.deltaTotal >= 0 ? 'pos' : 'neg';
     const dsign = r.deltaTotal >= 0 ? '+' : '-';
     const psign = r.pct >= 0 ? '+' : '-';
-    const flat = !r.hasHistory && !r.foil
-      ? ` <span style="color:#666; font-size:.7rem;">(no history)</span>` : '';
+    let flat = '';
+    if (!r.hasHistory && !r.foil) {
+      flat = ` <span style="color:#666; font-size:.7rem;">(no history)</span>`;
+    } else if (r.hasHistory && r.actualDaysAgo < binderMoversPeriod) {
+      flat = ` <span style="color:#888; font-size:.7rem;">(${r.actualDaysAgo}d)</span>`;
+    }
     const foilTag = r.foil
       ? ` <span style="color:#c9a227; font-size:.65rem; font-weight:700;">FOIL</span>` : '';
     const qtyTag  = r.qty > 1

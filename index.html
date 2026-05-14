@@ -1105,21 +1105,53 @@ function loadBinderBulkPrices() {
     .catch(() => { _binderBulkPrices = { cards: {} }; return _binderBulkPrices; });
   return _binderBulkPricesPromise;
 }
-function getBulkPriceSeries(scryfallId) {
+function getBulkPriceSeries(scryfallId, finishKey) {
+  // finishKey: 'n' (normal, default), 'f' (foil), 'e' (etched). For v1 files
+  // there's only the nonfoil series (the value is an array directly).
   if (!_binderBulkPrices || !_binderBulkPrices.cards) return null;
-  const arr = _binderBulkPrices.cards[scryfallId];
+  const card = _binderBulkPrices.cards[scryfallId];
+  if (!card) return null;
+  let arr = null;
+  if (Array.isArray(card)) {
+    // v1 format: cards[id] is the nonfoil array.
+    if (!finishKey || finishKey === 'n') arr = card;
+  } else {
+    // v2 format: cards[id] is {n:[...], f:[...], e:[...]}.
+    arr = card[finishKey || 'n'] || null;
+  }
   if (!arr || !arr.length) return null;
   const startStr = _binderBulkPrices.start;
   if (!startStr) return null;
-  const out = [];
   const startMs = Date.parse(startStr);
   if (isNaN(startMs)) return null;
+  const out = [];
   for (let i = 0; i < arr.length; i++) {
     if (arr[i] == null) continue;
     const d = new Date(startMs + i * 86400000);
     out.push([d.toISOString().slice(0, 10), arr[i]]);
   }
   return out.length ? out : null;
+}
+function pickFinishKey(parsed, data) {
+  // Decide which bulk-price finish series matches this watchlist entry,
+  // mirroring pickPriceForEntry's preference order. Returns one of 'n','f','e'
+  // or null if no series is available.
+  if (!_binderBulkPrices || !_binderBulkPrices.cards) return null;
+  const card = _binderBulkPrices.cards[data && data.id];
+  if (!card) return null;
+  const has = k => Array.isArray(card)
+    ? (k === 'n' && card.length > 0)
+    : (card[k] && card[k].some(p => p != null));
+  if (parsed.foil) {
+    if (has('e')) return 'e';
+    if (has('f')) return 'f';
+    if (has('n')) return 'n';
+  } else {
+    if (has('n')) return 'n';
+    if (has('f')) return 'f';
+    if (has('e')) return 'e';
+  }
+  return null;
 }
 function injectBinderIntoHistory(data) {
   // Build a HISTORY[id] entry on the fly so the existing detail view (chart,
@@ -1130,7 +1162,11 @@ function injectBinderIntoHistory(data) {
   // Prefer the bulk price file (30 days from MTGJSON) when available so day-1
   // visitors see real charts instead of single dots. Merge any locally-recorded
   // future days on top so today's price (newer than the bulk file) still shows.
-  const bulkSeries = getBulkPriceSeries(data.id);
+  // Pick whichever finish has data; prefer nonfoil so most cards show
+  // nonfoil charts in the detail view. For foil-only printings (no nonfoil
+  // price), this falls through to foil/etched so the chart isn't empty.
+  const bulkFinish = pickFinishKey({foil: data.price_usd == null}, data);
+  const bulkSeries = getBulkPriceSeries(data.id, bulkFinish);
   let series = bulkSeries ? bulkSeries.slice() : recorded.slice();
   if (bulkSeries && recorded.length) {
     // Append any localStorage-recorded entries that are newer than the
@@ -1420,22 +1456,17 @@ function calculateBinderTotal(daysAgo) {
       if (todayPrice != null) total += todayPrice * count;
       continue;
     }
-    // Foils don't have historical bulk data, so use today's foil price for
-    // historical totals too. Acceptable approximation - foil prices typically
-    // track nonfoil with a multiplier and we want the chart to reflect today's
-    // composition.
-    if (parsed.foil) {
-      if (todayPrice != null) total += todayPrice * count;
-      continue;
-    }
-    // Nonfoil: pull from the bulk price history. The bulk file's last entry
-    // is yesterday (today's MTGJSON snapshot isn't out yet most days), so
+    // Pull from the bulk price history. The bulk file's last entry is
+    // yesterday (today's MTGJSON snapshot isn't out yet most days), so
     // daysAgo=1 -> last index (yesterday), daysAgo=7 -> 7 entries back, etc.
     // CLAMP: if the requested daysAgo exceeds available history (e.g. card
     // only has 12 days of data but we asked for 30), use the OLDEST available
     // value rather than falling back to today's price. Otherwise short-history
     // cards short-circuit the delta to 0 and the 30d % collapses.
-    const series = getBulkPriceSeries(data.id);
+    // The finish key (n/f/e) matches the entry's foil flag and falls back
+    // when a printing is foil-only or nonfoil-only.
+    const fkey  = pickFinishKey(parsed, data);
+    const series = fkey ? getBulkPriceSeries(data.id, fkey) : null;
     if (series && series.length > 0) {
       let idx = series.length - daysAgo;
       if (idx < 0) idx = 0;
@@ -1464,20 +1495,27 @@ function calculateBinderTotalHistory() {
     const data = binderCacheGet(entry);
     if (!data || !data.id) continue;
     const qty = parsed.count || 1;
-    if (parsed.foil) {
-      // Foil cards don't have historical bulk data; plot today's foil price
-      // flat across the whole window.
-      const todayPrice = pickPriceForEntry(parsed, data);
-      if (todayPrice == null) continue;
-      for (let i = 0; i < days; i++) { totals[i] += todayPrice * qty; counts[i]++; }
-      continue;
+    // Pick the bulk-history finish that matches this entry. Foil entries
+    // walk the foil/etched series; nonfoil entries walk the normal series.
+    // pickFinishKey also handles the foil-only printing case by falling back.
+    const fkey = pickFinishKey(parsed, data);
+    const card = _binderBulkPrices.cards[data.id];
+    let arr = null;
+    if (card && fkey) {
+      if (Array.isArray(card)) {
+        // v1: only a nonfoil series exists.
+        if (fkey === 'n') arr = card;
+      } else {
+        arr = card[fkey] || null;
+      }
     }
-    const arr = _binderBulkPrices.cards[data.id];
     if (!arr) {
-      // No bulk history (price under $2 floor, or card missing); use today's
-      // nonfoil price flat for the window.
-      if (data.price_usd != null) {
-        for (let i = 0; i < days; i++) { totals[i] += data.price_usd * qty; counts[i]++; }
+      // No bulk history for this finish (price under $2 floor, missing card,
+      // or foil printing absent from MTGJSON); use today's price flat across
+      // the window so the entry still contributes to the chart line.
+      const todayPrice = pickPriceForEntry(parsed, data);
+      if (todayPrice != null) {
+        for (let i = 0; i < days; i++) { totals[i] += todayPrice * qty; counts[i]++; }
       }
       continue;
     }
@@ -1572,12 +1610,11 @@ function _priceForEntryDaysAgo(parsed, data, daysAgo) {
     const p = pickPriceForEntry(parsed, data);
     return p == null ? null : { price: p, actualDaysAgo: 0 };
   }
-  if (parsed.foil) {
-    // Foils don't have bulk history; flat-line today's foil price.
-    const p = pickPriceForEntry(parsed, data);
-    return p == null ? null : { price: p, actualDaysAgo: 0 };
-  }
-  const series = getBulkPriceSeries(data.id);
+  // Foil entries walk the foil/etched series; nonfoil walks normal. The
+  // finish picker also handles foil-only printings (Mystical Archive etc.)
+  // where nonfoil series doesn't exist by falling through to foil.
+  const fkey  = pickFinishKey(parsed, data);
+  const series = fkey ? getBulkPriceSeries(data.id, fkey) : null;
   if (series && series.length > 0) {
     let idx = series.length - daysAgo;
     if (idx < 0) idx = 0;
@@ -1587,7 +1624,7 @@ function _priceForEntryDaysAgo(parsed, data, daysAgo) {
       return { price: series[idx][1], actualDaysAgo: series.length - idx };
     }
   }
-  // Fallback: no usable bulk data; use today's nonfoil price flat (delta=0).
+  // Fallback: no usable bulk data; use today's price flat (delta=0).
   const p = pickPriceForEntry(parsed, data);
   return p == null ? null : { price: p, actualDaysAgo: 0 };
 }

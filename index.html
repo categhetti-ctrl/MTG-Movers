@@ -1396,7 +1396,15 @@ function pickPriceForEntry(parsed, data) {
     if (data.price_usd_etched != null) return data.price_usd_etched;
     if (data.price_usd_foil   != null) return data.price_usd_foil;
   }
-  return data.price_usd;
+  // Nonfoil entry: prefer regular USD, but fall back to foil/etched when the
+  // printing is foil-only (e.g. SOA Silver Scroll Foils, Mystical Archive
+  // etched variants, some Secret Lair drops). Without this fallback those
+  // printings show '—' because data.price_usd is null even though the card
+  // has a real market price - just only on the foil side.
+  if (data.price_usd != null) return data.price_usd;
+  if (data.price_usd_foil   != null) return data.price_usd_foil;
+  if (data.price_usd_etched != null) return data.price_usd_etched;
+  return null;
 }
 function calculateBinderTotal(daysAgo) {
   const list = loadWatchlist();

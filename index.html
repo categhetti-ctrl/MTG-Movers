@@ -1388,13 +1388,27 @@ function binderApplyFilterSort(list) {
     filtered = filtered.filter(e => binderEntryColorMatches(e, binderColorFilter));
   }
   if (binderSortBy !== 'custom') {
-    const enriched = filtered.map(e => ({e, d: binderCacheGet(e)}));
+    // Use pickPriceForEntry so foil-only printings (whose nonfoil price is
+    // null but foil/etched is set) sort by their real market value, not 0.
+    // Multiply by quantity so a 4-of of a $5 card outranks a 1-of of a $10.
+    const entryValue = (entry, data) => {
+      if (!data) return null;
+      const parsed = parseWatchlistEntry(entry) || {};
+      const unit   = pickPriceForEntry(parsed, data);
+      if (unit == null) return null;
+      const qty = parsed.count || 1;
+      return unit * qty;
+    };
+    const enriched = filtered.map(e => {
+      const d = binderCacheGet(e);
+      return {e, d, v: entryValue(e, d)};
+    });
     if (binderSortBy === 'highest') {
-      enriched.sort((a,b) => ((b.d && b.d.price_usd) || 0) - ((a.d && a.d.price_usd) || 0));
+      enriched.sort((a,b) => (b.v == null ? -1 : b.v) - (a.v == null ? -1 : a.v));
     } else if (binderSortBy === 'lowest') {
       enriched.sort((a,b) => {
-        const ap = (a.d && a.d.price_usd != null) ? a.d.price_usd : Infinity;
-        const bp = (b.d && b.d.price_usd != null) ? b.d.price_usd : Infinity;
+        const ap = a.v == null ? Infinity : a.v;
+        const bp = b.v == null ? Infinity : b.v;
         return ap - bp;
       });
     } else if (binderSortBy === 'alpha') {

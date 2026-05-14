@@ -1384,11 +1384,13 @@ function calculateBinderTotal(daysAgo) {
       if (todayPrice != null) total += todayPrice * count;
       continue;
     }
-    // Nonfoil: pull from the bulk price history.
+    // Nonfoil: pull from the bulk price history. The bulk file's last entry
+    // is yesterday (today's MTGJSON snapshot isn't out yet most days), so
+    // daysAgo=1 -> last index (yesterday), daysAgo=7 -> 7 entries back, etc.
     const series = getBulkPriceSeries(data.id);
     if (series && series.length > 0) {
-      const idx = series.length - 1 - daysAgo;
-      if (idx >= 0 && series[idx] && series[idx][1] != null) {
+      const idx = series.length - daysAgo;
+      if (idx >= 0 && idx < series.length && series[idx] && series[idx][1] != null) {
         total += series[idx][1] * count;
         continue;
       }
@@ -1437,6 +1439,17 @@ function calculateBinderTotalHistory() {
   const out = [];
   for (let i = 0; i < days; i++) {
     if (counts[i] > 0) out.push([new Date(startMs + i * 86400000).toISOString().slice(0, 10), totals[i]]);
+  }
+  // Append today's live total so the chart's rightmost point matches the
+  // displayed total exactly (Scryfall live prices, not yesterday's snapshot).
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayTotal = calculateBinderTotal(0);
+  if (todayTotal > 0) {
+    if (out.length && out[out.length - 1][0] === todayStr) {
+      out[out.length - 1][1] = todayTotal;
+    } else {
+      out.push([todayStr, todayTotal]);
+    }
   }
   return out;
 }

@@ -278,6 +278,9 @@
     .binder-slot.loading::after { content:""; position:absolute; inset:35%; border:3px solid #2a2a2a; border-top-color:#9ecbff; border-radius:50%; animation: spin 1s linear infinite; z-index:1;}
     @keyframes spin { to { transform: rotate(360deg); } }
     .binder-slot .err-label { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:.5rem; text-align:center; font-size:.65rem; color:#ef6f6c; z-index:4;}
+    /* Quantity (e.g. "×4") and foil indicator badges */
+    .binder-slot .qty-badge { position:absolute; top:6px; left:6px; background:rgba(0,0,0,.85); border:1px solid #2a2a2a; border-radius:4px; padding:1px 5px; font-size:.7rem; color:#fff; font-weight:700; z-index:5; line-height:1.3; }
+    .binder-slot .foil-badge { position:absolute; top:6px; right:6px; background:linear-gradient(135deg, #c08bff, #66c8ff, #ffd86b); color:#000; border-radius:4px; padding:1px 5px; font-size:.6rem; font-weight:800; z-index:5; letter-spacing:.05em; box-shadow:0 1px 2px rgba(0,0,0,.5); }
     /* Click animation - card slides up out of its sleeve like a top-loaded
        binder page. Lifts, tilts slightly, then translates upward beyond the
        slot's height, leaving the empty slot visible underneath. */
@@ -906,23 +909,25 @@ function loadWatchlist() {
 }
 function parseWatchlistEntry(line) {
   // Supported entry formats:
-  //   "Boseiju"                              -> {name, set:null, num:null}
-  //   "Force of Will (MH3)"                  -> {name, set:'mh3', num:null}
-  //   "Force of Will (STA-12)"               -> {name, set:'sta', num:'12'}
-  //   "Force of Will (sta 12)"               -> {name, set:'sta', num:'12'}
-  //   "Telepathy (9ED) 101★"                 -> {name, set:'9ed', num:'101★'}   (Arena/Moxfield)
-  //   "Cultivate (PLST) C18-138"             -> {name, set:'plst', num:'c18-138'}
+  //   "Boseiju"                              -> name only
+  //   "Force of Will (MH3)"                  -> name + set
+  //   "Force of Will (STA-12)"               -> name + set + num
+  //   "Cultivate (PLST) C18-138"             -> Arena/Moxfield: name + set + outer num
+  //   "4 Sol Ring (CMM) 287"                 -> quantity 4
+  //   "Sol Ring (CMM) 287 *F*"               -> foil (any *X* suffix flags foil)
+  //   "2 Sol Ring (CMM) 287 *F*"             -> 2 foils
   const s = (line || '').trim();
   if (!s) return null;
-  // \S+ captures any non-whitespace token after the parens, which handles
-  // collector numbers with hyphens, stars, daggers, foil markers, etc.
-  const m = s.match(/^(.+?)(?:\s*\(([A-Za-z0-9]+)(?:[-\s]+(\S+))?\)\s*(\S+)?)?\s*$/);
-  if (!m) return {name: s.toLowerCase(), set: null, num: null};
-  const num = m[3] || m[4] || null;
+  // Captures:  1=count  2=name  3=set  4=num-inside-parens  5=num-outside-parens  6=foil-marker
+  const m = s.match(/^(?:(\d+)\s*x?\s+)?(.+?)(?:\s*\(([A-Za-z0-9]+)(?:[-\s]+(\S+))?\)\s*([^\s*]+)?)?(?:\s*\*([A-Za-z]+)\*)?\s*$/);
+  if (!m) return {name: s.toLowerCase(), set: null, num: null, count: 1, foil: false};
+  const num = m[4] || m[5] || null;
   return {
-    name: m[1].trim().toLowerCase(),
-    set:  m[2] ? m[2].toLowerCase() : null,
-    num:  num ? num.toLowerCase() : null,
+    name:  m[2].trim().toLowerCase(),
+    set:   m[3] ? m[3].toLowerCase() : null,
+    num:   num ? num.toLowerCase() : null,
+    count: m[1] ? Math.max(1, parseInt(m[1], 10)) : 1,
+    foil:  !!(m[6] && /^(f|foil|fe|fp|e|etch|etched)$/i.test(m[6])),
   };
 }
 function watchlistEntries() {
@@ -965,12 +970,18 @@ function importDeckList() {
     if (!line) continue;
     if (line.startsWith('//') || line.startsWith('#')) continue;
     if (/^(sideboard|maybeboard|commander|companion|deck|main|mainboard)\b/i.test(line)) { skipped++; continue; }
-    // Drop foil/etched markers (TappedOut style: *F* *E*)
+    // Capture (and remove) foil/etched marker so the count-and-name parser
+    // can match. We re-append the marker to the cleaned entry.
+    let foilSuffix = '';
+    const foilM = line.match(/\*([A-Za-z]+)\*/);
+    if (foilM && /^(f|foil|fe|fp|e|etch|etched)$/i.test(foilM[1])) {
+      foilSuffix = ' *F*';
+    }
     line = line.replace(/\s*\*[A-Za-z]+\*\s*/g, ' ').trim();
     if (!line) continue;
     const m = line.match(re);
     if (!m) continue;
-    const count      = m[1];
+    const count      = m[1] ? parseInt(m[1], 10) : 1;
     const name       = (m[2] || '').trim();
     const setRaw     = m[3];
     const numInside  = m[4];
@@ -983,7 +994,10 @@ function importDeckList() {
       entry += num ? ` (${set}-${num})` : ` (${set})`;
       withSet++;
     }
-    if (count) stripped++;
+    // Preserve quantities > 1 by prepending the count.
+    if (count > 1) entry = `${count} ${entry}`;
+    entry += foilSuffix;
+    if (m[1]) stripped++;
     const key = entry.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
@@ -1233,6 +1247,7 @@ async function binderFetchEntry(entryStr) {
         img,
         price_usd: c.prices && c.prices.usd ? parseFloat(c.prices.usd) : null,
         price_usd_foil: c.prices && c.prices.usd_foil ? parseFloat(c.prices.usd_foil) : null,
+        price_usd_etched: c.prices && c.prices.usd_etched ? parseFloat(c.prices.usd_etched) : null,
         purchase_uri: (c.purchase_uris && c.purchase_uris.tcgplayer) || '',
         color_identity: Array.isArray(c.color_identity) ? c.color_identity.slice() : [],
         type_line: c.type_line || ''
@@ -1338,27 +1353,47 @@ async function prefetchAllBinderData() {
   }
 }
 let binderTotalPeriod = 30;
+function pickPriceForEntry(parsed, data) {
+  // Today's price honoring foil/etched marker on the watchlist entry.
+  if (!data) return null;
+  if (parsed.foil) {
+    if (data.price_usd_etched != null) return data.price_usd_etched;
+    if (data.price_usd_foil   != null) return data.price_usd_foil;
+  }
+  return data.price_usd;
+}
 function calculateBinderTotal(daysAgo) {
   const list = loadWatchlist();
   let total = 0;
   for (const entry of list) {
+    const parsed = parseWatchlistEntry(entry);
+    if (!parsed) continue;
     const data = binderCacheGet(entry);
     if (!data || !data.id) continue;
+    const count = parsed.count || 1;
+    const todayPrice = pickPriceForEntry(parsed, data);
     if (daysAgo === 0) {
-      if (data.price_usd != null) total += data.price_usd;
+      if (todayPrice != null) total += todayPrice * count;
       continue;
     }
-    // Use bulk price history (prices.json) when available.
+    // Foils don't have historical bulk data, so use today's foil price for
+    // historical totals too. Acceptable approximation - foil prices typically
+    // track nonfoil with a multiplier and we want the chart to reflect today's
+    // composition.
+    if (parsed.foil) {
+      if (todayPrice != null) total += todayPrice * count;
+      continue;
+    }
+    // Nonfoil: pull from the bulk price history.
     const series = getBulkPriceSeries(data.id);
     if (series && series.length > 0) {
       const idx = series.length - 1 - daysAgo;
       if (idx >= 0 && series[idx] && series[idx][1] != null) {
-        total += series[idx][1];
+        total += series[idx][1] * count;
         continue;
       }
     }
-    // Fallback: use current cached price (no history available).
-    if (data.price_usd != null) total += data.price_usd;
+    if (todayPrice != null) total += todayPrice * count;  // fallback
   }
   return total;
 }
@@ -1372,12 +1407,30 @@ function calculateBinderTotalHistory() {
   const totals = new Array(days).fill(0);
   const counts = new Array(days).fill(0);
   for (const entry of list) {
+    const parsed = parseWatchlistEntry(entry);
+    if (!parsed) continue;
     const data = binderCacheGet(entry);
     if (!data || !data.id) continue;
+    const qty = parsed.count || 1;
+    if (parsed.foil) {
+      // Foil cards don't have historical bulk data; plot today's foil price
+      // flat across the whole window.
+      const todayPrice = pickPriceForEntry(parsed, data);
+      if (todayPrice == null) continue;
+      for (let i = 0; i < days; i++) { totals[i] += todayPrice * qty; counts[i]++; }
+      continue;
+    }
     const arr = _binderBulkPrices.cards[data.id];
-    if (!arr) continue;
+    if (!arr) {
+      // No bulk history (price under $2 floor, or card missing); use today's
+      // nonfoil price flat for the window.
+      if (data.price_usd != null) {
+        for (let i = 0; i < days; i++) { totals[i] += data.price_usd * qty; counts[i]++; }
+      }
+      continue;
+    }
     for (let i = 0; i < days && i < arr.length; i++) {
-      if (arr[i] != null) { totals[i] += arr[i]; counts[i]++; }
+      if (arr[i] != null) { totals[i] += arr[i] * qty; counts[i]++; }
     }
   }
   const startMs = Date.parse(start);
@@ -1519,9 +1572,18 @@ function renderBinder() {
         return;
       }
       slot.classList.add('filled');
-      const priceText = data.price_usd != null ? `$${data.price_usd.toFixed(2)}` : '—';
+      const parsedEntry = parseWatchlistEntry(entry) || {};
+      const isFoil = parsedEntry.foil;
+      const qty = parsedEntry.count || 1;
+      const unitPrice = pickPriceForEntry(parsedEntry, data);
+      const priceText = unitPrice != null
+        ? (qty > 1 ? `$${(unitPrice * qty).toFixed(2)}` : `$${unitPrice.toFixed(2)}`)
+        : '—';
+      const qtyBadge  = qty > 1 ? `<span class="qty-badge">×${qty}</span>` : '';
+      const foilBadge = isFoil  ? `<span class="foil-badge">FOIL</span>` : '';
       slot.innerHTML =
         `<span class="gloss-streak"></span>` +
+        qtyBadge + foilBadge +
         `<div class="binder-card">` +
           `<img src="${data.img}" alt="${escapeHtml(data.name)}" loading="lazy" />` +
           `<div class="price-overlay">` +

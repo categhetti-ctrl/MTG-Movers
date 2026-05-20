@@ -874,6 +874,11 @@ function buildLinks(card) {
   out.push(`<a href="${ckUrl}" target="_blank" rel="noopener">Search on CardKingdom &rarr;</a>`);
   const cmUrl = `https://www.cardmarket.com/en/Magic/Products/Search?searchString=${encodeURIComponent(card.name)}`;
   out.push(`<a href="${cmUrl}" target="_blank" rel="noopener">Search on Cardmarket &rarr;</a>`);
+  if (card.set_code && card.collector_no) {
+    const mpSlug = (card.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    const mpUrl = `https://manapool.com/card/${(card.set_code || '').toLowerCase()}/${encodeURIComponent(card.collector_no)}/${mpSlug}`;
+    out.push(`<a href="${mpUrl}" target="_blank" rel="noopener">View on Mana Pool &rarr;</a>`);
+  }
   const sfUrl = `https://scryfall.com/search?q=${encodeURIComponent('!"'+card.name+'" set:'+(card.set_code||''))}`;
   out.push(`<a href="${sfUrl}" target="_blank" rel="noopener">View on Scryfall &rarr;</a>`);
   return out.join('');

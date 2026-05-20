@@ -9,12 +9,12 @@
   <style>
     body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; background:#000; color:#fff; }
     a { color:#9ecbff; }
-    header { padding: 1rem 1.5rem; background:#0d0d0d; border-bottom:1px solid #2a2a2a; display:flex; align-items:center; justify-content:center; gap:1.5rem; flex-wrap:wrap;}
+    header { padding: clamp(0.55rem, 2vw, 1rem) clamp(0.75rem, 3vw, 1.5rem); background:#0d0d0d; border-bottom:1px solid #2a2a2a; display:flex; align-items:center; justify-content:center; gap:1.5rem; flex-wrap:wrap;}
     .footer-meta { color:#fff; font-size:.85rem; margin-bottom:.6rem;}
-    header h1 { font-size: 1.1rem; margin: 0; }
+    header h1 { font-size: clamp(1rem, 2.5vw, 1.15rem); margin: 0; }
     header h1 a { color:#fff; text-decoration:none; }
     header .meta { color:#aaa; font-size:.85rem; }
-    main { padding: 1.25rem 1.5rem; max-width: 1280px; margin: 0 auto; }
+    main { padding: clamp(0.75rem, 2.5vw, 1.25rem) clamp(0.75rem, 3vw, 1.5rem); max-width: 1280px; margin: 0 auto; }
     .toolbar { display:flex; gap:.75rem; margin-bottom:1rem; flex-wrap:wrap; align-items:center;}
     .toolbar select, .toolbar input { background:#141414; color:#fff; border:1px solid #2a2a2a; border-radius:6px; padding:.4rem .6rem;}
     table { width: 100%; border-collapse: collapse; font-size:.92rem; }
@@ -25,9 +25,9 @@
     tr.row.down { background: rgba(239, 111, 108, 0.12); }
     tr.row.up:hover   { background: rgba(93, 211, 158, 0.22); }
     tr.row.down:hover { background: rgba(239, 111, 108, 0.22); }
-    .logo { display:block; position:relative; width:100%; height:108px; overflow:hidden; flex-shrink:1;}
+    .logo { display:block; position:relative; width:100%; height:clamp(60px, 11vw, 108px); overflow:hidden; flex-shrink:1;}
     .truck-anim { position:absolute; height:100%; display:flex; align-items:center; animation: truck-drive 14s linear infinite; will-change:left;}
-    .truck-anim svg { display:block; height:108px; width:auto;}
+    .truck-anim svg { display:block; height:clamp(60px, 11vw, 108px); width:auto;}
     @keyframes truck-drive { 0% { left:100%; } 100% { left:-360px; } }
     .falling-card { position:absolute; width:22px; height:30px; background:#1a1a1a center/cover no-repeat; border:1px solid #1a1a1a; border-radius:2px; box-shadow:0 1px 3px rgba(0,0,0,.6); opacity:0; will-change:transform,opacity;}
     @keyframes card-fall { 0% { transform:translate(0,0) rotate(0deg); opacity:0; } 12% { transform:translate(6px,6px) rotate(-18deg); opacity:1; } 100% { transform:translate(46px,90px) rotate(200deg); opacity:0; } }
@@ -36,8 +36,6 @@
       .falling-card { animation:none; opacity:0; }
     }
     @media (max-width: 768px) {
-      .logo { height:62px; }
-      .truck-anim svg { height:62px; }
       .falling-card { width:14px; height:19px; }
       /* Hide Set (4), Price (6), Prev (7) columns on mobile so the table
          fits the natural viewport without horizontal overflow. */
@@ -114,10 +112,10 @@
     .binder-spread {
       display:grid;
       grid-template-columns: 1fr 1fr;
-      gap: 1.5rem;
+      gap: clamp(0.6rem, 2.5vw, 1.5rem);
       position:relative;
       perspective: 1800px;
-      max-width: 1100px;
+      max-width: min(1100px, 100%);
       margin: 0 auto;
     }
     /* Spine - a darker gutter where the pages meet */
@@ -139,12 +137,12 @@
     .binder-page {
       display:grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 0.6rem 0.55rem;
+      gap: clamp(0.3rem, 1.2vw, 0.6rem) clamp(0.3rem, 1.1vw, 0.55rem);
       background:
         radial-gradient(ellipse at center,
           var(--page, #1a1a1a) 0%,
           color-mix(in srgb, var(--page, #1a1a1a), black 55%) 80%);
-      padding: 0.95rem;
+      padding: clamp(0.5rem, 1.8vw, 0.95rem);
       border-radius:10px;
       box-shadow:
         inset 0 0 0 1px rgba(0,0,0,.55),
@@ -170,7 +168,7 @@
     .binder-slot {
       position:relative;
       aspect-ratio: 5/7;
-      max-width: 200px;
+      max-width: clamp(200px, 24vw, 250px);
       width: 100%;
       margin: 0 auto;
       background:#000;
@@ -273,8 +271,8 @@
       display:flex; justify-content:space-between; align-items:baseline; gap:.3rem;
       z-index:4;
     }
-    .binder-slot .price-usd { font-size:.85rem; font-weight:700; color:#5dd39e;}
-    .binder-slot .set-tag { font-size:.6rem; color:#bbb; text-transform:uppercase; letter-spacing:.05em;}
+    .binder-slot .price-usd { font-size:clamp(.72rem, 1.5vw, .9rem); font-weight:700; color:#5dd39e;}
+    .binder-slot .set-tag { font-size:clamp(.52rem, 1vw, .64rem); color:#bbb; text-transform:uppercase; letter-spacing:.05em;}
     .binder-slot.loading::after { content:""; position:absolute; inset:35%; border:3px solid #2a2a2a; border-top-color:#9ecbff; border-radius:50%; animation: spin 1s linear infinite; z-index:1;}
     @keyframes spin { to { transform: rotate(360deg); } }
     .binder-slot .err-label { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:.5rem; text-align:center; font-size:.65rem; color:#ef6f6c; z-index:4;}
@@ -311,7 +309,7 @@
     @media (prefers-reduced-motion: reduce) {
       .binder-slot.popping .binder-card { animation:none; transform: translateY(-12px) scale(1.04); }
     }
-    .binder-controls { display:flex; align-items:center; justify-content:center; gap:1rem; margin-top:1.25rem; flex-wrap:wrap; }
+    .binder-controls { display:flex; align-items:center; justify-content:center; gap:clamp(.5rem, 2vw, 1rem); margin-top:clamp(.8rem, 2.5vw, 1.25rem); flex-wrap:wrap; }
     .binder-controls button { background:#141414; color:#fff; border:1px solid #2a2a2a; border-radius:6px; padding:.55rem 1rem; cursor:pointer; font-size:.9rem;}
     .binder-controls button:hover:not(:disabled) { background:#1f1f1f;}
     .binder-controls button:disabled { opacity:.4; cursor:not-allowed;}
@@ -319,10 +317,10 @@
     .binder-empty { text-align:center; padding:3rem 1rem; color:#888;}
     .binder-empty a { color:#9ecbff;}
     /* Binder total value panel (sits between the header and the binder). */
-    .binder-total { background:#0d0d0d; border:1px solid #2a2a2a; border-radius:10px; padding:1rem 1.25rem; margin: 1rem auto; max-width: 760px; display:flex; justify-content:space-between; align-items:center; gap:1.5rem; flex-wrap:wrap;}
+    .binder-total { background:#0d0d0d; border:1px solid #2a2a2a; border-radius:10px; padding:clamp(.75rem, 2vw, 1rem) clamp(.85rem, 2.5vw, 1.25rem); margin: 1rem auto; max-width: min(760px, 100%); display:flex; justify-content:space-between; align-items:center; gap:1.5rem; flex-wrap:wrap;}
     .binder-total .bt-left { display:flex; flex-direction:column; gap:.15rem;}
     .binder-total .bt-label { font-size:.68rem; color:#aaa; text-transform:uppercase; letter-spacing:.07em; font-weight:600;}
-    .binder-total .bt-amount { font-size:1.8rem; font-weight:700; color:#fff; line-height:1.1;}
+    .binder-total .bt-amount { font-size:clamp(1.4rem, 5vw, 1.9rem); font-weight:700; color:#fff; line-height:1.1;}
     .binder-total .bt-right { display:flex; flex-direction:column; align-items:flex-end; gap:.4rem;}
     .binder-total .bt-toggle { display:flex; gap:.3rem;}
     .binder-total .bt-toggle button { background:#141414; border:1px solid #2a2a2a; color:#aaa; padding:.3rem .65rem; border-radius:6px; cursor:pointer; font-size:.78rem;}

@@ -14,7 +14,7 @@
     header h1 { font-size: clamp(1rem, 2.5vw, 1.15rem); margin: 0; }
     header h1 a { color:#fff; text-decoration:none; }
     header .meta { color:#aaa; font-size:.85rem; }
-    main { padding: clamp(0.75rem, 2.5vw, 1.25rem) clamp(0.75rem, 3vw, 1.5rem); max-width: 1280px; margin: 0 auto; }
+    main { padding: clamp(0.75rem, 2.5vw, 1.25rem) clamp(0.75rem, 3vw, 1.5rem); max-width: 1400px; margin: 0 auto; }
     .toolbar { display:flex; gap:.75rem; margin-bottom:1rem; flex-wrap:wrap; align-items:center;}
     .toolbar select, .toolbar input { background:#141414; color:#fff; border:1px solid #2a2a2a; border-radius:6px; padding:.4rem .6rem;}
     table { width: 100%; border-collapse: collapse; font-size:.92rem; }
@@ -115,7 +115,7 @@
       gap: clamp(0.6rem, 2.5vw, 1.5rem);
       position:relative;
       perspective: 1800px;
-      max-width: min(1100px, 100%);
+      max-width: min(1320px, 100%);
       margin: 0 auto;
     }
     /* Spine - a darker gutter where the pages meet */
@@ -159,7 +159,7 @@
       .binder-page { grid-template-columns: repeat(3, 1fr); gap: 0.4rem; padding: 0.6rem; }
       .binder-page-left, .binder-page-right { animation:none; transform:none; }
     }
-    @media (max-width: 480px) {
+    @media (max-width: 360px) {
       .binder-page { grid-template-columns: repeat(2, 1fr); gap: 0.4rem; padding: 0.5rem; }
     }
     @media (prefers-reduced-motion: reduce) {
@@ -168,7 +168,7 @@
     .binder-slot {
       position:relative;
       aspect-ratio: 5/7;
-      max-width: clamp(200px, 24vw, 250px);
+      max-width: clamp(200px, 26vw, 300px);
       width: 100%;
       margin: 0 auto;
       background:#000;

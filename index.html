@@ -588,6 +588,7 @@
       </label>
       <button onclick="openWatchlist()" style="margin-left:1rem">Edit list</button>
       <button onclick="showMissingCards()" title="List watchlist entries Scryfall couldn't match">Find missing</button>
+      <button onclick="copyWatchlistForCollection()" title="Copy your binder list so you can paste it into collection.txt (shrinks prices.json and enables your daily email digest)">Copy for collection.txt</button>
       <button onclick="toggleCustomize()">Customize</button>
     </div>
 
@@ -2371,6 +2372,28 @@ function wlRenderResults(cards) {
         <div class="price">${usd}</div>
       </div>`;
   }).join('');
+}
+function copyWatchlistForCollection() {
+  const list = loadWatchlist();
+  if (!list.length) { flashMsg('Your watchlist is empty - add cards first.'); return; }
+  const text = list.join('\n');
+  const done = () => flashMsg('Copied ' + list.length + ' card' + (list.length === 1 ? '' : 's') + ' - paste into collection.txt');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done).catch(() => _fallbackCopy(text, done));
+  } else {
+    _fallbackCopy(text, done);
+  }
+}
+function _fallbackCopy(text, done) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); done(); }
+  catch (e) { flashMsg('Copy failed - open Edit list and copy the text manually.'); }
+  document.body.removeChild(ta);
 }
 function flashMsg(text) {
   let el = document.getElementById('flash');

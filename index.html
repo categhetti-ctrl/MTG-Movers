@@ -1309,13 +1309,25 @@ function binderCacheGet(key) {
   // Synchronous read from the in-memory mirror (loaded from IndexedDB at
   // startup). All the hot paths - sort, totals, render - call this, so it has
   // to stay synchronous and O(1).
+  //
+  // IDENTITY vs PRICE split: a card's identity (name, set, image, colors,
+  // type) never changes, so we DON'T expire the entry on the price TTL - the
+  // binder renders instantly from cached identity on reopen instead of
+  // blanking out. Only the price freshness is time-bound, tracked separately
+  // by binderPricesStale() so the prefetch knows to refresh prices in the
+  // background without throwing away the identity.
   const e = _binderMemCache.get(key);
   if (!e) return null;
-  if (Date.now() - e.t > BINDER_CACHE_TTL_MS) return null;
-  // Require fields added in newer versions; treat older entries as stale so
+  // Require fields added in newer versions; treat older entries as missing so
   // they get refetched and become filterable (color_identity, type_line).
   if (!e.d || !Array.isArray(e.d.color_identity)) return null;
   return e.d;
+}
+function binderPricesStale(key) {
+  // True if we have no entry, or its prices are older than the price TTL.
+  const e = _binderMemCache.get(key);
+  if (!e || !e.d) return true;
+  return (Date.now() - (e.t || 0)) > BINDER_CACHE_TTL_MS;
 }
 function binderCacheSet(key, data) {
   const e = { d: data, t: Date.now() };
@@ -1488,8 +1500,10 @@ async function batchFetchBinder(entries) {
   return cached;
 }
 async function binderFetchEntry(entryStr) {
+  // Return cached only when prices are still fresh; a price-stale entry falls
+  // through to refetch so its prices update (identity is unchanged).
   const cached = binderCacheGet(entryStr);
-  if (cached) return cached;
+  if (cached && !binderPricesStale(entryStr)) return cached;
   const parsed = parseWatchlistEntry(entryStr);
   if (!parsed) return null;
   const urls = binderScryfallUrls(parsed);
@@ -1586,7 +1600,10 @@ async function prefetchAllBinderData() {
   binderPrefetchInFlight = true;
   try {
     const list = loadWatchlist();
-    let todo = list.filter(e => !binderCacheGet(e));
+    // Fetch entries with no cached identity OR with stale prices. Identity-only
+    // cached cards already rendered instantly; this refreshes their prices in
+    // the background.
+    let todo = list.filter(e => !binderCacheGet(e) || binderPricesStale(e));
     if (!todo.length) return;
     // Fast path: resolve in bulk via /cards/collection (75 per request).
     const got = await batchFetchBinder(todo);

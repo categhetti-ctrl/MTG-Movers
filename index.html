@@ -1182,6 +1182,9 @@ function initBinderStorage() {
       _migrateFromLocalStorage(BINDER_CACHE_KEY, IDB_STORE_CARDS, _binderMemCache);
       _migrateFromLocalStorage(BINDER_HISTORY_KEY, IDB_STORE_HIST, _binderMemHist);
     }
+    // Cards/prices are now in memory. Invalidate any totals or history that
+    // were memoized against the empty pre-hydration cache so they recompute.
+    bumpBinderCompute();
   })();
   return binderStorageReady;
 }

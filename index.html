@@ -1049,6 +1049,7 @@ function importDeckList() {
 function saveWatchlist() {
   const v = document.getElementById('wl-text').value;
   localStorage.setItem(WL_KEY, v);
+  bumpBinderCompute();   // watchlist changed -> totals stale
   updateWatchlistCount();
   closeWatchlist();
   renderList();
@@ -1062,35 +1063,124 @@ function saveWatchlist() {
 // ---- BINDER (browser-side, fetches from Scryfall) ------------------------
 const BINDER_PAGE_SIZE = 18;     // 9 left + 9 right per spread (3x3 each)
 const BINDER_HALF_SIZE = 9;
-const BINDER_CACHE_KEY = 'binder-cache-v1';
-const BINDER_HISTORY_KEY = 'binder-history-v1';
+const BINDER_CACHE_KEY = 'binder-cache-v1';      // legacy localStorage key (migrated)
+const BINDER_HISTORY_KEY = 'binder-history-v1';  // legacy localStorage key (migrated)
 const BINDER_CACHE_TTL_MS = 12 * 3600 * 1000;
 let binderPage = 0;
 let binderColorFilter = 'all';
 let binderSortBy = 'custom';
 let binderPrefetchInFlight = false;
 
-function binderRecordPrice(id, price) {
-  if (!id || price == null || isNaN(price)) return;
+// Memoization version: bumped whenever anything that affects binder totals
+// changes (card data cached, watchlist edited, bulk prices loaded). The
+// expensive total/history calculations cache their result against this
+// version so page turns and period toggles don't re-scan the whole list.
+let _binderComputeVer = 0;
+function bumpBinderCompute() { _binderComputeVer++; }
+const _binderTotalMemo = new Map();   // daysAgo -> {ver, val}
+let _binderHistMemo = null;           // {ver, val}
+
+// ---- Binder persistent storage (IndexedDB + in-memory mirror) ----------
+// localStorage didn't scale: it caps at ~5 MB per origin and the old cache
+// rewrote the ENTIRE blob on every card write, making a big watchlist O(n^2)
+// and silently hitting QuotaExceededError. IndexedDB has no practical cap and
+// supports per-key writes. We mirror both stores into in-memory Maps at
+// startup so the many SYNCHRONOUS read sites (sort, totals, render loops)
+// keep working unchanged; writes update the Map immediately and flush to
+// IndexedDB asynchronously, one key at a time.
+const BINDER_IDB_NAME = 'mtg-binder';
+const BINDER_IDB_VERSION = 1;
+const IDB_STORE_CARDS = 'cards';     // entryStr -> {d: cardData, t: timestamp}
+const IDB_STORE_HIST  = 'history';   // scryfallId -> [[date, price], ...]
+let _binderIDB = null;
+const _binderMemCache = new Map();   // entryStr -> {d, t}
+const _binderMemHist  = new Map();   // id -> [[date, price], ...]
+let binderStorageReady = null;       // Promise; resolves once maps are loaded
+
+function _openBinderIDB() {
+  return new Promise((resolve, reject) => {
+    let req;
+    try { req = indexedDB.open(BINDER_IDB_NAME, BINDER_IDB_VERSION); }
+    catch (e) { reject(e); return; }
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(IDB_STORE_CARDS)) db.createObjectStore(IDB_STORE_CARDS);
+      if (!db.objectStoreNames.contains(IDB_STORE_HIST))  db.createObjectStore(IDB_STORE_HIST);
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror   = () => reject(req.error);
+  });
+}
+function _idbGetAll(db, store) {
+  return new Promise((resolve, reject) => {
+    const out = [];
+    const tx = db.transaction(store, 'readonly');
+    const cur = tx.objectStore(store).openCursor();
+    cur.onsuccess = () => {
+      const c = cur.result;
+      if (c) { out.push([c.key, c.value]); c.continue(); } else resolve(out);
+    };
+    cur.onerror = () => reject(cur.error);
+  });
+}
+function _idbPut(store, key, value) {
+  if (!_binderIDB) return;  // memory-only fallback (IDB unavailable)
   try {
-    const all = JSON.parse(localStorage.getItem(BINDER_HISTORY_KEY) || '{}');
-    const today = new Date().toISOString().slice(0, 10);
-    if (!all[id]) all[id] = [];
-    const last = all[id][all[id].length - 1];
-    if (last && last[0] === today) {
-      last[1] = price;          // overwrite today's price if visited again
-    } else {
-      all[id].push([today, price]);
-    }
-    if (all[id].length > 90) all[id] = all[id].slice(-90);  // 3-month cap
-    localStorage.setItem(BINDER_HISTORY_KEY, JSON.stringify(all));
+    const tx = _binderIDB.transaction(store, 'readwrite');
+    tx.objectStore(store).put(value, key);
   } catch (e) {}
 }
-function binderGetHistory(id) {
+function _migrateFromLocalStorage(lsKey, store, mem) {
   try {
-    const all = JSON.parse(localStorage.getItem(BINDER_HISTORY_KEY) || '{}');
-    return all[id] || [];
-  } catch (e) { return []; }
+    const old = JSON.parse(localStorage.getItem(lsKey) || '{}');
+    let n = 0;
+    for (const k in old) { mem.set(k, old[k]); _idbPut(store, k, old[k]); n++; }
+    if (n) localStorage.removeItem(lsKey);  // free the old blob
+  } catch (e) {}
+}
+function initBinderStorage() {
+  if (binderStorageReady) return binderStorageReady;
+  binderStorageReady = (async () => {
+    try {
+      _binderIDB = await _openBinderIDB();
+      const [cards, hist] = await Promise.all([
+        _idbGetAll(_binderIDB, IDB_STORE_CARDS),
+        _idbGetAll(_binderIDB, IDB_STORE_HIST),
+      ]);
+      for (const [k, v] of cards) _binderMemCache.set(k, v);
+      for (const [k, v] of hist)  _binderMemHist.set(k, v);
+      // One-time import of the old localStorage blobs into IndexedDB.
+      if (!cards.length) _migrateFromLocalStorage(BINDER_CACHE_KEY, IDB_STORE_CARDS, _binderMemCache);
+      if (!hist.length)  _migrateFromLocalStorage(BINDER_HISTORY_KEY, IDB_STORE_HIST, _binderMemHist);
+    } catch (e) {
+      // IndexedDB unavailable (e.g. some private-browsing modes). Fall back to
+      // a memory-only session and still try to seed from localStorage so the
+      // current session behaves; just nothing persists across reloads.
+      _binderIDB = null;
+      _migrateFromLocalStorage(BINDER_CACHE_KEY, IDB_STORE_CARDS, _binderMemCache);
+      _migrateFromLocalStorage(BINDER_HISTORY_KEY, IDB_STORE_HIST, _binderMemHist);
+    }
+  })();
+  return binderStorageReady;
+}
+
+function binderRecordPrice(id, price) {
+  if (!id || price == null || isNaN(price)) return;
+  const today = new Date().toISOString().slice(0, 10);
+  let arr = _binderMemHist.get(id);
+  if (!arr) arr = [];
+  const last = arr[arr.length - 1];
+  if (last && last[0] === today) {
+    last[1] = price;            // overwrite today's price if visited again
+  } else {
+    arr.push([today, price]);
+  }
+  if (arr.length > 90) arr = arr.slice(-90);  // 3-month cap
+  _binderMemHist.set(id, arr);
+  _idbPut(IDB_STORE_HIST, id, arr);
+}
+function binderGetHistory(id) {
+  return _binderMemHist.get(id) || [];
 }
 // Bulk price history file generated by publish_static.py. Fetched once per
 // session and used to seed the chart for binder cards on day 1.
@@ -1101,7 +1191,7 @@ function loadBinderBulkPrices() {
   if (_binderBulkPricesPromise) return _binderBulkPricesPromise;
   _binderBulkPricesPromise = fetch('prices.json')
     .then(r => r.ok ? r.json() : { cards: {} })
-    .then(j => { _binderBulkPrices = j; return j; })
+    .then(j => { _binderBulkPrices = j; bumpBinderCompute(); return j; })
     .catch(() => { _binderBulkPrices = { cards: {} }; return _binderBulkPrices; });
   return _binderBulkPricesPromise;
 }
@@ -1192,23 +1282,22 @@ function injectBinderIntoHistory(data) {
 }
 
 function binderCacheGet(key) {
-  try {
-    const cache = JSON.parse(localStorage.getItem(BINDER_CACHE_KEY) || '{}');
-    const e = cache[key];
-    if (!e) return null;
-    if (Date.now() - e.t > BINDER_CACHE_TTL_MS) return null;
-    // Require fields added in newer versions; treat older entries as stale so
-    // they get refetched and become filterable (color_identity, type_line).
-    if (!e.d || !Array.isArray(e.d.color_identity)) return null;
-    return e.d;
-  } catch (err) { return null; }
+  // Synchronous read from the in-memory mirror (loaded from IndexedDB at
+  // startup). All the hot paths - sort, totals, render - call this, so it has
+  // to stay synchronous and O(1).
+  const e = _binderMemCache.get(key);
+  if (!e) return null;
+  if (Date.now() - e.t > BINDER_CACHE_TTL_MS) return null;
+  // Require fields added in newer versions; treat older entries as stale so
+  // they get refetched and become filterable (color_identity, type_line).
+  if (!e.d || !Array.isArray(e.d.color_identity)) return null;
+  return e.d;
 }
 function binderCacheSet(key, data) {
-  try {
-    const cache = JSON.parse(localStorage.getItem(BINDER_CACHE_KEY) || '{}');
-    cache[key] = { d: data, t: Date.now() };
-    localStorage.setItem(BINDER_CACHE_KEY, JSON.stringify(cache));
-  } catch (err) {}
+  const e = { d: data, t: Date.now() };
+  _binderMemCache.set(key, e);        // immediate, synchronous
+  _idbPut(IDB_STORE_CARDS, key, e);   // async per-key flush (no full rewrite)
+  bumpBinderCompute();                // card data changed -> totals stale
 }
 // Common set-code mismatches between deck-export tools and Scryfall.
 const BINDER_SET_ALIASES = {
@@ -1294,6 +1383,86 @@ function showMissingCards() {
     renderBinder();
   });
 }
+function cardToBinderData(c) {
+  // Normalize a Scryfall card object into the compact shape the binder caches.
+  const img = (c.image_uris && c.image_uris.normal)
+           || (c.card_faces && c.card_faces[0] && c.card_faces[0].image_uris && c.card_faces[0].image_uris.normal)
+           || (c.image_uris && c.image_uris.large)
+           || '';
+  return {
+    id: c.id,
+    name: c.name || '',
+    set: (c.set || '').toUpperCase(),
+    set_name: c.set_name || '',
+    collector_number: c.collector_number || '',
+    img,
+    price_usd: c.prices && c.prices.usd ? parseFloat(c.prices.usd) : null,
+    price_usd_foil: c.prices && c.prices.usd_foil ? parseFloat(c.prices.usd_foil) : null,
+    price_usd_etched: c.prices && c.prices.usd_etched ? parseFloat(c.prices.usd_etched) : null,
+    purchase_uri: (c.purchase_uris && c.purchase_uris.tcgplayer) || '',
+    color_identity: Array.isArray(c.color_identity) ? c.color_identity.slice() : [],
+    type_line: c.type_line || ''
+  };
+}
+// Scryfall's batch endpoint: POST /cards/collection takes up to 75 identifiers
+// per request and returns {data, not_found}. This turns an N-card watchlist
+// from N individual GETs (rate-limited, slow) into ceil(N/75) POSTs. Anything
+// it can't resolve falls back to the per-card chain (suffix stripping, fuzzy,
+// autocomplete) in binderFetchEntry.
+async function batchFetchBinder(entries) {
+  const cached = new Set();
+  const items = [];   // {entry, ident, sig}
+  for (const entry of entries) {
+    const parsed = parseWatchlistEntry(entry);
+    if (!parsed) continue;
+    const setLower = (parsed.set || '').toLowerCase();
+    const aliased  = BINDER_SET_ALIASES[setLower] || setLower;
+    let ident, sig;
+    if (aliased && parsed.num) {
+      ident = { set: aliased, collector_number: String(parsed.num) };
+      sig = 'cn:' + aliased + '/' + String(parsed.num).toLowerCase();
+    } else if (parsed.name) {
+      ident = { name: parsed.name };
+      sig = 'nm:' + parsed.name.toLowerCase();
+    } else {
+      continue;
+    }
+    items.push({ entry, ident, sig });
+  }
+  for (let i = 0; i < items.length; i += 75) {
+    const chunk = items.slice(i, i + 75);
+    let resp;
+    try {
+      const r = await fetch('https://api.scryfall.com/cards/collection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifiers: chunk.map(x => x.ident) }),
+      });
+      if (!r.ok) continue;            // whole chunk falls back to per-card
+      resp = await r.json();
+    } catch (e) { continue; }
+    // Index returned cards by both a set/collector signature and a name
+    // signature so either identifier form can match.
+    const bySig = new Map();
+    for (const c of (resp.data || [])) {
+      if (!c || !c.id) continue;
+      const cnSig = 'cn:' + (c.set || '').toLowerCase() + '/' + (c.collector_number || '').toLowerCase();
+      const nmSig = 'nm:' + (c.name || '').toLowerCase();
+      if (!bySig.has(cnSig)) bySig.set(cnSig, c);
+      if (!bySig.has(nmSig)) bySig.set(nmSig, c);
+    }
+    for (const it of chunk) {
+      const c = bySig.get(it.sig);
+      if (!c) continue;
+      const data = cardToBinderData(c);
+      binderCacheSet(it.entry, data);
+      binderRecordPrice(data.id, data.price_usd);
+      cached.add(it.entry);
+    }
+    await new Promise(res => setTimeout(res, 100));  // be polite to Scryfall
+  }
+  return cached;
+}
 async function binderFetchEntry(entryStr) {
   const cached = binderCacheGet(entryStr);
   if (cached) return cached;
@@ -1306,24 +1475,7 @@ async function binderFetchEntry(entryStr) {
       if (!r.ok) continue;
       const c = await r.json();
       if (!c || !c.id) continue;
-      const img = (c.image_uris && c.image_uris.normal)
-               || (c.card_faces && c.card_faces[0] && c.card_faces[0].image_uris && c.card_faces[0].image_uris.normal)
-               || (c.image_uris && c.image_uris.large)
-               || '';
-      const data = {
-        id: c.id,
-        name: c.name || '',
-        set: (c.set || '').toUpperCase(),
-        set_name: c.set_name || '',
-        collector_number: c.collector_number || '',
-        img,
-        price_usd: c.prices && c.prices.usd ? parseFloat(c.prices.usd) : null,
-        price_usd_foil: c.prices && c.prices.usd_foil ? parseFloat(c.prices.usd_foil) : null,
-        price_usd_etched: c.prices && c.prices.usd_etched ? parseFloat(c.prices.usd_etched) : null,
-        purchase_uri: (c.purchase_uris && c.purchase_uris.tcgplayer) || '',
-        color_identity: Array.isArray(c.color_identity) ? c.color_identity.slice() : [],
-        type_line: c.type_line || ''
-      };
+      const data = cardToBinderData(c);
       binderCacheSet(entryStr, data);
       binderRecordPrice(data.id, data.price_usd);
       return data;
@@ -1345,23 +1497,7 @@ async function binderFetchEntry(entryStr) {
         if (r.ok) {
           const c = await r.json();
           if (c && c.id) {
-            const img = (c.image_uris && c.image_uris.normal)
-                     || (c.card_faces && c.card_faces[0] && c.card_faces[0].image_uris && c.card_faces[0].image_uris.normal)
-                     || (c.image_uris && c.image_uris.large)
-                     || '';
-            const data = {
-              id: c.id,
-              name: c.name || '',
-              set: (c.set || '').toUpperCase(),
-              set_name: c.set_name || '',
-              collector_number: c.collector_number || '',
-              img,
-              price_usd: c.prices && c.prices.usd ? parseFloat(c.prices.usd) : null,
-              price_usd_foil: c.prices && c.prices.usd_foil ? parseFloat(c.prices.usd_foil) : null,
-              purchase_uri: (c.purchase_uris && c.purchase_uris.tcgplayer) || '',
-              color_identity: Array.isArray(c.color_identity) ? c.color_identity.slice() : [],
-              type_line: c.type_line || ''
-            };
+            const data = cardToBinderData(c);
             binderCacheSet(entryStr, data);
             binderRecordPrice(data.id, data.price_usd);
             return data;
@@ -1419,21 +1555,31 @@ function binderApplyFilterSort(list) {
   return filtered;
 }
 async function prefetchAllBinderData() {
+  // Make sure the IndexedDB-backed cache has finished loading into memory
+  // before we decide what's missing - otherwise we'd refetch everything.
+  await initBinderStorage();
   if (binderPrefetchInFlight) return;
   binderPrefetchInFlight = true;
   try {
     const list = loadWatchlist();
-    const todo = list.filter(e => !binderCacheGet(e));
+    let todo = list.filter(e => !binderCacheGet(e));
     if (!todo.length) return;
-    const concurrency = 5;
-    let i = 0;
-    async function worker() {
-      while (i < todo.length) {
-        const idx = i++;
-        await binderFetchEntry(todo[idx]);
+    // Fast path: resolve in bulk via /cards/collection (75 per request).
+    const got = await batchFetchBinder(todo);
+    // Whatever the batch couldn't resolve (odd set codes, suffixed collector
+    // numbers, typos) drops to the per-card fallback chain at low concurrency.
+    todo = todo.filter(e => !got.has(e));
+    if (todo.length) {
+      const concurrency = 5;
+      let i = 0;
+      async function worker() {
+        while (i < todo.length) {
+          const idx = i++;
+          await binderFetchEntry(todo[idx]);
+        }
       }
+      await Promise.all(Array(concurrency).fill(0).map(worker));
     }
-    await Promise.all(Array(concurrency).fill(0).map(worker));
   } finally {
     binderPrefetchInFlight = false;
   }
@@ -1457,6 +1603,10 @@ function pickPriceForEntry(parsed, data) {
   return null;
 }
 function calculateBinderTotal(daysAgo) {
+  // Memoized: page turns and period toggles call this repeatedly with the
+  // same inputs. Invalidated by bumpBinderCompute() on data/watchlist change.
+  const memo = _binderTotalMemo.get(daysAgo);
+  if (memo && memo.ver === _binderComputeVer) return memo.val;
   const list = loadWatchlist();
   let total = 0;
   for (const entry of list) {
@@ -1492,9 +1642,13 @@ function calculateBinderTotal(daysAgo) {
     }
     if (todayPrice != null) total += todayPrice * count;  // fallback
   }
+  _binderTotalMemo.set(daysAgo, { ver: _binderComputeVer, val: total });
   return total;
 }
 function calculateBinderTotalHistory() {
+  // Memoized like calculateBinderTotal - the chart re-renders on every period
+  // toggle and page turn but the series only changes on data/watchlist change.
+  if (_binderHistMemo && _binderHistMemo.ver === _binderComputeVer) return _binderHistMemo.val;
   // Sum the watchlist's value for each day in the bulk-prices window.
   if (!_binderBulkPrices || !_binderBulkPrices.cards) return null;
   const days  = _binderBulkPrices.days  || 30;
@@ -1553,6 +1707,7 @@ function calculateBinderTotalHistory() {
       out.push([todayStr, todayTotal]);
     }
   }
+  _binderHistMemo = { ver: _binderComputeVer, val: out };
   return out;
 }
 let _binderTotalChart = null;
@@ -2113,6 +2268,7 @@ function addPrintingToWatchlist(name, setCode, num) {
   }
   list.push(entry);
   localStorage.setItem(WL_KEY, list.join('\n'));
+  bumpBinderCompute();   // watchlist changed -> totals stale
   updateWatchlistCount();
   // If modal is open, mirror the new entry into the textarea so a Save
   // doesn't accidentally erase it.
@@ -2205,6 +2361,14 @@ renderLeftTicker();
 renderFallingCards();
 initBinderCustomize();
 initBinderPrefs();
+// Begin loading the IndexedDB-backed binder cache into memory immediately.
+// When it finishes, re-render the binder if it's the active view so cached
+// cards/prices appear without waiting for a fresh Scryfall prefetch.
+initBinderStorage().then(() => {
+  if (!document.getElementById('view-binder').classList.contains('hidden')) {
+    renderBinder();
+  }
+});
 
 function applyFilters() { currentPage = 1; renderList(); }
 ['feed','rule','dir','minp','q'].forEach(id => document.getElementById(id).addEventListener('input', applyFilters));

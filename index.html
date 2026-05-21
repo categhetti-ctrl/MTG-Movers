@@ -956,18 +956,6 @@ function renderDetail(id, preferFinish, preferFeed) {
     cell('30d high', fmtPrice(hi, activePt)) +
     cell('30d low',  fmtPrice(lo, activePt));
 }
-// Populate feed dropdown from whatever feeds actually appear in today's data
-(function () {
-  const feedSel = document.getElementById('feed');
-  const seen = Array.from(new Set(RAW.map(r => r.price_type))).sort();
-  for (const pt of seen) {
-    const opt = document.createElement('option');
-    opt.value = pt;
-    opt.textContent = PT_LABELS[pt] || pt;
-    feedSel.appendChild(opt);
-  }
-})();
-
 // ---- WATCHLIST (browser-local) -------------------------------------------
 const WL_KEY = 'mtg-movers-watchlist-v1';
 function loadWatchlist() {

@@ -365,16 +365,16 @@
     .deck-period { display:inline-flex; gap:.3rem; }
     .deck-period button { background:#141414; border:1px solid #2a2a2a; color:#aaa; padding:.3rem .6rem; border-radius:6px; cursor:pointer; font-size:.78rem; }
     .deck-period button.active { background:#1f3a6e; border-color:#2e5099; color:#fff; }
-    .deck-shelf { display:grid; grid-template-columns: repeat(auto-fill, minmax(clamp(150px,22vw,210px), 1fr)); gap:clamp(.8rem,2vw,1.4rem); }
+    .deck-shelf { display:grid; grid-template-columns: repeat(auto-fill, minmax(clamp(150px,22vw,210px), 1fr)); gap:clamp(.8rem,2vw,1.4rem); margin-top: clamp(2rem,6vw,4rem); }
     .deck-box { position:relative; cursor:pointer; transition: transform .15s ease; }
     .deck-box { perspective: 700px; }
     .deck-box:hover { transform: translateY(-4px); }
-    .deck-box.opening { pointer-events:none; z-index:30; }
-    .deck-box.opening .deck-box-lid { transform-origin: top center; animation: deck-lid-open .5s cubic-bezier(.34,1.1,.6,1) forwards; }
+    .deck-box.opening { pointer-events:none; z-index:40; }
+    .deck-box.opening .deck-box-lid { transform-origin: top center; animation: deck-lid-open 1.5s cubic-bezier(.34,1.1,.6,1) forwards; }
     @keyframes deck-lid-open { 0% { transform: rotateX(0); } 100% { transform: rotateX(-115deg); opacity:.5; } }
-    .deck-box.opening .deck-box-body { animation: deck-body-pop .5s ease forwards; }
+    .deck-box.opening .deck-box-body { animation: deck-body-pop 1.5s ease forwards; }
     @keyframes deck-body-pop { 0%{transform:scale(1);} 30%{transform:scale(1.03);} 100%{transform:scale(1);} }
-    .deck-fly { position:fixed; width:46px; height:64px; border-radius:4px; background:#1a1a1a center/cover no-repeat; border:1px solid #000; box-shadow:0 4px 12px rgba(0,0,0,.6); z-index:60; pointer-events:none; will-change:transform,opacity; opacity:0; }
+    .deck-fly { position:fixed; width:46px; height:64px; border-radius:4px; background:#1a1a1a center/cover no-repeat; border:1px solid #000; box-shadow:0 4px 12px rgba(0,0,0,.6); z-index:200; pointer-events:none; will-change:transform,opacity; opacity:0; }
     @media (prefers-reduced-motion: reduce) { .deck-box.opening .deck-box-lid, .deck-box.opening .deck-box-body { animation:none; } }
     .deck-box-lid { height:18px; border-radius:8px 8px 0 0; background: color-mix(in srgb, var(--deck,#7f1d1d), white 14%); box-shadow: inset 0 2px 0 rgba(255,255,255,.18), inset 0 -3px 6px rgba(0,0,0,.35); }
     .deck-box-body { background: var(--deck,#7f1d1d); border-radius:0 0 8px 8px; padding:.85rem .9rem 1rem; min-height:120px; display:flex; flex-direction:column; box-shadow: inset 0 -10px 22px rgba(0,0,0,.4), inset 0 0 0 1px rgba(0,0,0,.3), 0 6px 14px rgba(0,0,0,.45); }
@@ -655,6 +655,11 @@
         <button class="preset" data-c="cover" data-v="#0f4f4f" style="background:#0f4f4f" title="Teal"></button>
         <input type="color" id="cover-custom" title="Custom color" />
       </div>
+      <div class="row">
+        <span class="swatch-label">Image</span>
+        <label class="wl-btn" style="cursor:pointer;">Upload cover<input type="file" accept="image/*" style="display:none;" onchange="handleBinderCoverFile(this)" /></label>
+        <button class="reset" type="button" onclick="removeBinderCover()">Remove image</button>
+      </div>
       <h4>Page</h4>
       <div class="row" id="page-presets">
         <span class="swatch-label">Presets</span>
@@ -758,6 +763,11 @@
     <div class="help">Name your deck, pick a box color, then paste a decklist or search to add cards. Counts like "4 Lightning Bolt" and printings like "Sol Ring (C21-263)" are supported. Saved in your browser only.</div>
     <input id="deck-name" type="text" placeholder="Deck name (e.g. Mono-Red Aggro)" style="width:100%; box-sizing:border-box; background:#000; color:#fff; border:1px solid #2a2a2a; border-radius:6px; padding:.5rem .75rem; margin-bottom:.6rem;" />
     <div id="deck-colors" style="display:flex; gap:.4rem; flex-wrap:wrap; margin-bottom:.6rem;"></div>
+    <div style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; margin-bottom:.6rem;">
+      <label class="wl-btn" style="cursor:pointer;">Box image<input type="file" accept="image/*" style="display:none;" onchange="handleDeckImageFile(this)" /></label>
+      <button class="wl-btn" type="button" onclick="clearDeckEditorImage()">Remove image</button>
+      <img id="deck-img-preview" alt="" style="height:42px; border-radius:4px; display:none;" />
+    </div>
     <div class="wl-search">
       <input id="deck-search" type="search" placeholder="Search to add a printing..." autocomplete="off" />
       <div id="deck-search-results" class="wl-results"></div>
@@ -955,6 +965,7 @@ let openDeckId = null;
 let _deckEditId = null;
 let _deckEditColor = DECK_BOX_COLORS[0];
 let _deckChart = null;
+let _deckEditImg = undefined;   // undefined=unchanged, null=remove, string=new image
 let deckSearchTimer = null;
 
 function loadDecks() {
@@ -1053,9 +1064,11 @@ function renderDeckShelf() {
   decks.sort((a, b) => b.badge.pct - a.badge.pct);
   let html = '';
   for (const { d, badge, val } of decks) {
+    const bimg = customImageGet('deck-' + d.id);
+    const bodyStyle = bimg ? ` style="background-image:linear-gradient(rgba(0,0,0,.35),rgba(0,0,0,.66)),url(${bimg});background-size:cover;background-position:center;"` : '';
     html += `<div class="deck-box" style="--deck:${d.color || DECK_BOX_COLORS[0]}" onclick="openDeck('${d.id}', event)">
       <div class="deck-box-lid"></div>
-      <div class="deck-box-body">
+      <div class="deck-box-body"${bodyStyle}>
         <div class="deck-box-name">${escapeHtml(d.name || 'Untitled deck')}</div>
         <div class="deck-box-count">${deckCardCount(deckCards(d))} cards</div>
         <div class="deck-box-val">${fmt.format(val)}</div>
@@ -1100,10 +1113,10 @@ function openDeck(id, evt) {
       { transform: 'translate(0,0) rotate(0deg) scale(.55)', opacity: 0 },
       { transform: 'translate(' + (dx*0.4) + 'px,' + (dy*0.5) + 'px) rotate(' + (rot*0.5) + 'deg) scale(1)', opacity: 1, offset: 0.35 },
       { transform: 'translate(' + dx + 'px,' + dy + 'px) rotate(' + rot + 'deg) scale(.9)', opacity: 0 }
-    ], { duration: 650 + Math.random() * 200, easing: 'cubic-bezier(.2,.7,.3,1)' });
-    setTimeout(() => card.remove(), 900);
+    ], { duration: 1900 + Math.random() * 600, easing: 'cubic-bezier(.2,.7,.3,1)' });
+    setTimeout(() => card.remove(), 2700);
   }
-  setTimeout(go, 470);
+  setTimeout(go, 1100);
 }
 function deckOpenCard(entry) {
   const data = binderCacheGet(entry);
@@ -1184,6 +1197,8 @@ function openDeckEditor(id) {
   document.getElementById('deck-search').value = '';
   const res = document.getElementById('deck-search-results'); res.innerHTML = ''; res.classList.remove('show');
   renderDeckColorSwatches();
+  _deckEditImg = undefined;
+  updateDeckImgPreview(id ? customImageGet('deck-' + id) : null);
   document.getElementById('deck-modal').classList.add('show');
 }
 function renderDeckColorSwatches() {
@@ -1191,6 +1206,16 @@ function renderDeckColorSwatches() {
   host.innerHTML = DECK_BOX_COLORS.map(c => `<button type="button" onclick="setDeckEditColor('${c}')" title="${c}" style="width:30px;height:30px;border-radius:6px;cursor:pointer;background:${c};border:2px solid ${c === _deckEditColor ? '#fff' : '#2a2a2a'};"></button>`).join('');
 }
 function setDeckEditColor(c) { _deckEditColor = c; renderDeckColorSwatches(); }
+function updateDeckImgPreview(url) {
+  const el = document.getElementById('deck-img-preview'); if (!el) return;
+  if (url) { el.src = url; el.style.display = ''; } else { el.removeAttribute('src'); el.style.display = 'none'; }
+}
+function handleDeckImageFile(input) {
+  const f = input.files && input.files[0]; if (!f) return;
+  readImageScaled(f, 700, url => { if (url) { _deckEditImg = url; updateDeckImgPreview(url); } });
+  input.value = '';
+}
+function clearDeckEditorImage() { _deckEditImg = null; updateDeckImgPreview(null); }
 function closeDeckEditor() { document.getElementById('deck-modal').classList.remove('show'); }
 function importDeckTextClean() {
   const ta = document.getElementById('deck-text');
@@ -1210,6 +1235,10 @@ function saveDeckFromEditor() {
   saveDecks(decks);
   closeDeckEditor();
   const savedId = _deckEditId;
+  if (_deckEditImg !== undefined) {
+    if (_deckEditImg) customImageSet('deck-' + savedId, _deckEditImg);
+    else customImageRemove('deck-' + savedId);
+  }
   renderDeckShelf();
   prefetchEntries(cards).then(() => {
     renderDeckShelf();
@@ -1223,6 +1252,7 @@ function deleteOpenDeck() {
   const deck = deckById(openDeckId); if (!deck) return;
   if (!confirm('Delete deck "' + (deck.name || 'Untitled') + '"? This only removes it from your saved decks.')) return;
   saveDecks(loadDecks().filter(d => d.id !== openDeckId));
+  customImageRemove('deck-' + openDeckId);
   openDeckId = null;
   location.hash = 'decks';
 }
@@ -1617,12 +1647,14 @@ let _binderHistMemo = null;           // {ver, val}
 // keep working unchanged; writes update the Map immediately and flush to
 // IndexedDB asynchronously, one key at a time.
 const BINDER_IDB_NAME = 'mtg-binder';
-const BINDER_IDB_VERSION = 1;
+const BINDER_IDB_VERSION = 2;
 const IDB_STORE_CARDS = 'cards';     // entryStr -> {d: cardData, t: timestamp}
 const IDB_STORE_HIST  = 'history';   // scryfallId -> [[date, price], ...]
+const IDB_STORE_IMG   = 'images';    // imageKey -> data URL (binder cover, deck boxes)
 let _binderIDB = null;
 const _binderMemCache = new Map();   // entryStr -> {d, t}
 const _binderMemHist  = new Map();   // id -> [[date, price], ...]
+const _customImages   = new Map();   // imageKey -> data URL
 let binderStorageReady = null;       // Promise; resolves once maps are loaded
 
 function _openBinderIDB() {
@@ -1634,6 +1666,7 @@ function _openBinderIDB() {
       const db = req.result;
       if (!db.objectStoreNames.contains(IDB_STORE_CARDS)) db.createObjectStore(IDB_STORE_CARDS);
       if (!db.objectStoreNames.contains(IDB_STORE_HIST))  db.createObjectStore(IDB_STORE_HIST);
+      if (!db.objectStoreNames.contains(IDB_STORE_IMG))   db.createObjectStore(IDB_STORE_IMG);
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror   = () => reject(req.error);
@@ -1658,6 +1691,36 @@ function _idbPut(store, key, value) {
     tx.objectStore(store).put(value, key);
   } catch (e) {}
 }
+function _idbDelete(store, key) {
+  if (!_binderIDB) return;
+  try { _binderIDB.transaction(store, 'readwrite').objectStore(store).delete(key); } catch (e) {}
+}
+// Custom user images (binder cover, deck boxes), kept in IndexedDB as data URLs
+// with an in-memory mirror so renders can read them synchronously.
+function customImageGet(key) { return _customImages.get(key) || null; }
+function customImageSet(key, dataURL) { _customImages.set(key, dataURL); _idbPut(IDB_STORE_IMG, key, dataURL); }
+function customImageRemove(key) { _customImages.delete(key); _idbDelete(IDB_STORE_IMG, key); }
+// Read an uploaded file, downscale it via canvas, and hand back a compact JPEG
+// data URL so storage/render stay light even for big phone photos.
+function readImageScaled(file, maxDim, cb) {
+  if (!file) { cb(null); return; }
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+      const w = Math.max(1, Math.round(img.width * scale)), h = Math.max(1, Math.round(img.height * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      try { cb(canvas.toDataURL('image/jpeg', 0.85)); } catch (e) { cb(null); }
+    };
+    img.onerror = () => cb(null);
+    img.src = reader.result;
+  };
+  reader.onerror = () => cb(null);
+  reader.readAsDataURL(file);
+}
 function _migrateFromLocalStorage(lsKey, store, mem) {
   try {
     const old = JSON.parse(localStorage.getItem(lsKey) || '{}');
@@ -1671,12 +1734,14 @@ function initBinderStorage() {
   binderStorageReady = (async () => {
     try {
       _binderIDB = await _openBinderIDB();
-      const [cards, hist] = await Promise.all([
+      const [cards, hist, imgs] = await Promise.all([
         _idbGetAll(_binderIDB, IDB_STORE_CARDS),
         _idbGetAll(_binderIDB, IDB_STORE_HIST),
+        _idbGetAll(_binderIDB, IDB_STORE_IMG),
       ]);
       for (const [k, v] of cards) _binderMemCache.set(k, v);
       for (const [k, v] of hist)  _binderMemHist.set(k, v);
+      for (const [k, v] of imgs)  _customImages.set(k, v);
       // One-time import of the old localStorage blobs into IndexedDB.
       if (!cards.length) _migrateFromLocalStorage(BINDER_CACHE_KEY, IDB_STORE_CARDS, _binderMemCache);
       if (!hist.length)  _migrateFromLocalStorage(BINDER_HISTORY_KEY, IDB_STORE_HIST, _binderMemHist);
@@ -2596,6 +2661,29 @@ function applyBinderColors(c) {
   const cc = document.getElementById('cover-custom'); if (cc) cc.value = c.cover;
   const pc = document.getElementById('page-custom');  if (pc) pc.value = c.page;
 }
+function applyBinderCover() {
+  const wrap = document.querySelector('.binder-wrap'); if (!wrap) return;
+  const img = customImageGet('binder-cover');
+  if (img) {
+    wrap.style.backgroundImage = `linear-gradient(rgba(0,0,0,.25), rgba(0,0,0,.45)), url(${img})`;
+    wrap.style.backgroundSize = 'cover';
+    wrap.style.backgroundPosition = 'center';
+    wrap.style.backgroundBlendMode = 'normal';
+  } else {
+    wrap.style.backgroundImage = '';
+    wrap.style.backgroundSize = '';
+    wrap.style.backgroundPosition = '';
+    wrap.style.backgroundBlendMode = '';
+  }
+}
+function handleBinderCoverFile(input) {
+  const f = input.files && input.files[0]; if (!f) return;
+  readImageScaled(f, 1000, url => { if (url) { customImageSet('binder-cover', url); applyBinderCover(); flashMsg('Cover image set'); } });
+  input.value = '';
+}
+function removeBinderCover() {
+  customImageRemove('binder-cover'); applyBinderCover(); flashMsg('Cover image removed');
+}
 function setBinderColor(which, value) {
   const c = loadBinderColors();
   c[which] = value;
@@ -2936,6 +3024,7 @@ initBinderPrefs();
 // When it finishes, re-render the binder if it's the active view so cached
 // cards/prices appear without waiting for a fresh Scryfall prefetch.
 initBinderStorage().then(() => {
+  applyBinderCover();
   if (!document.getElementById('view-binder').classList.contains('hidden')) {
     renderBinder();
   }

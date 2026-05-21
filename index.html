@@ -52,6 +52,15 @@
     .chip.feed-ck  { background:#1f4f9c; color:#fff; }
     .chip.feed-cm  { background:#b3661e; color:#fff; }
     .chip.feed-mp  { background:#0f7d6b; color:#fff; }
+    #sort-row th { cursor:pointer; user-select:none; white-space:nowrap; }
+    #sort-row th:hover { color:#fff; }
+    #sort-row th.sort-asc::after  { content:"\25B2"; font-size:.7rem; margin-left:.25rem; }
+    #sort-row th.sort-desc::after { content:"\25BC"; font-size:.7rem; margin-left:.25rem; }
+    .filter-row th { padding:.3rem .4rem; vertical-align:top; }
+    .filter-row input, .filter-row select { width:100%; box-sizing:border-box; background:#141414; color:#fff; border:1px solid #2a2a2a; border-radius:4px; padding:.25rem .3rem; font-size:.8rem; }
+    .pct-filter { display:flex; gap:.2rem; }
+    .pct-filter select { width:auto; flex:0 0 auto; }
+    .pct-filter input  { flex:1; min-width:0; }
     .chip.feed-pick { cursor:pointer; padding:.3rem .7rem; font-size:.78rem; border:1px solid transparent;}
     .chip.feed-pick.active { background:#1f1f1f; color:#fff; border-color:#fff;}
     .name a { color:#9ecbff; text-decoration:none; }
@@ -451,47 +460,36 @@
 <main>
   <section id="view-list">
     <div class="toolbar">
-      <label>Feed
-        <select id="feed">
-          <option value="">all feeds</option>
-        </select>
-      </label>
-      <label>Rule
-        <select id="rule">
-          <option value="">all rules</option>
-          <option value="1d_pct">1 day %</option>
-          <option value="7d_pct">7 day %</option>
-          <option value="30d_pct">30 day %</option>
-          <option value="spike">spike</option>
-          <option value="crash">crash</option>
-        </select>
-      </label>
-      <label>Direction
-        <select id="dir">
-          <option value="">both</option>
-          <option value="up">up only</option>
-          <option value="down">down only</option>
-        </select>
-      </label>
-      <label>Min price
-        <input id="minp" type="number" min="0" step="0.5" value="1" style="width:5em" />
-      </label>
-      <label>Search
-        <input id="q" type="search" placeholder="card name..." />
-      </label>
       <button type="button" class="wl-btn" onclick="openWatchlist()">Watchlist (<span id="wl-count">0</span>)</button>
       <button type="button" class="wl-btn" onclick="goBinder()">Open Binder</button>
       <label class="wl-toggle"><input type="checkbox" id="wl-only" /> Only watchlist</label>
+      <button type="button" class="wl-btn" onclick="clearColumnFilters()">Clear filters</button>
+      <span class="meta">Click a header to sort; filter under each column.</span>
       <span style="margin-left:auto" class="meta">Showing <span id="count">-</span></span>
     </div>
     <table id="alerts">
-      <thead><tr>
-        <th>Feed</th><th>Rule</th><th>Card</th><th>Set</th><th>Finish</th>
-        <th style="text-align:right">Price</th>
-        <th style="text-align:right">Prev</th>
-        <th style="text-align:right">% change</th>
-        <th style="text-align:right">Score</th>
-      </tr></thead>
+      <thead>
+      <tr id="sort-row">
+        <th data-sort="feed" onclick="setSort('feed')">Feed</th>
+        <th data-sort="rule" onclick="setSort('rule')">Rule</th>
+        <th data-sort="name" onclick="setSort('name')">Card</th>
+        <th data-sort="set" onclick="setSort('set')">Set</th>
+        <th data-sort="finish" onclick="setSort('finish')">Finish</th>
+        <th data-sort="price_now"  style="text-align:right" onclick="setSort('price_now')">Price</th>
+        <th data-sort="price_prev" style="text-align:right" onclick="setSort('price_prev')">Prev</th>
+        <th data-sort="pct_change" style="text-align:right" onclick="setSort('pct_change')">% change</th>
+      </tr>
+      <tr class="filter-row">
+        <th><select id="f-feed" onchange="applyFilters()"><option value="">all</option></select></th>
+        <th><select id="f-rule" onchange="applyFilters()"><option value="">all</option><option value="1d_pct">1 day %</option><option value="7d_pct">7 day %</option><option value="30d_pct">30 day %</option><option value="spike">spike</option><option value="crash">crash</option></select></th>
+        <th><input id="f-name" type="search" placeholder="filter" oninput="applyFilters()" /></th>
+        <th><input id="f-set" type="search" placeholder="filter" oninput="applyFilters()" /></th>
+        <th><select id="f-finish" onchange="applyFilters()"><option value="">all</option><option value="normal">normal</option><option value="foil">foil</option><option value="etched">etched</option></select></th>
+        <th style="text-align:right"><input id="f-price" type="number" min="0" step="0.5" placeholder="&ge;$" oninput="applyFilters()" /></th>
+        <th style="text-align:right"><input id="f-prev" type="number" min="0" step="0.5" placeholder="&ge;$" oninput="applyFilters()" /></th>
+        <th style="text-align:right"><div class="pct-filter"><select id="f-dir" onchange="applyFilters()"><option value="">&plusmn;</option><option value="up">&uarr;</option><option value="down">&darr;</option></select><input id="f-pct" type="number" min="0" step="1" placeholder="&ge;%" oninput="applyFilters()" /></div></th>
+      </tr>
+      </thead>
       <tbody></tbody>
     </table>
     <div class="pagination" id="pagination">
@@ -730,39 +728,87 @@ function changePage(delta) {
   const tbl = document.getElementById('alerts');
   if (tbl) tbl.scrollIntoView({behavior:'smooth', block:'start'});
 }
+let sortCol = null;   // null = default: largest absolute % move first
+let sortDir = 'desc';
+function setSort(col) {
+  if (sortCol === col) { sortDir = (sortDir === 'asc') ? 'desc' : 'asc'; }
+  else { sortCol = col; sortDir = ['price_now','price_prev','pct_change'].indexOf(col) >= 0 ? 'desc' : 'asc'; }
+  currentPage = 1;
+  renderList();
+}
+function sortRows(rows) {
+  if (!sortCol) { rows.sort((a,b) => Math.abs(b.pct_change) - Math.abs(a.pct_change)); return; }
+  const sign = (sortDir === 'asc') ? 1 : -1;
+  const val = (r) => {
+    switch (sortCol) {
+      case 'feed':   return (PT_LABELS[r.price_type] || r.price_type || '');
+      case 'rule':   return (RULE_LABELS[r.rule] || r.rule || '');
+      case 'name':   return (r.name || '').toLowerCase();
+      case 'set':    return (r.set_code || '').toLowerCase();
+      case 'finish': return (r.finish || '');
+      case 'price_now':  return r.price_now;
+      case 'price_prev': return r.price_prev;
+      case 'pct_change': return r.pct_change;
+      default: return '';
+    }
+  };
+  rows.sort((a,b) => {
+    const av = val(a), bv = val(b);
+    if (typeof av === 'string') return sign * av.localeCompare(bv);
+    return sign * ((av || 0) - (bv || 0));
+  });
+}
+function updateSortIndicators() {
+  document.querySelectorAll('#sort-row th').forEach(th => {
+    th.classList.remove('sort-asc','sort-desc');
+    if (th.getAttribute('data-sort') === sortCol) th.classList.add(sortDir === 'asc' ? 'sort-asc' : 'sort-desc');
+  });
+}
+function clearColumnFilters() {
+  ['f-feed','f-rule','f-dir','f-finish','f-name','f-set','f-price','f-prev','f-pct']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  applyFilters();
+}
 function renderList() {
-  const feed = document.getElementById('feed').value;
-  const rule = document.getElementById('rule').value;
-  const dir  = document.getElementById('dir').value;
-  const minp = parseFloat(document.getElementById('minp').value || '0');
-  const q    = document.getElementById('q').value.trim().toLowerCase();
+  const feed = document.getElementById('f-feed').value;
+  const rule = document.getElementById('f-rule').value;
+  const dir  = document.getElementById('f-dir').value;
+  const minp = parseFloat(document.getElementById('f-price').value || '0');
+  const minPrev = parseFloat(document.getElementById('f-prev').value || '0');
+  const minPct  = parseFloat(document.getElementById('f-pct').value || '0') / 100;
+  const qName = document.getElementById('f-name').value.trim().toLowerCase();
+  const qSet  = document.getElementById('f-set').value.trim().toLowerCase();
+  const finishF = document.getElementById('f-finish').value;
   const wlOnly = document.getElementById('wl-only').checked;
   const wl = wlOnly ? watchlistEntries() : null;
   let rows = RAW.filter(r => {
     if (wl && !rowMatchesWatchlist(r, wl)) return false;
     if (feed && r.price_type !== feed) return false;
     if (rule && r.rule !== rule) return false;
+    if (finishF && r.finish !== finishF) return false;
     if (dir === 'up'   && r.pct_change <= 0) return false;
     if (dir === 'down' && r.pct_change >= 0) return false;
-    if (r.price_now < minp) return false;
-    if (q && !r.name.toLowerCase().includes(q)) return false;
+    if (minp && r.price_now < minp) return false;
+    if (minPrev && r.price_prev < minPrev) return false;
+    if (minPct && Math.abs(r.pct_change) < minPct) return false;
+    if (qName && !r.name.toLowerCase().includes(qName)) return false;
+    if (qSet && !(r.set_code||'').toLowerCase().includes(qSet)) return false;
     return true;
   });
-  rows.sort((a,b) => Math.abs(b.pct_change) - Math.abs(a.pct_change));
   // With no specific rule selected ("all rules"), collapse each card to a
-  // single row per feed - its largest move - so a card that tripped several
-  // rules (1d/7d/30d/spike/crash) doesn't repeat within the same feed. Rows
-  // are already sorted by descending move size, so keeping the first
-  // occurrence per (card, feed) keeps the biggest.
+  // single row per feed - its LARGEST move - so a card that tripped several
+  // rules (1d/7d/30d/spike/crash) doesn't repeat within the same feed.
   if (!rule) {
-    const seen = new Set();
-    rows = rows.filter(r => {
+    const best = new Map();
+    for (const r of rows) {
       const key = r.scryfall_id + '|' + r.price_type;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+      const cur = best.get(key);
+      if (!cur || Math.abs(r.pct_change) > Math.abs(cur.pct_change)) best.set(key, r);
+    }
+    rows = Array.from(best.values());
   }
+  sortRows(rows);
+  updateSortIndicators();
   const total = rows.length;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   if (currentPage > totalPages) currentPage = totalPages;
@@ -790,7 +836,6 @@ function renderList() {
       <td style="text-align:right">${fmtPrice(r.price_now, r.price_type)}</td>
       <td style="text-align:right">${fmtPrice(r.price_prev, r.price_type)}</td>
       <td style="text-align:right" class="${r.pct_change>=0?'pos':'neg'}">${fmtPct(r.pct_change)}</td>
-      <td style="text-align:right">${r.score!=null ? r.score.toFixed(2) : ''}</td>
     </tr>`).join('');
 }
 function goHome() { if (location.hash) location.hash = ''; else showList(); }
@@ -2420,7 +2465,7 @@ function flashMsg(text) {
 }
 
 (function () {
-  const feedSel = document.getElementById('feed');
+  const feedSel = document.getElementById('f-feed');
   const seen = Array.from(new Set(RAW.map(r => r.price_type))).sort();
   for (const pt of seen) {
     const opt = document.createElement('option');
@@ -2446,7 +2491,6 @@ initBinderStorage().then(() => {
 });
 
 function applyFilters() { currentPage = 1; renderList(); }
-['feed','rule','dir','minp','q'].forEach(id => document.getElementById(id).addEventListener('input', applyFilters));
 document.getElementById('wl-only').addEventListener('change', applyFilters);
 document.getElementById('wl-search').addEventListener('input', wlSearchInput);
 window.addEventListener('hashchange', route);

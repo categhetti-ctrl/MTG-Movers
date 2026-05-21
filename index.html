@@ -14,6 +14,10 @@
     header h1 { font-size: clamp(1rem, 2.5vw, 1.15rem); margin: 0; }
     header h1 a { color:#fff; text-decoration:none; }
     header .meta { color:#aaa; font-size:.85rem; }
+    .header-nav { display:flex; gap:.4rem; align-items:center; flex-wrap:wrap; }
+    .header-nav a { color:#cfe3ff; text-decoration:none; font-size:.9rem; font-weight:500; padding:.4rem .85rem; border:1px solid #2a2a2a; border-radius:999px; background:#141414; white-space:nowrap; }
+    .header-nav a:hover { background:#1f1f1f; color:#fff; }
+    .header-nav a.active { background:#1f3a6e; border-color:#2e5099; color:#fff; }
     main { padding: clamp(0.75rem, 2.5vw, 1.25rem) clamp(0.75rem, 3vw, 1.5rem); max-width: 1400px; margin: 0 auto; }
     .toolbar { display:flex; gap:.75rem; margin-bottom:1rem; flex-wrap:wrap; align-items:center;}
     .toolbar select, .toolbar input { background:#141414; color:#fff; border:1px solid #2a2a2a; border-radius:6px; padding:.4rem .6rem;}
@@ -363,7 +367,15 @@
     .deck-period button.active { background:#1f3a6e; border-color:#2e5099; color:#fff; }
     .deck-shelf { display:grid; grid-template-columns: repeat(auto-fill, minmax(clamp(150px,22vw,210px), 1fr)); gap:clamp(.8rem,2vw,1.4rem); }
     .deck-box { position:relative; cursor:pointer; transition: transform .15s ease; }
+    .deck-box { perspective: 700px; }
     .deck-box:hover { transform: translateY(-4px); }
+    .deck-box.opening { pointer-events:none; z-index:30; }
+    .deck-box.opening .deck-box-lid { transform-origin: top center; animation: deck-lid-open .5s cubic-bezier(.34,1.1,.6,1) forwards; }
+    @keyframes deck-lid-open { 0% { transform: rotateX(0); } 100% { transform: rotateX(-115deg); opacity:.5; } }
+    .deck-box.opening .deck-box-body { animation: deck-body-pop .5s ease forwards; }
+    @keyframes deck-body-pop { 0%{transform:scale(1);} 30%{transform:scale(1.03);} 100%{transform:scale(1);} }
+    .deck-fly { position:fixed; width:46px; height:64px; border-radius:4px; background:#1a1a1a center/cover no-repeat; border:1px solid #000; box-shadow:0 4px 12px rgba(0,0,0,.6); z-index:60; pointer-events:none; will-change:transform,opacity; opacity:0; }
+    @media (prefers-reduced-motion: reduce) { .deck-box.opening .deck-box-lid, .deck-box.opening .deck-box-body { animation:none; } }
     .deck-box-lid { height:18px; border-radius:8px 8px 0 0; background: color-mix(in srgb, var(--deck,#7f1d1d), white 14%); box-shadow: inset 0 2px 0 rgba(255,255,255,.18), inset 0 -3px 6px rgba(0,0,0,.35); }
     .deck-box-body { background: var(--deck,#7f1d1d); border-radius:0 0 8px 8px; padding:.85rem .9rem 1rem; min-height:120px; display:flex; flex-direction:column; box-shadow: inset 0 -10px 22px rgba(0,0,0,.4), inset 0 0 0 1px rgba(0,0,0,.3), 0 6px 14px rgba(0,0,0,.45); }
     .deck-box-name { font-weight:700; font-size:1rem; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.5); line-height:1.2; }
@@ -475,6 +487,11 @@
     </svg>
     </div>
   </a>
+  <nav class="header-nav" id="header-nav">
+    <a href="#" data-v="list" onclick="goHome();return false;">Movers</a>
+    <a href="#binder" data-v="binder" onclick="goBinder();return false;">Binder</a>
+    <a href="#decks" data-v="decks" onclick="goDecks();return false;">Decks</a>
+  </nav>
 </header>
 
 <aside class="ticker left">
@@ -1036,7 +1053,7 @@ function renderDeckShelf() {
   decks.sort((a, b) => b.badge.pct - a.badge.pct);
   let html = '';
   for (const { d, badge, val } of decks) {
-    html += `<div class="deck-box" style="--deck:${d.color || DECK_BOX_COLORS[0]}" onclick="openDeck('${d.id}')">
+    html += `<div class="deck-box" style="--deck:${d.color || DECK_BOX_COLORS[0]}" onclick="openDeck('${d.id}', event)">
       <div class="deck-box-lid"></div>
       <div class="deck-box-body">
         <div class="deck-box-name">${escapeHtml(d.name || 'Untitled deck')}</div>
@@ -1050,7 +1067,44 @@ function renderDeckShelf() {
 }
 
 /* open one deck */
-function openDeck(id) { location.hash = 'deck/' + encodeURIComponent(id); }
+function openDeck(id, evt) {
+  const go = () => { location.hash = 'deck/' + encodeURIComponent(id); };
+  const box = evt && (evt.currentTarget || (evt.target && evt.target.closest && evt.target.closest('.deck-box')));
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!box || reduce) { go(); return; }
+  box.classList.add('opening');
+  // Gather up to a few real card images from the deck for the burst.
+  const imgs = [];
+  const deck = deckById(id);
+  if (deck) {
+    for (const e of deckCards(deck)) {
+      const d = binderCacheGet(e);
+      if (d && d.img) { imgs.push(d.img); if (imgs.length >= 8) break; }
+    }
+  }
+  const rect = box.getBoundingClientRect();
+  const N = 8;
+  for (let i = 0; i < N; i++) {
+    const card = document.createElement('div');
+    card.className = 'deck-fly';
+    const img = imgs.length ? imgs[i % imgs.length] : null;
+    if (img) card.style.backgroundImage = 'url("' + img + '")';
+    else card.style.background = ['#7f1d1d','#1e3a8a','#14532d','#6b21a8'][i % 4];
+    card.style.left = (rect.left + rect.width * (0.2 + 0.6 * Math.random()) - 23) + 'px';
+    card.style.top  = (rect.top + 4) + 'px';
+    document.body.appendChild(card);
+    const dx  = (Math.random() * 460 - 230);
+    const dy  = -(150 + Math.random() * 230);
+    const rot = (Math.random() * 720 - 360);
+    card.animate([
+      { transform: 'translate(0,0) rotate(0deg) scale(.55)', opacity: 0 },
+      { transform: 'translate(' + (dx*0.4) + 'px,' + (dy*0.5) + 'px) rotate(' + (rot*0.5) + 'deg) scale(1)', opacity: 1, offset: 0.35 },
+      { transform: 'translate(' + dx + 'px,' + dy + 'px) rotate(' + rot + 'deg) scale(.9)', opacity: 0 }
+    ], { duration: 650 + Math.random() * 200, easing: 'cubic-bezier(.2,.7,.3,1)' });
+    setTimeout(() => card.remove(), 900);
+  }
+  setTimeout(go, 470);
+}
 function deckOpenCard(entry) {
   const data = binderCacheGet(entry);
   if (!data || !data.id) return;
@@ -1243,7 +1297,17 @@ function showBinder() {
     });
   }
 }
+function highlightNav() {
+  const h = location.hash;
+  let v = 'list';
+  if (/^#binder/.test(h)) v = 'binder';
+  else if (/^#deck/.test(h)) v = 'decks';
+  const nav = document.getElementById('header-nav');
+  if (!nav) return;
+  nav.querySelectorAll('a').forEach(a => a.classList.toggle('active', a.getAttribute('data-v') === v));
+}
 function route() {
+  highlightNav();
   const m = location.hash.match(/^#card\/([^\/]+)(?:\/([^\/]*)(?:\/([^\/]*))?)?/);
   if (m) {
     const id = decodeURIComponent(m[1]);

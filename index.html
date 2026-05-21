@@ -749,6 +749,20 @@ function renderList() {
     return true;
   });
   rows.sort((a,b) => Math.abs(b.pct_change) - Math.abs(a.pct_change));
+  // With no specific rule selected ("all rules"), collapse each card to a
+  // single row per feed - its largest move - so a card that tripped several
+  // rules (1d/7d/30d/spike/crash) doesn't repeat within the same feed. Rows
+  // are already sorted by descending move size, so keeping the first
+  // occurrence per (card, feed) keeps the biggest.
+  if (!rule) {
+    const seen = new Set();
+    rows = rows.filter(r => {
+      const key = r.scryfall_id + '|' + r.price_type;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
   const total = rows.length;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   if (currentPage > totalPages) currentPage = totalPages;

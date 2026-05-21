@@ -354,6 +354,39 @@
     .bt-mover-row .delta .pct { font-size:.72rem;}
     .bt-mover-row .delta.pos { color:#5dd39e; }
     .bt-mover-row .delta.neg { color:#ef6f6c; }
+    /* ===== Decks (deck boxes) ===== */
+    .decks-bar { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:1.25rem; }
+    .decks-bar h2 { margin:0; font-size:clamp(1.05rem,3vw,1.25rem); }
+    .decks-bar .spacer { margin-left:auto; }
+    .deck-period { display:inline-flex; gap:.3rem; }
+    .deck-period button { background:#141414; border:1px solid #2a2a2a; color:#aaa; padding:.3rem .6rem; border-radius:6px; cursor:pointer; font-size:.78rem; }
+    .deck-period button.active { background:#1f3a6e; border-color:#2e5099; color:#fff; }
+    .deck-shelf { display:grid; grid-template-columns: repeat(auto-fill, minmax(clamp(150px,22vw,210px), 1fr)); gap:clamp(.8rem,2vw,1.4rem); }
+    .deck-box { position:relative; cursor:pointer; transition: transform .15s ease; }
+    .deck-box:hover { transform: translateY(-4px); }
+    .deck-box-lid { height:18px; border-radius:8px 8px 0 0; background: color-mix(in srgb, var(--deck,#7f1d1d), white 14%); box-shadow: inset 0 2px 0 rgba(255,255,255,.18), inset 0 -3px 6px rgba(0,0,0,.35); }
+    .deck-box-body { background: var(--deck,#7f1d1d); border-radius:0 0 8px 8px; padding:.85rem .9rem 1rem; min-height:120px; display:flex; flex-direction:column; box-shadow: inset 0 -10px 22px rgba(0,0,0,.4), inset 0 0 0 1px rgba(0,0,0,.3), 0 6px 14px rgba(0,0,0,.45); }
+    .deck-box-name { font-weight:700; font-size:1rem; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.5); line-height:1.2; }
+    .deck-box-count { font-size:.72rem; color:rgba(255,255,255,.7); margin-top:.2rem; }
+    .deck-box-val { margin-top:auto; padding-top:.6rem; font-size:1.15rem; font-weight:700; color:#fff; }
+    .deck-box-delta { font-size:.8rem; font-weight:600; color:rgba(255,255,255,.85); }
+    .deck-box-delta.pos { color:#9af5cf; } .deck-box-delta.neg { color:#ffb4b2; }
+    .deck-box-delta .dp { opacity:.7; font-weight:400; }
+    .deck-box-add { border:2px dashed #2a2a2a; border-radius:8px; min-height:156px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#888; gap:.3rem; }
+    .deck-box-add:hover { border-color:#3a3a3a; color:#bbb; transform:none; background:#0d0d0d; }
+    .deck-add-plus { font-size:2rem; line-height:1; }
+    .deck-open-head { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:.5rem; }
+    .deck-open-title { font-size:clamp(1.2rem,4vw,1.5rem); font-weight:700; margin:0; }
+    .deck-open-value { font-size:clamp(1.3rem,5vw,1.7rem); font-weight:700; }
+    .deck-open-delta { font-size:.95rem; font-weight:600; color:#aaa; }
+    .deck-open-delta.pos { color:#5dd39e; } .deck-open-delta.neg { color:#ef6f6c; }
+    .deck-chart-wrap { width:100%; height:120px; margin:.5rem 0 1rem; }
+    .deck-sec-title { font-size:.78rem; text-transform:uppercase; letter-spacing:.08em; color:#bbb; font-weight:600; margin:1.25rem 0 .4rem; }
+    .deck-cards { display:grid; grid-template-columns: repeat(auto-fill, minmax(clamp(110px,15vw,150px),1fr)); gap:.6rem; }
+    .deck-card { position:relative; aspect-ratio:5/7; border-radius:6px; overflow:hidden; background:#000; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,.6); }
+    .deck-card img { width:100%; height:100%; object-fit:cover; display:block; }
+    .deck-card .qb { position:absolute; top:4px; left:4px; background:rgba(0,0,0,.85); border-radius:4px; padding:0 5px; font-size:.7rem; font-weight:700; color:#fff; }
+    .deck-card .pr { position:absolute; left:0; right:0; bottom:0; background:rgba(0,0,0,.82); font-size:.75rem; font-weight:700; color:#5dd39e; padding:.25rem .35rem; text-align:right; }
     /* Customize panel */
     .binder-customize { display:none; margin: 1rem auto 0; max-width: 720px; background:#0d0d0d; border:1px solid #2a2a2a; border-radius:10px; padding:1rem 1.25rem; }
     .binder-customize.show { display:block; }
@@ -462,6 +495,7 @@
     <div class="toolbar">
       <button type="button" class="wl-btn" onclick="openWatchlist()">Watchlist (<span id="wl-count">0</span>)</button>
       <button type="button" class="wl-btn" onclick="goBinder()">Open Binder</button>
+      <button type="button" class="wl-btn" onclick="goDecks()">My Decks</button>
       <label class="wl-toggle"><input type="checkbox" id="wl-only" /> Only watchlist</label>
       <button type="button" class="wl-btn" onclick="clearColumnFilters()">Clear filters</button>
       <span class="meta">Click a header to sort; filter under each column.</span>
@@ -621,6 +655,45 @@
 
     <p class="meta" style="text-align:center; margin-top:.75rem; color:#aaa; font-size:.8rem;">Card images and prices fetched from <a href="https://scryfall.com" target="_blank" rel="noopener" style="color:#9ecbff">Scryfall</a> on demand and cached in your browser for 12 hours.</p>
   </section>
+  <section id="view-decks" class="hidden">
+    <div id="deck-shelf-wrap">
+      <div class="decks-bar">
+        <h2>My decks</h2>
+        <div class="deck-period" id="deck-period-shelf">
+          <button data-d="1" onclick="setDeckPeriod(1)">1d</button>
+          <button data-d="7" onclick="setDeckPeriod(7)">7d</button>
+          <button data-d="30" class="active" onclick="setDeckPeriod(30)">30d</button>
+        </div>
+        <span class="spacer"></span>
+        <button class="wl-btn" onclick="openDeckEditor(null)">+ New deck</button>
+      </div>
+      <div class="deck-shelf" id="deck-shelf"></div>
+    </div>
+    <div id="deck-open-wrap" class="hidden">
+      <div class="binder-controls" style="justify-content:flex-start; margin:0 0 1rem;">
+        <button onclick="goDecks()">&larr; All decks</button>
+        <button onclick="openDeckEditor(openDeckId)">Edit</button>
+        <button onclick="deleteOpenDeck()">Delete</button>
+      </div>
+      <div class="deck-open-head">
+        <div>
+          <h2 class="deck-open-title" id="deck-open-name">Deck</h2>
+          <div class="deck-open-value" id="deck-open-value">$0.00</div>
+          <div class="deck-open-delta" id="deck-open-delta">&mdash;</div>
+        </div>
+        <div class="deck-period" id="deck-period-open">
+          <button data-d="1" onclick="setDeckPeriod(1)">1d</button>
+          <button data-d="7" onclick="setDeckPeriod(7)">7d</button>
+          <button data-d="30" class="active" onclick="setDeckPeriod(30)">30d</button>
+        </div>
+      </div>
+      <div class="deck-chart-wrap"><canvas id="deck-chart"></canvas></div>
+      <div class="deck-sec-title">Biggest movers (<span id="deck-movers-period">30</span>d)</div>
+      <div id="deck-movers"></div>
+      <div class="deck-sec-title">Cards</div>
+      <div class="deck-cards" id="deck-cards"></div>
+    </div>
+  </section>
 </main>
 
 <div id="wl-modal" class="modal" onclick="if(event.target.id==='wl-modal')closeWatchlist()">
@@ -658,6 +731,25 @@
     <div id="bt-movers-list" style="flex:1; overflow-y:auto; margin-top:.5rem; border-top:1px solid #1a1a1a;"></div>
     <div class="actions">
       <button class="primary" onclick="closeBinderMovers()">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="deck-modal" class="modal" onclick="if(event.target.id==='deck-modal')closeDeckEditor()">
+  <div class="panel" style="width:min(600px,94vw)">
+    <h3 id="deck-modal-title">New deck</h3>
+    <div class="help">Name your deck, pick a box color, then paste a decklist or search to add cards. Counts like "4 Lightning Bolt" and printings like "Sol Ring (C21-263)" are supported. Saved in your browser only.</div>
+    <input id="deck-name" type="text" placeholder="Deck name (e.g. Mono-Red Aggro)" style="width:100%; box-sizing:border-box; background:#000; color:#fff; border:1px solid #2a2a2a; border-radius:6px; padding:.5rem .75rem; margin-bottom:.6rem;" />
+    <div id="deck-colors" style="display:flex; gap:.4rem; flex-wrap:wrap; margin-bottom:.6rem;"></div>
+    <div class="wl-search">
+      <input id="deck-search" type="search" placeholder="Search to add a printing..." autocomplete="off" />
+      <div id="deck-search-results" class="wl-results"></div>
+    </div>
+    <textarea id="deck-text" placeholder="4 Lightning Bolt&#10;Ragavan, Nimble Pilferer (MH2-138)&#10;Sol Ring"></textarea>
+    <div class="actions">
+      <button onclick="importDeckTextClean()" style="margin-right:auto" title="Strip counts/headers and dedupe">Clean list</button>
+      <button onclick="closeDeckEditor()">Cancel</button>
+      <button class="primary" onclick="saveDeckFromEditor()">Save deck</button>
     </div>
   </div>
 </div>
@@ -838,6 +930,281 @@ function renderList() {
       <td style="text-align:right" class="${r.pct_change>=0?'pos':'neg'}">${fmtPct(r.pct_change)}</td>
     </tr>`).join('');
 }
+/* ===================== DECKS (deck boxes) ===================== */
+const DECKS_KEY = 'mtg-decks-v1';
+const DECK_BOX_COLORS = ['#7f1d1d','#1e3a8a','#14532d','#6b21a8','#b45309','#0f766e','#9d174d','#3f3f46'];
+let deckPeriod = 30;
+let openDeckId = null;
+let _deckEditId = null;
+let _deckEditColor = DECK_BOX_COLORS[0];
+let _deckChart = null;
+let deckSearchTimer = null;
+
+function loadDecks() {
+  try { const o = JSON.parse(localStorage.getItem(DECKS_KEY) || '{}'); return Array.isArray(o.decks) ? o.decks : []; }
+  catch (e) { return []; }
+}
+function saveDecks(decks) { localStorage.setItem(DECKS_KEY, JSON.stringify({ version: 1, decks })); }
+function deckById(id) { return loadDecks().find(d => d.id === id) || null; }
+function deckCards(d) { return (d && Array.isArray(d.cards)) ? d.cards : []; }
+function newDeckId() { return 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+function allDeckCards() { const out = []; for (const d of loadDecks()) for (const c of deckCards(d)) out.push(c); return out; }
+
+// Pull missing/stale cards for an arbitrary entry list (reuses binder fetch path).
+async function prefetchEntries(entries) {
+  await initBinderStorage();
+  let todo = entries.filter(e => !binderCacheGet(e) || binderPricesStale(e));
+  if (!todo.length) return;
+  const got = await batchFetchBinder(todo);
+  todo = todo.filter(e => !got.has(e));
+  if (todo.length) {
+    const concurrency = 5; let i = 0;
+    async function worker() { while (i < todo.length) { await binderFetchEntry(todo[i++]); } }
+    await Promise.all(Array(concurrency).fill(0).map(worker));
+  }
+}
+
+// One entry's value at daysAgo, reusing the binder pricing primitives.
+function entryValueAt(entry, daysAgo) {
+  const parsed = parseWatchlistEntry(entry); if (!parsed) return null;
+  const data = binderCacheGet(entry); if (!data || !data.id) return null;
+  const count = parsed.count || 1;
+  const today = pickPriceForEntry(parsed, data);
+  if (daysAgo === 0) return today == null ? null : today * count;
+  const fkey = pickFinishKey(parsed, data);
+  const series = fkey ? getBulkPriceSeries(data.id, fkey) : null;
+  if (series && series.length > 0) {
+    let idx = series.length - daysAgo;
+    if (idx < 0) idx = 0;
+    if (idx >= series.length) idx = series.length - 1;
+    if (series[idx] && series[idx][1] != null) return series[idx][1] * count;
+  }
+  return today == null ? null : today * count;
+}
+function deckTotalValue(cards, daysAgo) { let t = 0; for (const e of cards) { const v = entryValueAt(e, daysAgo); if (v != null) t += v; } return t; }
+function deckCardCount(cards) { let n = 0; for (const e of cards) { const pp = parseWatchlistEntry(e); if (pp) n += (pp.count || 1); } return n; }
+function deckDeltaBadge(cards) {
+  const now = deckTotalValue(cards, 0), past = deckTotalValue(cards, deckPeriod);
+  if (past <= 0 || !isFinite(past)) return { text: '—', cls: '', pct: 0 };
+  const d = now - past, pct = d / past * 100, sign = d >= 0 ? '+' : '-';
+  return { text: `${sign}${Math.abs(pct).toFixed(1)}%`, cls: d >= 0 ? 'pos' : 'neg', pct };
+}
+function deckValueHistory(cards) {
+  if (!_binderBulkPrices || !_binderBulkPrices.cards) return null;
+  const days = _binderBulkPrices.days || 30, start = _binderBulkPrices.start; if (!start) return null;
+  const totals = new Array(days).fill(0), counts = new Array(days).fill(0);
+  for (const entry of cards) {
+    const parsed = parseWatchlistEntry(entry); if (!parsed) continue;
+    const data = binderCacheGet(entry); if (!data || !data.id) continue;
+    const qty = parsed.count || 1, fkey = pickFinishKey(parsed, data), card = _binderBulkPrices.cards[data.id];
+    let arr = null;
+    if (card && fkey) { if (Array.isArray(card)) { if (fkey === 'n') arr = card; } else arr = card[fkey] || null; }
+    if (!arr) { const tp = pickPriceForEntry(parsed, data); if (tp != null) for (let i = 0; i < days; i++) { totals[i] += tp * qty; counts[i]++; } continue; }
+    for (let i = 0; i < days && i < arr.length; i++) { if (arr[i] != null) { totals[i] += arr[i] * qty; counts[i]++; } }
+  }
+  const startMs = Date.parse(start), out = [];
+  for (let i = 0; i < days; i++) { if (counts[i] > 0) out.push([new Date(startMs + i * 86400000).toISOString().slice(0, 10), totals[i]]); }
+  const todayStr = new Date().toISOString().slice(0, 10), todayTotal = deckTotalValue(cards, 0);
+  if (todayTotal > 0) { if (out.length && out[out.length - 1][0] === todayStr) out[out.length - 1][1] = todayTotal; else out.push([todayStr, todayTotal]); }
+  return out;
+}
+
+/* nav / views */
+function goDecks() { location.hash = 'decks'; }
+function showDecks() {
+  document.getElementById('view-list').classList.add('hidden');
+  document.getElementById('view-detail').classList.add('hidden');
+  document.getElementById('view-binder').classList.add('hidden');
+  document.getElementById('view-decks').classList.remove('hidden');
+  window.scrollTo(0, 0);
+}
+function showDeckShelf() { document.getElementById('deck-shelf-wrap').classList.remove('hidden'); document.getElementById('deck-open-wrap').classList.add('hidden'); }
+function showDeckOpen() { document.getElementById('deck-shelf-wrap').classList.add('hidden'); document.getElementById('deck-open-wrap').classList.remove('hidden'); }
+function setDeckPeriod(d) {
+  deckPeriod = parseInt(d, 10) || 30;
+  document.querySelectorAll('#deck-period-shelf button, #deck-period-open button').forEach(b => b.classList.toggle('active', parseInt(b.dataset.d, 10) === deckPeriod));
+  const mp = document.getElementById('deck-movers-period'); if (mp) mp.textContent = deckPeriod;
+  if (openDeckId && !document.getElementById('deck-open-wrap').classList.contains('hidden')) renderOpenDeck(openDeckId);
+  else renderDeckShelf();
+}
+
+/* shelf */
+function renderDeckShelf() {
+  const shelf = document.getElementById('deck-shelf'); if (!shelf) return;
+  const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+  const decks = loadDecks().map(d => ({ d, badge: deckDeltaBadge(deckCards(d)), val: deckTotalValue(deckCards(d), 0) }));
+  decks.sort((a, b) => b.badge.pct - a.badge.pct);
+  let html = '';
+  for (const { d, badge, val } of decks) {
+    html += `<div class="deck-box" style="--deck:${d.color || DECK_BOX_COLORS[0]}" onclick="openDeck('${d.id}')">
+      <div class="deck-box-lid"></div>
+      <div class="deck-box-body">
+        <div class="deck-box-name">${escapeHtml(d.name || 'Untitled deck')}</div>
+        <div class="deck-box-count">${deckCardCount(deckCards(d))} cards</div>
+        <div class="deck-box-val">${fmt.format(val)}</div>
+        <div class="deck-box-delta ${badge.cls}">${badge.text} <span class="dp">${deckPeriod}d</span></div>
+      </div></div>`;
+  }
+  html += `<div class="deck-box deck-box-add" onclick="openDeckEditor(null)"><div class="deck-add-plus">+</div><div>New deck</div></div>`;
+  shelf.innerHTML = html;
+}
+
+/* open one deck */
+function openDeck(id) { location.hash = 'deck/' + encodeURIComponent(id); }
+function deckOpenCard(entry) {
+  const data = binderCacheGet(entry);
+  if (!data || !data.id) return;
+  injectBinderIntoHistory(data);
+  binderRecordPrice(data.id, data.price_usd);
+  goCard(data.id, 'normal', 'market');
+}
+function renderOpenDeck(id) {
+  const deck = deckById(id); if (!deck) { location.hash = 'decks'; return; }
+  openDeckId = id;
+  const cards = deckCards(deck);
+  const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+  document.getElementById('deck-open-name').textContent = deck.name || 'Untitled deck';
+  document.getElementById('deck-open-value').textContent = fmt.format(deckTotalValue(cards, 0));
+  const badge = deckDeltaBadge(cards), dEl = document.getElementById('deck-open-delta');
+  dEl.textContent = badge.text === '—' ? '—' : (badge.text + ' over ' + deckPeriod + 'd');
+  dEl.className = 'deck-open-delta ' + badge.cls;
+  const mp = document.getElementById('deck-movers-period'); if (mp) mp.textContent = deckPeriod;
+  renderDeckChart(cards);
+  renderDeckMovers(cards);
+  renderDeckCards(cards);
+}
+function renderDeckChart(cards) {
+  const canvas = document.getElementById('deck-chart'); if (!canvas || typeof Chart === 'undefined') return;
+  const hist = deckValueHistory(cards);
+  if (_deckChart) { _deckChart.destroy(); _deckChart = null; }
+  if (!hist || hist.length < 2) return;
+  _deckChart = new Chart(canvas, {
+    type: 'line',
+    data: { labels: hist.map(p => p[0]), datasets: [{ data: hist.map(p => p[1]), borderColor: '#9ecbff', backgroundColor: 'rgba(158,203,255,.14)', fill: true, tension: .25, pointRadius: 0, borderWidth: 2 }] },
+    options: { maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => '$' + ctx.parsed.y.toFixed(2) } } },
+      scales: { x: { ticks: { color: '#888', maxRotation: 0, autoSkip: true, maxTicksLimit: 6 }, grid: { color: '#232938' } }, y: { ticks: { color: '#888', callback: v => '$' + Math.round(v).toLocaleString() }, grid: { color: '#232938' } } } }
+  });
+}
+function renderDeckMovers(cards) {
+  const host = document.getElementById('deck-movers'); if (!host) return;
+  const rows = calculateBinderMovers(deckPeriod, cards).filter(r => Math.abs(r.deltaTotal) >= 0.005).slice(0, 12);
+  if (!rows.length) { host.innerHTML = '<div style="padding:.6rem; color:#888; font-size:.85rem;">No measurable moves yet (needs cached prices and bulk history).</div>'; return; }
+  const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+  host.innerHTML = rows.map(r => {
+    const cls = r.deltaTotal >= 0 ? 'pos' : 'neg', ds = r.deltaTotal >= 0 ? '+' : '-', ps = r.pct >= 0 ? '+' : '-';
+    return `<div class="bt-mover-row" onclick="deckOpenCard('${escapeJs(r.entry)}')">
+      <img src="${r.img || ''}" alt="" loading="lazy" />
+      <div class="info"><div class="name">${escapeHtml(r.name)}${r.qty > 1 ? ` <span style="color:#aaa;font-size:.7rem;">x${r.qty}</span>` : ''}</div>
+      <div class="prices">${(r.set || '').toUpperCase()} #${escapeHtml(r.num || '')} · $${r.unitPast.toFixed(2)} → $${r.unitNow.toFixed(2)}</div></div>
+      <div class="delta ${cls}"><div class="amount">${ds}${fmt.format(Math.abs(r.deltaTotal))}</div><div class="pct">${ps}${(Math.abs(r.pct) * 100).toFixed(1)}%</div></div>
+    </div>`;
+  }).join('');
+}
+function renderDeckCards(cards) {
+  const host = document.getElementById('deck-cards'); if (!host) return;
+  if (!cards.length) { host.innerHTML = '<div style="color:#888; padding:1rem;">No cards yet. Click Edit to add some.</div>'; return; }
+  host.innerHTML = cards.map(entry => {
+    const parsed = parseWatchlistEntry(entry) || {};
+    const data = binderCacheGet(entry);
+    const qty = parsed.count || 1;
+    if (!data || !data.id) {
+      return `<div class="deck-card" title="${escapeHtml(entry)}" style="display:flex;align-items:center;justify-content:center;text-align:center;padding:.4rem;font-size:.7rem;color:#888;">${escapeHtml(parsed.name || entry)}</div>`;
+    }
+    const unit = pickPriceForEntry(parsed, data);
+    const priceText = unit != null ? (qty > 1 ? `$${(unit * qty).toFixed(2)}` : `$${unit.toFixed(2)}`) : '—';
+    return `<div class="deck-card" onclick="deckOpenCard('${escapeJs(entry)}')">
+      <img src="${data.img}" alt="${escapeHtml(data.name)}" loading="lazy" />
+      ${qty > 1 ? `<span class="qb">x${qty}</span>` : ''}
+      <span class="pr">${priceText}</span></div>`;
+  }).join('');
+}
+
+/* editor */
+function openDeckEditor(id) {
+  _deckEditId = id;
+  const deck = id ? deckById(id) : null;
+  _deckEditColor = (deck && deck.color) ? deck.color : DECK_BOX_COLORS[0];
+  document.getElementById('deck-modal-title').textContent = deck ? 'Edit deck' : 'New deck';
+  document.getElementById('deck-name').value = deck ? (deck.name || '') : '';
+  document.getElementById('deck-text').value = deck ? deckCards(deck).join('\n') : '';
+  document.getElementById('deck-search').value = '';
+  const res = document.getElementById('deck-search-results'); res.innerHTML = ''; res.classList.remove('show');
+  renderDeckColorSwatches();
+  document.getElementById('deck-modal').classList.add('show');
+}
+function renderDeckColorSwatches() {
+  const host = document.getElementById('deck-colors'); if (!host) return;
+  host.innerHTML = DECK_BOX_COLORS.map(c => `<button type="button" onclick="setDeckEditColor('${c}')" title="${c}" style="width:30px;height:30px;border-radius:6px;cursor:pointer;background:${c};border:2px solid ${c === _deckEditColor ? '#fff' : '#2a2a2a'};"></button>`).join('');
+}
+function setDeckEditColor(c) { _deckEditColor = c; renderDeckColorSwatches(); }
+function closeDeckEditor() { document.getElementById('deck-modal').classList.remove('show'); }
+function importDeckTextClean() {
+  const ta = document.getElementById('deck-text');
+  const lines = ta.value.split('\n').map(s => s.trim()).filter(Boolean)
+    .filter(l => !/^(deck|sideboard|commander|companion|maybeboard)\b/i.test(l));
+  const seen = new Set(), out = [];
+  for (const l of lines) { const k = l.toLowerCase(); if (!seen.has(k)) { seen.add(k); out.push(l); } }
+  ta.value = out.join('\n');
+  flashMsg('Cleaned to ' + out.length + ' lines');
+}
+function saveDeckFromEditor() {
+  const name = document.getElementById('deck-name').value.trim() || 'Untitled deck';
+  const cards = document.getElementById('deck-text').value.split('\n').map(s => s.trim()).filter(Boolean);
+  const decks = loadDecks();
+  if (_deckEditId) { const d = decks.find(x => x.id === _deckEditId); if (d) { d.name = name; d.color = _deckEditColor; d.cards = cards; } }
+  else { _deckEditId = newDeckId(); decks.push({ id: _deckEditId, name, color: _deckEditColor, cards }); }
+  saveDecks(decks);
+  closeDeckEditor();
+  const savedId = _deckEditId;
+  renderDeckShelf();
+  prefetchEntries(cards).then(() => {
+    renderDeckShelf();
+    if (openDeckId === savedId && !document.getElementById('deck-open-wrap').classList.contains('hidden')) renderOpenDeck(savedId);
+  });
+  loadBinderBulkPrices().then(() => { renderDeckShelf(); if (openDeckId === savedId) renderOpenDeck(savedId); });
+  flashMsg('Saved "' + name + '"');
+}
+function deleteOpenDeck() {
+  if (!openDeckId) return;
+  const deck = deckById(openDeckId); if (!deck) return;
+  if (!confirm('Delete deck "' + (deck.name || 'Untitled') + '"? This only removes it from your saved decks.')) return;
+  saveDecks(loadDecks().filter(d => d.id !== openDeckId));
+  openDeckId = null;
+  location.hash = 'decks';
+}
+
+/* deck search (Scryfall) */
+function deckSearchInput() { clearTimeout(deckSearchTimer); deckSearchTimer = setTimeout(deckSearchRun, 350); }
+function deckSearchRun() {
+  const q = (document.getElementById('deck-search').value || '').trim();
+  const box = document.getElementById('deck-search-results');
+  if (q.length < 2) { box.innerHTML = ''; box.classList.remove('show'); return; }
+  box.innerHTML = '<div class="wl-status">Searching Scryfall...</div>'; box.classList.add('show');
+  fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(q)}&unique=prints&order=released&dir=desc`)
+    .then(r => r.status === 404 ? { data: [] } : (r.ok ? r.json() : Promise.reject(r.status)))
+    .then(d => deckRenderResults(d.data || []))
+    .catch(err => { box.innerHTML = `<div class="wl-status">Search error (${err}).</div>`; });
+}
+function deckRenderResults(cards) {
+  const box = document.getElementById('deck-search-results');
+  if (!cards.length) { box.innerHTML = '<div class="wl-status">No printings found.</div>'; return; }
+  box.innerHTML = cards.slice(0, 40).map(c => {
+    const img = (c.image_uris && c.image_uris.small) || (c.card_faces && c.card_faces[0] && c.card_faces[0].image_uris && c.card_faces[0].image_uris.small) || '';
+    const usd = c.prices && c.prices.usd ? `$${c.prices.usd}` : '';
+    const safe = (c.name || '').replace(/'/g, "\\'");
+    return `<div class="wl-result" onclick="deckAddPrinting('${safe}','${c.set || ''}','${c.collector_number || ''}')">
+      ${img ? `<img src="${img}" loading="lazy" alt="" />` : ''}
+      <div class="info"><div class="nm">${escapeHtml(c.name)}</div><div class="meta-line">${escapeHtml(c.set_name || '')} (${(c.set || '').toUpperCase()}) #${escapeHtml(c.collector_number || '')}</div></div>
+      <div class="price">${usd}</div></div>`;
+  }).join('');
+}
+function deckAddPrinting(name, set, num) {
+  const entry = `${name} (${(set || '').toUpperCase()}${num ? '-' + num : ''})`;
+  const ta = document.getElementById('deck-text');
+  ta.value = (ta.value.trim() ? ta.value.replace(/\s*$/, '') + '\n' : '') + entry;
+  flashMsg('Added: ' + entry);
+}
+
 function goHome() { if (location.hash) location.hash = ''; else showList(); }
 function goCard(id, finish, pt) {
   location.hash = `card/${encodeURIComponent(id)}/${encodeURIComponent(finish||'')}/${encodeURIComponent(pt||'')}`;
@@ -846,18 +1213,21 @@ function showList() {
   document.getElementById('view-list').classList.remove('hidden');
   document.getElementById('view-detail').classList.add('hidden');
   document.getElementById('view-binder').classList.add('hidden');
+  document.getElementById('view-decks').classList.add('hidden');
   window.scrollTo(0,0);
 }
 function showDetail() {
   document.getElementById('view-list').classList.add('hidden');
   document.getElementById('view-detail').classList.remove('hidden');
   document.getElementById('view-binder').classList.add('hidden');
+  document.getElementById('view-decks').classList.add('hidden');
   window.scrollTo(0,0);
 }
 function showBinder() {
   document.getElementById('view-list').classList.add('hidden');
   document.getElementById('view-detail').classList.add('hidden');
   document.getElementById('view-binder').classList.remove('hidden');
+  document.getElementById('view-decks').classList.add('hidden');
   window.scrollTo(0,0);
   // Fire-and-forget prefetch so filters/sorts work across the full watchlist
   // even on cards that aren't on the visible spread. After it finishes we
@@ -893,6 +1263,22 @@ function route() {
     binderPage = parseInt(b[1] || '0', 10) || 0;
     renderBinder();
     showBinder();
+    return;
+  }
+  const dk = location.hash.match(/^#deck\/([^\/]+)/);
+  if (dk) {
+    const id = decodeURIComponent(dk[1]);
+    showDecks(); showDeckOpen();
+    renderOpenDeck(id);
+    prefetchEntries(deckCards(deckById(id) || {})).then(() => renderOpenDeck(id));
+    loadBinderBulkPrices().then(() => { if (openDeckId === id) renderOpenDeck(id); });
+    return;
+  }
+  if (/^#decks/.test(location.hash)) {
+    showDecks(); showDeckShelf();
+    renderDeckShelf();
+    prefetchEntries(allDeckCards()).then(() => renderDeckShelf());
+    loadBinderBulkPrices().then(() => renderDeckShelf());
     return;
   }
   showList();
@@ -1895,10 +2281,11 @@ function _priceForEntryDaysAgo(parsed, data, daysAgo) {
   const p = pickPriceForEntry(parsed, data);
   return p == null ? null : { price: p, actualDaysAgo: 0 };
 }
-function calculateBinderMovers(daysAgo) {
+function calculateBinderMovers(daysAgo, entries) {
   // Return [{entry, name, set, num, img, qty, unitNow, unitPast, deltaTotal,
   //          pct, hasHistory, actualDaysAgo}, ...] sorted by abs $ delta desc.
-  const list = loadWatchlist();
+  // `entries` lets the Decks view reuse this over an explicit card list.
+  const list = entries || loadWatchlist();
   const rows = [];
   for (const entry of list) {
     const parsed = parseWatchlistEntry(entry);
@@ -2493,6 +2880,7 @@ initBinderStorage().then(() => {
 function applyFilters() { currentPage = 1; renderList(); }
 document.getElementById('wl-only').addEventListener('change', applyFilters);
 document.getElementById('wl-search').addEventListener('input', wlSearchInput);
+document.getElementById('deck-search').addEventListener('input', deckSearchInput);
 window.addEventListener('hashchange', route);
 renderList();
 route();

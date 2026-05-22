@@ -695,6 +695,8 @@
         <button type="button" class="wl-btn" onclick="openWatchlist()">Watchlist (<span id="wl-count">0</span>)</button>
         <label class="wl-toggle"><input type="checkbox" id="wl-only" /> Watchlist</label>
         <button type="button" class="wl-btn" onclick="clearColumnFilters()">Clear filters</button>
+        <button type="button" class="wl-btn" onclick="exportBackup()">Back up</button>
+        <label class="wl-btn" style="cursor:pointer;">Restore<input type="file" accept="application/json,.json" style="display:none;" onchange="importBackupFile(this)" /></label>
       </div>
       <span class="meta tb-showing">Showing <span id="count">-</span></span>
     </div>
@@ -3266,6 +3268,60 @@ function _fallbackCopy(text, done) {
   try { document.execCommand('copy'); done(); }
   catch (e) { flashMsg('Copy failed - open Edit list and copy the text manually.'); }
   document.body.removeChild(ta);
+}
+// ---- Backup / restore -----------------------------------------------------
+// Everything the user builds lives in this browser (localStorage + IndexedDB),
+// so a backup bundles those into one downloadable JSON. The IndexedDB card/price
+// CACHE is intentionally excluded - it's large and re-fetched automatically.
+const BACKUP_KEYS = [WL_KEY, DECKS_KEY, BINDER_COLOR_KEY, BINDER_PREFS_KEY, 'mtg-theme'];
+function exportBackup() {
+  const data = { app: 'mtg-movers', backupVersion: 1, exportedAt: new Date().toISOString(),
+                 localStorage: {}, images: {} };
+  for (const k of BACKUP_KEYS) {
+    const v = localStorage.getItem(k);
+    if (v !== null) data.localStorage[k] = v;
+  }
+  for (const [k, v] of _customImages) data.images[k] = v;  // binder cover + deck box images
+  const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `mtg-movers-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  const ni = Object.keys(data.images).length;
+  flashMsg(`Backup downloaded (${Object.keys(data.localStorage).length} settings, ${ni} image${ni === 1 ? '' : 's'})`);
+}
+function importBackupFile(input) {
+  const file = input.files && input.files[0];
+  input.value = '';   // allow re-selecting the same file later
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onerror = () => flashMsg('Could not read that file.');
+  reader.onload = () => {
+    let data;
+    try { data = JSON.parse(reader.result); }
+    catch (e) { flashMsg('Could not read that file (not valid JSON).'); return; }
+    if (!data || data.app !== 'mtg-movers' || typeof data.localStorage !== 'object') {
+      flashMsg('That is not an MTG Movers backup file.'); return;
+    }
+    if (!confirm('Restore this backup? It will replace your current watchlist, decks, and binder settings on this device.')) return;
+    let nset = 0, nimg = 0;
+    // Only restore our known keys (never blindly write arbitrary localStorage).
+    for (const k of BACKUP_KEYS) {
+      if (Object.prototype.hasOwnProperty.call(data.localStorage, k)) {
+        localStorage.setItem(k, data.localStorage[k]); nset++;
+      }
+    }
+    if (data.images && typeof data.images === 'object') {
+      for (const k of Object.keys(data.images)) {
+        if (typeof data.images[k] === 'string') { customImageSet(k, data.images[k]); nimg++; }
+      }
+    }
+    flashMsg(`Restored ${nset} settings + ${nimg} images. Reloading…`);
+    setTimeout(() => location.reload(), 900);
+  };
+  reader.readAsText(file);
 }
 function flashMsg(text) {
   let el = document.getElementById('flash');

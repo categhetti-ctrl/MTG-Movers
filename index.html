@@ -24,7 +24,8 @@
   </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
-    body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; background:#000; color:#fff; }
+    html { overflow-x: hidden; }
+    body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; background:#000; color:#fff; overflow-x: hidden; max-width: 100%; }
     a { color:#9ecbff; }
     header { padding: clamp(0.55rem, 2vw, 1rem) clamp(0.75rem, 3vw, 1.5rem); background:#0d0d0d; border-bottom:1px solid #2a2a2a; display:flex; align-items:center; justify-content:center; gap:1.5rem; flex-wrap:wrap; position:relative; z-index:20;}
     .footer-meta { color:#fff; font-size:.85rem; margin-bottom:.6rem;}
@@ -44,6 +45,7 @@
     .tb-showing { justify-self:end; text-align:right; color:#8a8f99; font-size:.8rem;}
     @media (max-width:760px){ .toolbar { grid-template-columns:1fr;} .tb-hint,.tb-showing{ justify-self:center; text-align:center;} }
     .toolbar select, .toolbar input { background:#141414; color:#fff; border:1px solid #2a2a2a; border-radius:6px; padding:.4rem .6rem;}
+    .table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
     table { width: 100%; border-collapse: collapse; font-size:.92rem; }
     th, td { padding: .55rem .65rem; border-bottom: 1px solid #2a2a2a; text-align: left; vertical-align: middle;}
     th { color:#bbb; font-weight:500; }
@@ -700,6 +702,7 @@
       </div>
       <span class="meta tb-showing">Showing <span id="count">-</span></span>
     </div>
+    <div class="table-wrap">
     <table id="alerts">
       <thead>
       <tr id="sort-row">
@@ -725,6 +728,7 @@
       </thead>
       <tbody></tbody>
     </table>
+    </div>
     <div class="pagination" id="pagination">
       <button id="page-prev" onclick="changePage(-1)">&larr; Prev</button>
       <span class="info" id="page-info">Page 1 of 1</span>
@@ -1114,7 +1118,19 @@ function toggleTheme() {
   refreshChartsForTheme();
 }
 const PAGE_SIZE = 100;
+const MOBILE_PAGE_SIZE = 20;   // fewer rows per page on phones -> a bigger, less cluttered list
+function pageSize() {
+  return (window.matchMedia && window.matchMedia('(max-width: 768px)').matches)
+    ? MOBILE_PAGE_SIZE : PAGE_SIZE;
+}
 let currentPage = 1;
+// Re-paginate when crossing the mobile breakpoint (e.g. phone rotation).
+if (window.matchMedia) {
+  const _pageMq = window.matchMedia('(max-width: 768px)');
+  const _onPageMq = () => { currentPage = 1; renderList(); };
+  if (_pageMq.addEventListener) _pageMq.addEventListener('change', _onPageMq);
+  else if (_pageMq.addListener) _pageMq.addListener(_onPageMq);
+}
 function changePage(delta) {
   currentPage += delta;
   renderList();
@@ -1203,10 +1219,11 @@ function renderList() {
   sortRows(rows);
   updateSortIndicators();
   const total = rows.length;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const ps = pageSize();
+  const totalPages = Math.max(1, Math.ceil(total / ps));
   if (currentPage > totalPages) currentPage = totalPages;
   if (currentPage < 1) currentPage = 1;
-  const pageRows = rows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const pageRows = rows.slice((currentPage - 1) * ps, currentPage * ps);
   document.getElementById('count').textContent = total
     ? `${pageRows.length} of ${total}` : '0';
   const pag = document.getElementById('pagination');

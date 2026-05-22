@@ -5,6 +5,9 @@
   <title>MTG Price Movers - 2026-05-22</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="description" content="Daily mover snapshot for Magic: the Gathering cards." />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#0d0d0d" id="meta-theme-color" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
   <script>
     /* Apply saved theme (or the visitor's OS preference) before first paint so
        there is no flash of the wrong theme. */
@@ -14,6 +17,8 @@
         var t = (s === 'light' || s === 'dark') ? s
               : (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
         document.documentElement.setAttribute('data-theme', t);
+        var mc = document.getElementById('meta-theme-color');
+        if (mc) mc.setAttribute('content', t === 'light' ? '#ffffff' : '#0d0d0d');
       } catch (e) { document.documentElement.setAttribute('data-theme', 'dark'); }
     })();
   </script>
@@ -1102,6 +1107,8 @@ function toggleTheme() {
   const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
   document.documentElement.setAttribute('data-theme', next);
   try { localStorage.setItem('mtg-theme', next); } catch (e) {}
+  const mc = document.getElementById('meta-theme-color');
+  if (mc) mc.setAttribute('content', next === 'light' ? '#ffffff' : '#0d0d0d');
   refreshChartsForTheme();
 }
 const PAGE_SIZE = 100;
@@ -3312,5 +3319,13 @@ route();
 // card detail is instant. The alert table itself renders from RAW and doesn't
 // need this, so it never blocks initial load.
 setTimeout(loadAlertHistory, 0);
+</script>
+<script>
+  /* Register the service worker for offline use + installability. */
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js').catch(function () {});
+    });
+  }
 </script>
 </body></html>

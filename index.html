@@ -85,6 +85,10 @@
       #alerts .feed-long { display:none; }
       #alerts .feed-abbr { display:inline; }
       .filter-row th { padding:.25rem .25rem; }
+      /* Hide Back up / Restore on phones and center the button groups. */
+      .mobile-hide { display:none !important; }
+      .header-nav { justify-content:center; }
+      .toolbar { justify-items:center; }
     }
     .pos { color:#5dd39e; }
     .neg { color:#ef6f6c; }
@@ -713,8 +717,8 @@
         <button type="button" class="wl-btn" onclick="openWatchlist()">Watchlist (<span id="wl-count">0</span>)</button>
         <label class="wl-toggle"><input type="checkbox" id="wl-only" /> Watchlist</label>
         <button type="button" class="wl-btn" onclick="clearColumnFilters()">Clear filters</button>
-        <button type="button" class="wl-btn" onclick="exportBackup()">Back up</button>
-        <label class="wl-btn" style="cursor:pointer;">Restore<input type="file" accept="application/json,.json" style="display:none;" onchange="importBackupFile(this)" /></label>
+        <button type="button" class="wl-btn mobile-hide" onclick="exportBackup()">Back up</button>
+        <label class="wl-btn mobile-hide" style="cursor:pointer;">Restore<input type="file" accept="application/json,.json" style="display:none;" onchange="importBackupFile(this)" /></label>
       </div>
       <span class="meta tb-showing">Showing <span id="count">-</span></span>
     </div>

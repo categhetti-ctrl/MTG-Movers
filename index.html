@@ -1639,11 +1639,15 @@ function showBinder() {
   document.getElementById('view-binder').classList.remove('hidden');
   document.getElementById('view-decks').classList.add('hidden');
   window.scrollTo(0,0);
+  // Render immediately so the binder appears at once (cached cards + empty
+  // slots) instead of waiting for the whole watchlist to resolve - that wait is
+  // what made decks feel faster than the binder. Prefetch then fills slots in.
+  if (typeof renderBinder === 'function') renderBinder();
   // Fire-and-forget prefetch so filters/sorts work across the full watchlist
-  // even on cards that aren't on the visible spread. After it finishes we
-  // re-render so the page reflects newly available data.
+  // even on cards that aren't on the visible spread. It re-renders progressively
+  // as cards resolve (skipAnim=true so the open animation doesn't replay).
   if (typeof prefetchAllBinderData === 'function') {
-    prefetchAllBinderData().then(() => { if (typeof renderBinder === 'function') renderBinder(); });
+    prefetchAllBinderData().then(() => { if (typeof renderBinder === 'function') renderBinder(true); });
   }
   // Bulk price history (30 days, all cards) - lets the detail view show a
   // real chart on day 1 for any binder card with data in the local DB.
@@ -2247,6 +2251,7 @@ function binderCacheSet(key, data) {
   _binderMemCache.set(key, e);        // immediate, synchronous
   _idbPut(IDB_STORE_CARDS, key, e);   // async per-key flush (no full rewrite)
   bumpBinderCompute();                // card data changed -> totals stale
+  if (typeof _markBinderCacheDirty === 'function') _markBinderCacheDirty();
 }
 // Common set-code mismatches between deck-export tools and Scryfall.
 const BINDER_SET_ALIASES = {
@@ -2358,7 +2363,7 @@ function cardToBinderData(c) {
 // from N individual GETs (rate-limited, slow) into ceil(N/75) POSTs. Anything
 // it can't resolve falls back to the per-card chain (suffix stripping, fuzzy,
 // autocomplete) in binderFetchEntry.
-async function batchFetchBinder(entries) {
+async function batchFetchBinder(entries, onChunk) {
   const cached = new Set();
   const items = [];   // {entry, ident, sig}
   for (const entry of entries) {
@@ -2408,6 +2413,7 @@ async function batchFetchBinder(entries) {
       binderRecordPrice(data.id, data.price_usd);
       cached.add(it.entry);
     }
+    if (typeof onChunk === 'function') { try { onChunk(); } catch (e) {} }
     await new Promise(res => setTimeout(res, 100));  // be polite to Scryfall
   }
   return cached;
@@ -2505,6 +2511,18 @@ function binderApplyFilterSort(list) {
   }
   return filtered;
 }
+let _binderRenderThrottle = 0;
+function _binderProgressiveRender() {
+  // Re-render the visible spread as cards resolve, throttled, and WITHOUT
+  // replaying the page-open animation (skipAnim) so it fills smoothly.
+  const now = Date.now();
+  if (now - _binderRenderThrottle < 250) return;
+  _binderRenderThrottle = now;
+  try {
+    if (!document.getElementById('view-binder').classList.contains('hidden')
+        && typeof renderBinder === 'function') renderBinder(true);
+  } catch (e) {}
+}
 async function prefetchAllBinderData() {
   // Make sure the IndexedDB-backed cache has finished loading into memory
   // before we decide what's missing - otherwise we'd refetch everything.
@@ -2519,7 +2537,7 @@ async function prefetchAllBinderData() {
     let todo = list.filter(e => !binderCacheGet(e) || binderPricesStale(e));
     if (!todo.length) return;
     // Fast path: resolve in bulk via /cards/collection (75 per request).
-    const got = await batchFetchBinder(todo);
+    const got = await batchFetchBinder(todo, _binderProgressiveRender);
     // Whatever the batch couldn't resolve (odd set codes, suffixed collector
     // numbers, typos) drops to the per-card fallback chain at low concurrency.
     todo = todo.filter(e => !got.has(e));
@@ -2530,6 +2548,7 @@ async function prefetchAllBinderData() {
         while (i < todo.length) {
           const idx = i++;
           await binderFetchEntry(todo[idx]);
+          _binderProgressiveRender();
         }
       }
       await Promise.all(Array(concurrency).fill(0).map(worker));
@@ -2872,7 +2891,7 @@ function binderJumpToEntry(entry) {
   if (sec && sec.scrollIntoView) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function renderBinder() {
+function renderBinder(skipAnim) {
   renderBinderTotal();
   const list = binderApplyFilterSort(loadWatchlist());
   const totalSpreads = Math.max(1, Math.ceil(list.length / BINDER_PAGE_SIZE));
@@ -2906,8 +2925,7 @@ function renderBinder() {
     el.offsetHeight;          // force reflow
     el.style.animation = '';
   };
-  restartAnim(leftEl);
-  restartAnim(rightEl);
+  if (!skipAnim) { restartAnim(leftEl); restartAnim(rightEl); }
 
   const start = binderPage * BINDER_PAGE_SIZE;
   const slice = list.slice(start, start + BINDER_PAGE_SIZE);
@@ -3487,6 +3505,15 @@ async function _onSignedIn(user) {
       }
     }
     _syncUnsub = ref.onSnapshot(_onSnap, err => console.warn('sync listen failed', err));
+    // Pull resolved binder cards so a freshly signed-in device shows the binder
+    // instantly instead of re-querying Scryfall for every card, then push the
+    // merged union back up.
+    try {
+      const pulled = await _pullBinderCache();
+      _markBinderCacheDirty();
+      if (pulled && typeof renderBinder === 'function'
+          && !document.getElementById('view-binder').classList.contains('hidden')) renderBinder(true);
+    } catch (e) { console.warn('binder cache sync failed', e); }
     flashMsg('Synced — signed in as ' + (user.displayName || user.email || 'you'));
   } catch (e) { console.warn('sync init failed', e); }
 }
@@ -3564,6 +3591,58 @@ function initSync() {
     });
   } catch (e) {}
   _fbAuth.onAuthStateChanged(u => { if (u) _onSignedIn(u); else _onSignedOut(); });
+}
+// ---- Binder card-cache cloud sync ----------------------------------------
+// Resolved card identities (Scryfall lookups) are the expensive thing to
+// rebuild on a fresh device. We mirror them to Firestore - chunked, because a
+// doc maxes out at 1 MiB - so signing in on a new device pulls them instantly
+// instead of re-querying Scryfall for every card. Stored under
+// users/{uid}/binderCache, which needs the recursive-wildcard security rule.
+// Everything is best-effort: if the rule isn't set (or anything errors) it just
+// logs a warning and the binder falls back to resolving from Scryfall.
+const BINDER_CACHE_CHUNK = 250;
+let _binderCachePushTimer = null, _binderCacheDirty = false;
+function _markBinderCacheDirty() {
+  _binderCacheDirty = true;
+  if (!_syncUid || !_fbDb) return;
+  clearTimeout(_binderCachePushTimer);
+  _binderCachePushTimer = setTimeout(_pushBinderCache, 4000);
+}
+async function _pushBinderCache() {
+  if (!_syncUid || !_fbDb || !_binderCacheDirty) return;
+  _binderCacheDirty = false;
+  try {
+    const entries = Array.from(_binderMemCache.entries());
+    const col = _fbDb.collection('users').doc(_syncUid).collection('binderCache');
+    const writes = [];
+    for (let i = 0; i < entries.length; i += BINDER_CACHE_CHUNK) {
+      const arr = entries.slice(i, i + BINDER_CACHE_CHUNK)
+        .map(([k, v]) => ({ k: k, d: (v && v.d) ? v.d : v }));
+      writes.push(col.doc('c' + (i / BINDER_CACHE_CHUNK)).set({ cards: arr }));
+    }
+    await Promise.all(writes);
+  } catch (e) { console.warn('binder cache push failed', e); }
+}
+async function _pullBinderCache() {
+  if (!_syncUid || !_fbDb) return 0;
+  let n = 0;
+  try {
+    const snap = await _fbDb.collection('users').doc(_syncUid).collection('binderCache').get();
+    const now = Date.now();
+    snap.forEach(doc => {
+      const arr = (doc.data() || {}).cards || [];
+      for (const it of arr) {
+        if (it && it.k && !_binderMemCache.has(it.k)) {   // don't clobber fresher local
+          const entry = { d: it.d, t: now };
+          _binderMemCache.set(it.k, entry);
+          _idbPut(IDB_STORE_CARDS, it.k, entry);
+          n++;
+        }
+      }
+    });
+    if (n) bumpBinderCompute();
+  } catch (e) { console.warn('binder cache pull failed', e); }
+  return n;
 }
 function flashMsg(text) {
   let el = document.getElementById('flash');

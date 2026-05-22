@@ -69,15 +69,27 @@
     }
     @media (max-width: 768px) {
       .falling-card { width:14px; height:19px; }
-      /* Hide Set (4), Price (6), Prev (7) columns on mobile so the table
-         fits the natural viewport without horizontal overflow. */
+      /* Trim the movers table to Feed / Card / % change on phones so it fills
+         the screen with no sideways scroll. Hidden: Rule(2), Set(4), Finish(5),
+         Price(6), Prev(7). Full detail is on the card page (tap any row). */
+      #alerts th:nth-child(2), #alerts td:nth-child(2),
       #alerts th:nth-child(4), #alerts td:nth-child(4),
+      #alerts th:nth-child(5), #alerts td:nth-child(5),
       #alerts th:nth-child(6), #alerts td:nth-child(6),
       #alerts th:nth-child(7), #alerts td:nth-child(7) { display:none; }
+      #alerts { font-size:.82rem; }
+      #alerts th, #alerts td { padding:.45rem .4rem; }
+      #alerts td:nth-child(3) { white-space:normal; word-break:break-word; }
+      #alerts img.thumb { height:28px; margin-right:.3rem; }
+      #alerts .chip { font-size:.66rem; padding:.08rem .4rem; }
+      #alerts .feed-long { display:none; }
+      #alerts .feed-abbr { display:inline; }
+      .filter-row th { padding:.25rem .25rem; }
     }
     .pos { color:#5dd39e; }
     .neg { color:#ef6f6c; }
     .chip { display:inline-block; padding:.1rem .45rem; border-radius:999px; font-size:.72rem; background:#2a2a2a; white-space:nowrap;}
+    .feed-abbr { display:none; }
     .chip.spike { background:#5b3a90; }
     .chip.crash { background:#7a1414; color:#ffe0e0; font-weight:600; }
     .chip.feed-tcg { background:#b3261e; color:#fff; }
@@ -1009,6 +1021,13 @@ const PT_LABELS = {
   "cm_avg":     "Cardmarket",
   "manapool":   "Mana Pool"
 };
+const PT_LABELS_SHORT = {
+  "market":     "TCG",
+  "ck_buylist": "CK buy",
+  "ck_retail":  "CK ret",
+  "cm_avg":     "CM",
+  "manapool":   "MP"
+};
 const RULE_LABELS = {
   "1d_pct":  "1 day %",
   "7d_pct":  "7 day %",
@@ -1242,7 +1261,7 @@ function renderList() {
   const tbody = document.querySelector('#alerts tbody');
   tbody.innerHTML = pageRows.map(r => `
     <tr class="row ${r.pct_change >= 0 ? 'up' : 'down'}" onclick="goCard('${r.scryfall_id}','${r.finish}','${r.price_type}')">
-      <td><span class="chip ${feedClass(r.price_type)}">${PT_LABELS[r.price_type] || r.price_type}</span></td>
+      <td><span class="chip ${feedClass(r.price_type)}"><span class="feed-long">${PT_LABELS[r.price_type] || r.price_type}</span><span class="feed-abbr">${PT_LABELS_SHORT[r.price_type] || PT_LABELS[r.price_type] || r.price_type}</span></span></td>
       <td><span class="chip ${r.rule==='spike'?'spike':''}${r.rule==='crash'?'crash':''}">${RULE_LABELS[r.rule] || r.rule}</span></td>
       <td class="name">${r.image_uri ? `<img class="thumb" src="${r.image_uri}" loading="lazy" />` : ''}<a>${r.name}</a></td>
       <td>${(r.set_code||'').toUpperCase()}</td>

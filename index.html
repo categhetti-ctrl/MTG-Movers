@@ -95,6 +95,31 @@
     .price-summary .stat { text-align:center; }
     .price-summary .stat .label { font-size:.7rem; color:#aaa; text-transform:uppercase; letter-spacing:.05em; }
     .price-summary .stat .val { font-size:1.4rem; font-weight:600; margin-top:.15rem;}
+    /* Best-price callout (card detail) */
+    .best-price { display:flex; gap:.75rem; flex-wrap:wrap; margin:0 0 1.25rem; }
+    .bp-card { flex:1 1 220px; min-width:190px; background:#0d0d0d; border:1px solid #2a2a2a; border-left-width:4px; border-radius:10px; padding:.7rem .9rem; }
+    .bp-card.bp-buy  { border-left-color:#5dd39e; }
+    .bp-card.bp-sell { border-left-color:#9ecbff; }
+    .bp-label { font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; color:#aaa; font-weight:700; }
+    .bp-fin { color:#888; font-weight:600; text-transform:none; letter-spacing:0; }
+    .bp-feed { font-size:1rem; font-weight:600; margin-top:.22rem; color:#fff; }
+    .bp-price { font-size:1.35rem; font-weight:700; margin-top:.1rem; }
+    .bp-card.bp-buy  .bp-price { color:#5dd39e; }
+    .bp-card.bp-sell .bp-price { color:#9ecbff; }
+    .bp-native { font-size:.8rem; color:#aaa; font-weight:500; margin-left:.3rem; }
+    .stat.best-buy  .val { color:#5dd39e; }
+    .stat.best-sell .val { color:#9ecbff; }
+    [data-theme="light"] .bp-card { background:#ffffff; border-color:#e3e6ec; }
+    [data-theme="light"] .bp-card.bp-buy  { border-left-color:#1a9d6a; }
+    [data-theme="light"] .bp-card.bp-sell { border-left-color:#1a66cc; }
+    [data-theme="light"] .bp-label { color:#5a6172; }
+    [data-theme="light"] .bp-fin { color:#8a90a0; }
+    [data-theme="light"] .bp-feed { color:#1c2230; }
+    [data-theme="light"] .bp-card.bp-buy  .bp-price { color:#1a9d6a; }
+    [data-theme="light"] .bp-card.bp-sell .bp-price { color:#1a66cc; }
+    [data-theme="light"] .bp-native { color:#5a6172; }
+    [data-theme="light"] .stat.best-buy  .val { color:#1a9d6a; }
+    [data-theme="light"] .stat.best-sell .val { color:#1a66cc; }
     .detail-body { display:grid; grid-template-columns: 280px 1fr; gap:1.5rem; align-items:start;}
     @media (max-width: 800px) { .detail-body { grid-template-columns: 1fr; } }
     .card-art img { width:100%; border-radius:10px; box-shadow:0 4px 16px rgba(0,0,0,.4);}
@@ -691,6 +716,7 @@
       </div>
       <div class="price-summary" id="d-summary"></div>
     </div>
+    <div id="d-bestprice" class="best-price"></div>
     <div class="detail-body">
       <div class="card-art">
         <img id="d-img" alt="" />
@@ -971,6 +997,46 @@ function feedClass(pt) {
 const fmtPct = v => (v == null || isNaN(v)) ? '-' : (v*100).toFixed(1)+'%';
 const fmtPrice = (v, pt) => (v == null || isNaN(v)) ? '-' : (isEur(pt) ? '€' : '$') + Number(v).toFixed(2);
 const currencyOf = pt => isEur(pt) ? 'EUR' : 'USD';
+// ---- Best price across feeds (card detail) ----
+const EUR_USD = 1.08;  // approximate EUR->USD; update if rates drift significantly
+const _toUsd = (v, pt) => (v == null ? null : (isEur(pt) ? v * EUR_USD : v));
+function computeBestPrices(card, finish) {
+  // Compare every feed at the SAME finish so it's apples-to-apples. Buy = lowest
+  // USD-equivalent among the retail/market feeds; sell = the CK buylist (what a
+  // vendor pays you). Cardmarket (EUR) is converted to USD for ranking.
+  const out = { buy: null, sell: null };
+  for (const pt of Object.keys(card.history || {})) {
+    const series = card.history[pt] && card.history[pt][finish];
+    if (!series || !series.length) continue;
+    const v = series[series.length - 1][1];
+    if (v == null || isNaN(v) || v <= 0) continue;
+    const row = { pt, v, usd: _toUsd(v, pt) };
+    if (pt === 'ck_buylist') out.sell = row;
+    else if (!out.buy || row.usd < out.buy.usd) out.buy = row;
+  }
+  return out;
+}
+function _bpCardHtml(kind, label, r, finNote) {
+  const native = fmtPrice(r.v, r.pt);
+  const price = isEur(r.pt)
+    ? `≈$${r.usd.toFixed(2)} <span class="bp-native">${native}</span>`
+    : native;
+  return `<div class="bp-card bp-${kind}">
+      <div class="bp-label">${label}${finNote}</div>
+      <div class="bp-feed">${PT_LABELS[r.pt] || r.pt}</div>
+      <div class="bp-price">${price}</div>
+    </div>`;
+}
+function renderBestPrice(card, finish, best) {
+  const host = document.getElementById('d-bestprice');
+  if (!host) return;
+  if (!best || (!best.buy && !best.sell)) { host.innerHTML = ''; return; }
+  const finNote = (finish && finish !== 'normal') ? ` <span class="bp-fin">(${finish})</span>` : '';
+  let html = '';
+  if (best.buy)  html += _bpCardHtml('buy',  'Cheapest to buy',        best.buy,  finNote);
+  if (best.sell) html += _bpCardHtml('sell', 'Best buylist (sell to)', best.sell, finNote);
+  host.innerHTML = html;
+}
 let chart = null;
 // ---- Theme (light / dark) ----
 function _themeColors() {
@@ -1597,18 +1663,24 @@ function renderDetail(id, preferFinish, preferFeed) {
   const [activePt, activeFinish] = bestFinishAndFeed(card, preferFinish, preferFeed);
   if (!activePt) {
     document.getElementById('d-summary').innerHTML = '<span class="meta">No price history available.</span>';
+    document.getElementById('d-bestprice').innerHTML = '';
     document.getElementById('d-feed-picker').innerHTML = '';
     document.getElementById('d-stats').innerHTML = '';
     if (chart) { chart.destroy(); chart = null; }
     return;
   }
+  const best = computeBestPrices(card, activeFinish);
   const summary = Object.keys(card.history).map(pt => {
     const finishes = Object.keys(card.history[pt]);
     const fin = finishes.includes(activeFinish) ? activeFinish : finishes[0];
     const v = latestPrice(card, pt, fin);
-    return `<div class="stat"><div class="label">${PT_LABELS[pt] || pt}</div><div class="val">${fmtPrice(v, pt)}</div></div>`;
+    let cls = 'stat';
+    if (best.buy && pt === best.buy.pt) cls += ' best-buy';
+    if (best.sell && pt === best.sell.pt) cls += ' best-sell';
+    return `<div class="${cls}"><div class="label">${PT_LABELS[pt] || pt}</div><div class="val">${fmtPrice(v, pt)}</div></div>`;
   }).join('');
   document.getElementById('d-summary').innerHTML = summary;
+  renderBestPrice(card, activeFinish, best);
   const finishesForPt = Object.keys(card.history[activePt] || {});
   const feedChips = Object.keys(card.history).map(pt => {
     const base = (pt === activePt) ? 'chip feed-pick active' : 'chip feed-pick';

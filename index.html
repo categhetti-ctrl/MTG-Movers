@@ -5,6 +5,18 @@
   <title>MTG Price Movers - 2026-05-22</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="description" content="Daily mover snapshot for Magic: the Gathering cards." />
+  <script>
+    /* Apply saved theme (or the visitor's OS preference) before first paint so
+       there is no flash of the wrong theme. */
+    (function () {
+      try {
+        var s = localStorage.getItem('mtg-theme');
+        var t = (s === 'light' || s === 'dark') ? s
+              : (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) { document.documentElement.setAttribute('data-theme', 'dark'); }
+    })();
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; background:#000; color:#fff; }
@@ -471,6 +483,104 @@
       body { padding-left:200px; padding-right:200px;}
       .ticker { display:flex;}
     }
+    /* ===== Theme toggle button (both themes) ===== */
+    .theme-toggle { display:inline-flex; align-items:center; justify-content:center; width:38px; height:38px; padding:0; border-radius:999px; cursor:pointer; border:1px solid #3a4150; background:linear-gradient(180deg,#262a32,#16181d); color:#dbe9ff; box-shadow: inset 0 1px 0 rgba(255,255,255,.10), 0 1px 2px rgba(0,0,0,.45); transition: filter .15s ease, transform .08s ease; }
+    .theme-toggle:hover { filter:brightness(1.2); }
+    .theme-toggle:active { transform:translateY(1px); }
+    .theme-toggle:focus-visible { outline:2px solid #5b8cff; outline-offset:2px; }
+    .theme-toggle svg { width:18px; height:18px; display:block; }
+    .theme-toggle .icon-moon { display:none; }
+    [data-theme="light"] .theme-toggle .icon-sun  { display:none; }
+    [data-theme="light"] .theme-toggle .icon-moon { display:block; }
+    /* ===== Light theme overrides ===== */
+    [data-theme="light"] body { background:#f4f5f7; color:#1c2230; }
+    [data-theme="light"] a { color:#1a66cc; }
+    [data-theme="light"] header { background:#ffffff; border-bottom-color:#e3e6ec; }
+    [data-theme="light"] header h1, [data-theme="light"] header h1 a { color:#1c2230; }
+    [data-theme="light"] header .meta { color:#5a6172; }
+    [data-theme="light"] .footer-meta { color:#1c2230; }
+    [data-theme="light"] .truck-anim [stroke="#fff"] { stroke:#1c2230; }
+    [data-theme="light"] .truck-anim [fill="#fff"] { fill:#1c2230; }
+    [data-theme="light"] .header-nav a { color:#27324a; border-color:#cdd3de; background:linear-gradient(180deg,#ffffff,#eef0f4); box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 1px 2px rgba(0,0,0,.12); }
+    [data-theme="light"] .header-nav a:hover { filter:brightness(.97); color:#0f1830; }
+    [data-theme="light"] .header-nav a.active { color:#fff; border-color:#2e5099; background:linear-gradient(180deg,#4f86e8,#2f5fbf); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 1px 4px rgba(0,0,0,.2); }
+    [data-theme="light"] .theme-toggle { border-color:#cdd3de; background:linear-gradient(180deg,#ffffff,#eef0f4); color:#27324a; }
+    [data-theme="light"] .toolbar select, [data-theme="light"] .toolbar input { background:#ffffff; color:#1c2230; border-color:#cdd3de; }
+    [data-theme="light"] .tb-hint { color:#aab0bd; }
+    [data-theme="light"] .tb-showing { color:#6b7280; }
+    [data-theme="light"] th, [data-theme="light"] td { border-bottom-color:#e3e6ec; }
+    [data-theme="light"] th { color:#5a6172; }
+    [data-theme="light"] #sort-row th:hover { color:#0f1830; }
+    [data-theme="light"] tr.row.up { background: rgba(26,157,106,.12); }
+    [data-theme="light"] tr.row.down { background: rgba(212,69,63,.10); }
+    [data-theme="light"] tr.row.up:hover { background: rgba(26,157,106,.20); }
+    [data-theme="light"] tr.row.down:hover { background: rgba(212,69,63,.18); }
+    [data-theme="light"] .pos, [data-theme="light"] .binder-total .bt-delta.pos, [data-theme="light"] .bt-mover-row .delta.pos, [data-theme="light"] .deck-open-delta.pos, [data-theme="light"] .wl-result .price { color:#1a9d6a; }
+    [data-theme="light"] .neg, [data-theme="light"] .binder-total .bt-delta.neg, [data-theme="light"] .bt-mover-row .delta.neg, [data-theme="light"] .deck-open-delta.neg { color:#d4453f; }
+    [data-theme="light"] .chip { background:#e6e8ee; color:#27324a; }
+    [data-theme="light"] .chip.feed-pick.active { background:#27324a; color:#fff; border-color:#27324a; }
+    [data-theme="light"] .filter-row input, [data-theme="light"] .filter-row select { background:#ffffff; color:#1c2230; border-color:#cdd3de; }
+    [data-theme="light"] .name a, [data-theme="light"] .back, [data-theme="light"] .binder-empty a { color:#1a66cc; }
+    [data-theme="light"] .detail-head { border-bottom-color:#e3e6ec; }
+    [data-theme="light"] .detail-head h2 { color:#1a66cc; }
+    [data-theme="light"] .detail-head .sub, [data-theme="light"] .price-summary .stat .label { color:#5a6172; }
+    [data-theme="light"] .card-art .links a { background:#ffffff; border-color:#cdd3de; }
+    [data-theme="light"] .card-art .links a:hover { background:#eef0f4; }
+    [data-theme="light"] .panel { background:#ffffff; border-color:#e3e6ec; }
+    [data-theme="light"] .panel h3 { color:#5a6172; }
+    [data-theme="light"] .stat-grid .cell { background:#f4f6f9; border-color:#e3e6ec; }
+    [data-theme="light"] .stat-grid .cell .lbl { color:#5a6172; }
+    [data-theme="light"] footer { color:#5a6172; border-top-color:#e3e6ec; }
+    [data-theme="light"] .pagination button { background:#ffffff; color:#1c2230; border-color:#cdd3de; }
+    [data-theme="light"] .pagination button:hover:not(:disabled) { background:#eef0f4; }
+    [data-theme="light"] .pagination .info { color:#5a6172; }
+    [data-theme="light"] .binder-total { background:#ffffff; border-color:#e3e6ec; }
+    [data-theme="light"] .binder-total .bt-label { color:#5a6172; }
+    [data-theme="light"] .binder-total .bt-amount { color:#1c2230; }
+    [data-theme="light"] .binder-total .bt-toggle button { background:#ffffff; border-color:#cdd3de; color:#5a6172; }
+    [data-theme="light"] .binder-total .bt-toggle button.active { background:#2f5fbf; border-color:#2e5099; color:#fff; }
+    [data-theme="light"] .binder-total .bt-delta { color:#5a6172; }
+    [data-theme="light"] .binder-total .bt-chart-hint { color:#8a90a0; }
+    [data-theme="light"] .bt-mover-row { border-bottom-color:#e3e6ec; }
+    [data-theme="light"] .bt-mover-row:hover { background:#f0f1f4; }
+    [data-theme="light"] .bt-mover-row .name { color:#1a66cc; }
+    [data-theme="light"] .bt-mover-row .prices { color:#5a6172; }
+    [data-theme="light"] .bt-mover-row img { background:#e3e6ec; }
+    [data-theme="light"] .deck-period button { background:#ffffff; border-color:#cdd3de; color:#5a6172; }
+    [data-theme="light"] .deck-period button.active { background:#2f5fbf; border-color:#2e5099; color:#fff; }
+    [data-theme="light"] .deck-open-delta { color:#5a6172; }
+    [data-theme="light"] .deck-sec-title { color:#5a6172; }
+    [data-theme="light"] .deck-box-add { border-color:#cdd3de; color:#8a90a0; }
+    [data-theme="light"] .deck-box-add:hover { border-color:#aab0bd; color:#5a6172; background:#eef0f4; }
+    [data-theme="light"] .binder-customize { background:#ffffff; border-color:#e3e6ec; }
+    [data-theme="light"] .binder-customize h4, [data-theme="light"] .binder-customize .swatch-label { color:#5a6172; }
+    [data-theme="light"] .binder-customize .preset.active { border-color:#1c2230; }
+    [data-theme="light"] .binder-empty { color:#5a6172; }
+    [data-theme="light"] .wl-btn { color:#27324a; border-color:#cdd3de; background:linear-gradient(180deg,#ffffff,#eef0f4); box-shadow: inset 0 1px 0 rgba(255,255,255,.85), 0 1px 2px rgba(0,0,0,.12); }
+    [data-theme="light"] .wl-btn:hover { filter:brightness(.97); box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 2px 6px rgba(0,0,0,.16); }
+    [data-theme="light"] .wl-toggle { background:linear-gradient(180deg,#ffffff,#eef0f4); border-color:#cdd3de; color:#27324a; box-shadow: inset 0 1px 0 rgba(255,255,255,.85); }
+    [data-theme="light"] .modal { background:rgba(20,24,33,.45); }
+    [data-theme="light"] .modal .panel { background:#ffffff; border-color:#e3e6ec; }
+    [data-theme="light"] .modal h3 { color:#1c2230; }
+    [data-theme="light"] .modal .help { color:#5a6172; }
+    [data-theme="light"] .modal textarea { background:#ffffff; color:#1c2230; border-color:#cdd3de; }
+    [data-theme="light"] .modal .actions button { color:#27324a; border-color:#cdd3de; background:linear-gradient(180deg,#ffffff,#eef0f4); box-shadow: inset 0 1px 0 rgba(255,255,255,.85), 0 1px 2px rgba(0,0,0,.12); }
+    [data-theme="light"] .modal .actions button:hover { filter:brightness(.97); }
+    [data-theme="light"] .modal .actions .primary { color:#fff; border-color:#2e5099; background:linear-gradient(180deg,#4f86e8,#2f5fbf); }
+    [data-theme="light"] .wl-search input { background:#ffffff; color:#1c2230; border-color:#cdd3de; }
+    [data-theme="light"] .wl-results { background:#ffffff; border-color:#cdd3de; }
+    [data-theme="light"] .wl-result { border-bottom-color:#eef0f4; }
+    [data-theme="light"] .wl-result:hover { background:#f0f1f4; }
+    [data-theme="light"] .wl-result .nm { color:#1a66cc; }
+    [data-theme="light"] .wl-result .meta-line, [data-theme="light"] .wl-status { color:#5a6172; }
+    [data-theme="light"] .ticker { background:#f0f1f4; }
+    [data-theme="light"] .ticker.left { border-right-color:#e3e6ec; }
+    [data-theme="light"] .ticker.right { border-left-color:#e3e6ec; }
+    [data-theme="light"] .ticker-header { background:#ffffff; border-bottom-color:#e3e6ec; color:#5a6172; }
+    [data-theme="light"] .ticker-item { border-bottom-color:#e6e8ee; }
+    [data-theme="light"] .ticker-item:hover { background:#e9ebef; }
+    [data-theme="light"] .ticker-item .nm { color:#1c2230; }
+    [data-theme="light"] .ticker-empty { color:#8a90a0; }
   </style>
 </head>
 <body>
@@ -504,6 +614,10 @@
     <a href="#" data-v="list" onclick="goHome();return false;">Movers</a>
     <a href="#binder" data-v="binder" onclick="goBinder();return false;">Binder</a>
     <a href="#decks" data-v="decks" onclick="goDecks();return false;">Decks</a>
+    <button type="button" class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Switch between light and dark theme" title="Toggle light / dark theme">
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg>
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+    </button>
   </nav>
 </header>
 
@@ -852,6 +966,33 @@ const fmtPct = v => (v == null || isNaN(v)) ? '-' : (v*100).toFixed(1)+'%';
 const fmtPrice = (v, pt) => (v == null || isNaN(v)) ? '-' : (isEur(pt) ? '€' : '$') + Number(v).toFixed(2);
 const currencyOf = pt => isEur(pt) ? 'EUR' : 'USD';
 let chart = null;
+// ---- Theme (light / dark) ----
+function _themeColors() {
+  const light = document.documentElement.getAttribute('data-theme') === 'light';
+  return light
+    ? { grid:'#e3e6ec', tick:'#5a6172', line:'#1a66cc', fill:'rgba(26,102,204,.10)', legend:'#5a6172' }
+    : { grid:'#232938', tick:'#888',    line:'#9ecbff', fill:'rgba(158,203,255,.10)', legend:'#bbb' };
+}
+function refreshChartsForTheme() {
+  const c = _themeColors();
+  [chart, _deckChart, _binderTotalChart].forEach(ch => {
+    if (!ch || !ch.options) return;
+    try {
+      (ch.data.datasets || []).forEach(ds => { ds.borderColor = c.line; ds.backgroundColor = c.fill; });
+      const sc = ch.options.scales || {};
+      ['x', 'y'].forEach(ax => { if (sc[ax]) { if (sc[ax].ticks) sc[ax].ticks.color = c.tick; if (sc[ax].grid) sc[ax].grid.color = c.grid; } });
+      const lg = ch.options.plugins && ch.options.plugins.legend;
+      if (lg && lg.labels) lg.labels.color = c.legend;
+      ch.update('none');
+    } catch (e) {}
+  });
+}
+function toggleTheme() {
+  const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', next);
+  try { localStorage.setItem('mtg-theme', next); } catch (e) {}
+  refreshChartsForTheme();
+}
 const PAGE_SIZE = 100;
 let currentPage = 1;
 function changePage(delta) {
@@ -1164,6 +1305,7 @@ function renderDeckChart(cards) {
     options: { maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => '$' + ctx.parsed.y.toFixed(2) } } },
       scales: { x: { ticks: { color: '#888', maxRotation: 0, autoSkip: true, maxTicksLimit: 6 }, grid: { color: '#232938' } }, y: { ticks: { color: '#888', callback: v => '$' + Math.round(v).toLocaleString() }, grid: { color: '#232938' } } } }
   });
+  refreshChartsForTheme();
 }
 function renderDeckMovers(cards) {
   const host = document.getElementById('deck-movers'); if (!host) return;
@@ -1492,6 +1634,7 @@ function renderDetail(id, preferFinish, preferFeed) {
       }
     }
   });
+  refreshChartsForTheme();
   document.getElementById('d-stats-title').textContent =
     `Movement - ${PT_LABELS[activePt] || activePt} (${activeFinish}, ${currencyOf(activePt)})`;
   const d1  = pctChange(series, 1);
@@ -2366,6 +2509,7 @@ function renderBinderTotalChart() {
       }
     }
   });
+  refreshChartsForTheme();
 }
 function renderBinderTotal() {
   renderBinderTotalChart();

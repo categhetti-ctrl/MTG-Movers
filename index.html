@@ -3458,15 +3458,36 @@ function _onSignedOut() {
   _syncUid = null;
   _updateAuthUI(null);
 }
+function _preferRedirect() {
+  // Popups are unreliable in installed PWAs / on mobile / where third-party
+  // cookies are blocked - use a full-page redirect there.
+  const standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
+    || window.navigator.standalone === true;
+  const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+  return standalone || mobile;
+}
 function signIn() {
-  if (!_fbAuth) return;
+  if (!_fbAuth) { flashMsg('Sign-in not ready yet.'); return; }
   const provider = new firebase.auth.GoogleAuthProvider();
+  if (_preferRedirect()) {
+    _fbAuth.signInWithRedirect(provider)
+      .catch(e => { console.warn('sign-in failed', e); flashMsg('Sign-in error: ' + (e.code || e.message)); });
+    return;
+  }
   _fbAuth.signInWithPopup(provider).catch(e => {
     const c = e && e.code;
-    if (c === 'auth/popup-closed-by-user' || c === 'auth/cancelled-popup-request') return;
-    if (c === 'auth/popup-blocked' || c === 'auth/operation-not-supported-in-this-environment') {
-      _fbAuth.signInWithRedirect(provider);
-    } else { console.warn('sign-in failed', e); flashMsg('Sign-in failed.'); }
+    if (c === 'auth/cancelled-popup-request') return;
+    // Popup couldn't complete (closed instantly, blocked, COOP / third-party
+    // cookie restrictions) -> fall back to a full-page redirect.
+    if (c === 'auth/popup-closed-by-user' || c === 'auth/popup-blocked'
+        || c === 'auth/operation-not-supported-in-this-environment'
+        || c === 'auth/internal-error') {
+      _fbAuth.signInWithRedirect(provider)
+        .catch(e2 => { console.warn('sign-in failed', e2); flashMsg('Sign-in error: ' + (e2.code || e2.message)); });
+      return;
+    }
+    console.warn('sign-in failed', e);
+    flashMsg('Sign-in error: ' + (c || e.message));
   });
 }
 function signOutUser() {
@@ -3500,7 +3521,11 @@ function initSync() {
     _fbDb = firebase.firestore();
   } catch (e) { console.warn('Firebase init failed', e); return; }
   _updateAuthUI(null);                               // reveal the Sign in button
-  try { _fbAuth.getRedirectResult().catch(() => {}); } catch (e) {}
+  try {
+    _fbAuth.getRedirectResult().catch(e => {
+      if (e && e.code) { console.warn('redirect result', e); flashMsg('Sign-in error: ' + e.code); }
+    });
+  } catch (e) {}
   _fbAuth.onAuthStateChanged(u => { if (u) _onSignedIn(u); else _onSignedOut(); });
 }
 function flashMsg(text) {

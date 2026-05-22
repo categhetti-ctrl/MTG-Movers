@@ -2040,8 +2040,14 @@ function _idbClear(store) {
 // Custom user images (binder cover, deck boxes), kept in IndexedDB as data URLs
 // with an in-memory mirror so renders can read them synchronously.
 function customImageGet(key) { return _customImages.get(key) || null; }
-function customImageSet(key, dataURL) { _customImages.set(key, dataURL); _idbPut(IDB_STORE_IMG, key, dataURL); }
-function customImageRemove(key) { _customImages.delete(key); _idbDelete(IDB_STORE_IMG, key); }
+function customImageSet(key, dataURL) {
+  _customImages.set(key, dataURL); _idbPut(IDB_STORE_IMG, key, dataURL);
+  if (typeof _pushBinderImage === 'function') _pushBinderImage(key, dataURL);
+}
+function customImageRemove(key) {
+  _customImages.delete(key); _idbDelete(IDB_STORE_IMG, key);
+  if (typeof _deleteBinderImage === 'function') _deleteBinderImage(key);
+}
 // Read an uploaded file, downscale it via canvas, and hand back a compact JPEG
 // data URL so storage/render stay light even for big phone photos.
 function readImageScaled(file, maxDim, cb) {
@@ -3531,6 +3537,16 @@ async function _onSignedIn(user) {
       if (pulled && typeof renderBinder === 'function'
           && !document.getElementById('view-binder').classList.contains('hidden')) renderBinder(true);
     } catch (e) { console.warn('binder cache sync failed', e); }
+    // Custom images (binder cover + deck box art): pull the account's, seed any
+    // local-only ones, then re-render whatever's showing.
+    try {
+      await _syncBinderImagesOnSignIn();
+      if (typeof applyBinderCover === 'function') applyBinderCover();
+      if (typeof renderDeckShelf === 'function'
+          && !document.getElementById('view-decks').classList.contains('hidden')) renderDeckShelf();
+      if (typeof renderBinder === 'function'
+          && !document.getElementById('view-binder').classList.contains('hidden')) renderBinder(true);
+    } catch (e) { console.warn('image sync failed', e); }
     flashMsg('Synced — signed in as ' + (user.displayName || user.email || 'you'));
   } catch (e) { console.warn('sync init failed', e); }
 }
@@ -3683,6 +3699,47 @@ async function _pullBinderCache() {
     if (n) bumpBinderCompute();
   } catch (e) { console.warn('binder cache pull failed', e); }
   return n;
+}
+// ---- Custom image cloud sync (binder cover + deck box art) ----------------
+// One Firestore doc per image under users/{uid}/binderImages (covered by the
+// same recursive-wildcard rule). readImageScaled keeps these as ~150-400KB
+// JPEGs, well under the 1 MiB doc limit; an oversized one is skipped (kept
+// local only) rather than failing the write.
+async function _pushBinderImage(key, dataURL) {
+  if (!_syncUid || !_fbDb || !key || !dataURL) return;
+  if (dataURL.length > 950000) { console.warn('image too large to sync (' + dataURL.length + 'b):', key); return; }
+  try {
+    await _fbDb.collection('users').doc(_syncUid).collection('binderImages').doc(key)
+      .set({ data: dataURL, t: Date.now() });
+  } catch (e) { console.warn('image push failed', e); }
+}
+async function _deleteBinderImage(key) {
+  if (!_syncUid || !_fbDb || !key) return;
+  try {
+    await _fbDb.collection('users').doc(_syncUid).collection('binderImages').doc(key).delete();
+  } catch (e) { console.warn('image delete failed', e); }
+}
+async function _pullBinderImages() {
+  const keys = new Set();
+  if (!_syncUid || !_fbDb) return keys;
+  try {
+    const snap = await _fbDb.collection('users').doc(_syncUid).collection('binderImages').get();
+    snap.forEach(doc => {
+      const d = doc.data() || {};
+      if (d.data) {
+        _customImages.set(doc.id, d.data);   // cloud is authoritative for its keys
+        _idbPut(IDB_STORE_IMG, doc.id, d.data);
+        keys.add(doc.id);
+      }
+    });
+  } catch (e) { console.warn('image pull failed', e); }
+  return keys;
+}
+async function _syncBinderImagesOnSignIn() {
+  const cloudKeys = await _pullBinderImages();
+  for (const [k, v] of _customImages) {     // seed any local-only images up
+    if (!cloudKeys.has(k)) _pushBinderImage(k, v);
+  }
 }
 function flashMsg(text) {
   let el = document.getElementById('flash');

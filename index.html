@@ -998,13 +998,20 @@ const fmtPct = v => (v == null || isNaN(v)) ? '-' : (v*100).toFixed(1)+'%';
 const fmtPrice = (v, pt) => (v == null || isNaN(v)) ? '-' : (isEur(pt) ? '€' : '$') + Number(v).toFixed(2);
 const currencyOf = pt => isEur(pt) ? 'EUR' : 'USD';
 // ---- Best price across feeds (card detail) ----
-const EUR_USD = 1.08;  // approximate EUR->USD; update if rates drift significantly
+const EUR_USD = 1.0800;  // injected at build time from live FX (fx_fetcher); fallback in config.EUR_USD_FALLBACK
 const _toUsd = (v, pt) => (v == null ? null : (isEur(pt) ? v * EUR_USD : v));
+function _median(nums) {
+  const a = nums.slice().sort((x, y) => x - y);
+  const n = a.length;
+  if (!n) return null;
+  return n % 2 ? a[(n - 1) / 2] : (a[n / 2 - 1] + a[n / 2]) / 2;
+}
 function computeBestPrices(card, finish) {
   // Compare every feed at the SAME finish so it's apples-to-apples. Buy = lowest
   // USD-equivalent among the retail/market feeds; sell = the CK buylist (what a
   // vendor pays you). Cardmarket (EUR) is converted to USD for ranking.
   const out = { buy: null, sell: null };
+  const buyCands = [];
   for (const pt of Object.keys(card.history || {})) {
     const series = card.history[pt] && card.history[pt][finish];
     if (!series || !series.length) continue;
@@ -1012,7 +1019,22 @@ function computeBestPrices(card, finish) {
     if (v == null || isNaN(v) || v <= 0) continue;
     const row = { pt, v, usd: _toUsd(v, pt) };
     if (pt === 'ck_buylist') out.sell = row;
-    else if (!out.buy || row.usd < out.buy.usd) out.buy = row;
+    else buyCands.push(row);
+  }
+  // Outlier guard: a single bad/stale feed value shouldn't be crowned "cheapest
+  // to buy". A real buy price can't sit far below what dealers pay (buylist) nor
+  // far below the median of the other feeds, so drop those before picking the
+  // minimum. Only kicks in with 2+ candidates, and never empties the result.
+  let cands = buyCands;
+  if (buyCands.length >= 2) {
+    const med = _median(buyCands.map(r => r.usd));
+    const sellUsd = out.sell ? out.sell.usd : null;
+    const filtered = buyCands.filter(r =>
+      r.usd >= 0.45 * med && (sellUsd == null || r.usd >= 0.85 * sellUsd));
+    if (filtered.length) cands = filtered;
+  }
+  for (const r of cands) {
+    if (!out.buy || r.usd < out.buy.usd) out.buy = r;
   }
   return out;
 }

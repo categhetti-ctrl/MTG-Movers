@@ -2033,6 +2033,10 @@ function _idbDelete(store, key) {
   if (!_binderIDB) return;
   try { _binderIDB.transaction(store, 'readwrite').objectStore(store).delete(key); } catch (e) {}
 }
+function _idbClear(store) {
+  if (!_binderIDB) return;
+  try { _binderIDB.transaction(store, 'readwrite').objectStore(store).clear(); } catch (e) {}
+}
 // Custom user images (binder cover, deck boxes), kept in IndexedDB as data URLs
 // with an in-memory mirror so renders can read them synchronously.
 function customImageGet(key) { return _customImages.get(key) || null; }
@@ -3484,6 +3488,19 @@ function _onSnap(snap) {
   }
 }
 async function _onSignedIn(user) {
+  // Detect an account switch on a shared device: if a DIFFERENT account was the
+  // last one signed in here, flush its pending data to ITS cloud, then wipe this
+  // device before loading the new account - so the two never merge.
+  let _prevUid = null;
+  try { _prevUid = localStorage.getItem('mtg-sync-uid'); } catch (e) {}
+  if (_prevUid && _prevUid !== user.uid) {
+    clearTimeout(_syncPushTimer); clearTimeout(_binderCachePushTimer);
+    try { await _pushCloud(); } catch (e) {}
+    _binderCacheDirty = true; try { await _pushBinderCache(); } catch (e) {}
+    if (_syncUnsub) { try { _syncUnsub(); } catch (e) {} _syncUnsub = null; }
+    _clearLocalUserData();
+  }
+  try { localStorage.setItem('mtg-sync-uid', user.uid); } catch (e) {}
   _syncUid = user.uid;
   _updateAuthUI(user);
   try {
@@ -3554,9 +3571,32 @@ function signIn() {
     flashMsg('Sign-in error: ' + (c || e.message));
   });
 }
-function signOutUser() {
+function _clearLocalUserData() {
+  // Wipe THIS device's personal collection data so it can't carry over between
+  // accounts on a shared device. Cloud data is untouched and re-pulls on sign-in.
+  try {
+    [WL_KEY, DECKS_KEY, BINDER_COLOR_KEY, BINDER_PREFS_KEY, 'mtg-sync-at']
+      .forEach(k => localStorage.removeItem(k));
+  } catch (e) {}
+  try { _binderMemCache.clear(); _binderMemHist.clear(); _customImages.clear(); } catch (e) {}
+  _idbClear(IDB_STORE_CARDS); _idbClear(IDB_STORE_HIST); _idbClear(IDB_STORE_IMG);
+  _syncLocalAt = 0;
+  bumpBinderCompute();
+  try { applyBinderCover(); } catch (e) {}
+  try { _refreshAfterSync(); } catch (e) {}   // re-render the active view as empty
+}
+async function signOutUser() {
   if (!_fbAuth) return;
-  if (!confirm('Sign out? Your data stays in the cloud and on this device.')) return;
+  if (!confirm('Sign out? Your watchlist, decks, and binder will be cleared from THIS device (they stay safe in your account and come back when you sign in).')) return;
+  // Flush pending writes so a change made right before sign-out isn't lost, then
+  // stop further writes, clear this device, and sign out.
+  clearTimeout(_syncPushTimer); clearTimeout(_binderCachePushTimer);
+  try { await _pushCloud(); } catch (e) {}
+  _binderCacheDirty = true; try { await _pushBinderCache(); } catch (e) {}
+  if (_syncUnsub) { try { _syncUnsub(); } catch (e) {} _syncUnsub = null; }
+  _syncUid = null;
+  try { localStorage.removeItem('mtg-sync-uid'); } catch (e) {}
+  _clearLocalUserData();
   _fbAuth.signOut();
 }
 function _updateAuthUI(user) {

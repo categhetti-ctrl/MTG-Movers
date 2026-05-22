@@ -2059,6 +2059,13 @@ function _migrateFromLocalStorage(lsKey, store, mem) {
 function initBinderStorage() {
   if (binderStorageReady) return binderStorageReady;
   binderStorageReady = (async () => {
+    // Ask the browser to keep this data. iOS Safari evicts IndexedDB
+    // aggressively, which forces the binder to re-fetch every card from
+    // Scryfall on the next visit (the "slow populate"). Best-effort and
+    // non-blocking - never delays startup.
+    try {
+      if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
+    } catch (e) {}
     try {
       _binderIDB = await _openBinderIDB();
       const [cards, hist, imgs] = await Promise.all([

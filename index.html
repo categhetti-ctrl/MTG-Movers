@@ -69,13 +69,13 @@
     }
     @media (max-width: 768px) {
       .falling-card { width:14px; height:19px; }
-      /* Trim the movers table to Feed / Card / % change on phones so it fills
-         the screen with no sideways scroll. Hidden: Rule(2), Set(4), Finish(5),
-         Price(6), Prev(7). Full detail is on the card page (tap any row). */
+      /* Trim the movers table to Feed / Card / Price / % change on phones so
+         the value is visible at a glance without sideways scroll.
+         Hidden: Rule(2), Set(4), Finish(5), Prev(7). Full detail is on the
+         card page (tap any row). */
       #alerts th:nth-child(2), #alerts td:nth-child(2),
       #alerts th:nth-child(4), #alerts td:nth-child(4),
       #alerts th:nth-child(5), #alerts td:nth-child(5),
-      #alerts th:nth-child(6), #alerts td:nth-child(6),
       #alerts th:nth-child(7), #alerts td:nth-child(7) { display:none; }
       #alerts { font-size:.82rem; }
       #alerts th, #alerts td { padding:.45rem .4rem; }

@@ -798,6 +798,11 @@
           <h3 id="d-stats-title">Movement</h3>
           <div class="stat-grid" id="d-stats"></div>
         </div>
+        <div class="panel" id="d-spike-context" style="display:none;">
+          <h3 id="d-spike-title">Why is this card moving?</h3>
+          <p class="meta" style="color:#aaa; font-size:.85rem; margin:0 0 .6rem;">A big recent move &mdash; here's where MTG news usually breaks. We don't know the cause; tap a link to investigate.</p>
+          <div id="d-spike-links" style="display:flex; gap:.5rem; flex-wrap:wrap;"></div>
+        </div>
       </div>
     </div>
   </section>
@@ -1810,6 +1815,48 @@ function buildLinks(card) {
   out.push(`<a href="${sfUrl}" target="_blank" rel="noopener">View on Scryfall &rarr;</a>`);
   return out.join('');
 }
+function renderSpikeContext(card) {
+  // Show a panel of search-link buttons (Reddit, YouTube, Google News, etc.)
+  // when the card has had a big recent move on ANY feed/finish - a spike
+  // (>= +100%) or a crash (<= -50%) in any of the 1d / 7d / 30d windows. We
+  // don't claim to know the cause; the links point at where MTG news breaks.
+  const panel = document.getElementById('d-spike-context');
+  if (!panel) return;
+  if (!card || !card.history) { panel.style.display = 'none'; return; }
+  const periods = [1, 7, 30];
+  let spike = false, crash = false;
+  for (const pt of Object.keys(card.history)) {
+    for (const fin of Object.keys(card.history[pt])) {
+      const series = card.history[pt][fin] || [];
+      for (const d of periods) {
+        const pc = pctChange(series, d);
+        if (pc == null) continue;
+        if (pc >=  1.0) spike = true;
+        if (pc <= -0.5) crash = true;
+      }
+    }
+  }
+  if (!spike && !crash) { panel.style.display = 'none'; return; }
+  panel.style.display = '';
+  const title = document.getElementById('d-spike-title');
+  if (title) title.textContent = (spike && crash) ? 'Why is this card moving so much?'
+                                : spike            ? 'Why is this card spiking?'
+                                                   : 'Why is this card crashing?';
+  const links = document.getElementById('d-spike-links');
+  if (!links) return;
+  const name = card.name || '';
+  const enc = encodeURIComponent;
+  const items = [
+    { label: 'Reddit r/MagicTCG', url: 'https://www.google.com/search?q=' + enc('site:reddit.com/r/magictcg "' + name + '"') },
+    { label: 'YouTube',           url: 'https://www.youtube.com/results?search_query=' + enc(name + ' MTG spike') },
+    { label: 'Google News',       url: 'https://www.google.com/search?q=' + enc('"' + name + '" MTG spike OR ban OR reprint') + '&tbm=nws' },
+    { label: 'MTGGoldfish',       url: 'https://www.mtggoldfish.com/q?utf8=%E2%9C%93&query_string=' + enc(name) + '&commit=Search' },
+    { label: 'X (Twitter)',       url: 'https://twitter.com/search?q=' + enc('"' + name + '" MTG') + '&src=typed_query' },
+  ];
+  links.innerHTML = items.map(it =>
+    '<a class="wl-btn" href="' + it.url + '" target="_blank" rel="noopener">' + escapeHtml(it.label) + ' ↗</a>'
+  ).join('');
+}
 function renderDetail(id, preferFinish, preferFeed) {
   const card = HISTORY[id];
   if (!card) return;
@@ -1827,6 +1874,7 @@ function renderDetail(id, preferFinish, preferFeed) {
     document.getElementById('d-bestprice').innerHTML = '';
     document.getElementById('d-feed-picker').innerHTML = '';
     document.getElementById('d-stats').innerHTML = '';
+    const _sc = document.getElementById('d-spike-context'); if (_sc) _sc.style.display = 'none';
     if (chart) { chart.destroy(); chart = null; }
     return;
   }
@@ -1842,6 +1890,7 @@ function renderDetail(id, preferFinish, preferFeed) {
   }).join('');
   document.getElementById('d-summary').innerHTML = summary;
   renderBestPrice(card, activeFinish, best);
+  renderSpikeContext(card);
   const finishesForPt = Object.keys(card.history[activePt] || {});
   const feedChips = Object.keys(card.history).map(pt => {
     const base = (pt === activePt) ? 'chip feed-pick active' : 'chip feed-pick';

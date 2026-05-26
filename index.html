@@ -800,7 +800,8 @@
         </div>
         <div class="panel" id="d-spike-context" style="display:none;">
           <h3 id="d-spike-title">Why is this card moving?</h3>
-          <p class="meta" style="color:#aaa; font-size:.85rem; margin:0 0 .6rem;">A big recent move &mdash; here's where MTG news usually breaks. We don't know the cause; tap a link to investigate.</p>
+          <p id="d-spike-synopsis" style="display:none; margin:0 0 .6rem; line-height:1.45;"></p>
+          <p id="d-spike-disclaimer" class="meta" style="color:#aaa; font-size:.78rem; margin:0 0 .6rem;"></p>
           <div id="d-spike-links" style="display:flex; gap:.5rem; flex-wrap:wrap;"></div>
         </div>
       </div>
@@ -1842,6 +1843,19 @@ function renderSpikeContext(card) {
   if (title) title.textContent = (spike && crash) ? 'Why is this card moving so much?'
                                 : spike            ? 'Why is this card spiking?'
                                                    : 'Why is this card crashing?';
+  // Synopsis (cached daily from Claude with web search). Hidden when missing.
+  const syn  = document.getElementById('d-spike-synopsis');
+  const disc = document.getElementById('d-spike-disclaimer');
+  const text = (card.synopsis || '').trim();
+  if (syn) {
+    if (text) { syn.textContent = text; syn.style.display = ''; }
+    else      { syn.textContent = '';   syn.style.display = 'none'; }
+  }
+  if (disc) {
+    disc.textContent = text
+      ? ('Researched ' + (card.synopsis_date || 'recently') + ' — verify with the sources below.')
+      : "We don't know the cause yet — tap a link to dig in.";
+  }
   const links = document.getElementById('d-spike-links');
   if (!links) return;
   const name = card.name || '';

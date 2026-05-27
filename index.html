@@ -983,6 +983,31 @@
         <div class="sub" id="pb-stats"></div>
       </div>
     </div>
+    <div class="binder-controls" id="pb-filter-bar" style="justify-content:flex-start; margin:0 0 1rem;">
+      <label style="color:#bbb; font-size:.85rem;">Color
+        <select id="pb-color" onchange="setPublicBinderColorFilter(this.value)" style="background:#141414; color:#fff; border:1px solid #2a2a2a; border-radius:6px; padding:.4rem .55rem; margin-left:.4rem;">
+          <option value="all">All</option>
+          <option value="W">White</option>
+          <option value="U">Blue</option>
+          <option value="B">Black</option>
+          <option value="R">Red</option>
+          <option value="G">Green</option>
+          <option value="C">Colorless</option>
+          <option value="M">Multicolor</option>
+        </select>
+      </label>
+      <label style="color:#bbb; font-size:.85rem;">Sort
+        <select id="pb-sort-cards" onchange="setPublicBinderSortBy(this.value)" style="background:#141414; color:#fff; border:1px solid #2a2a2a; border-radius:6px; padding:.4rem .55rem; margin-left:.4rem;">
+          <option value="custom">List order</option>
+          <option value="highest">Highest value</option>
+          <option value="lowest">Lowest value</option>
+          <option value="alpha">A &ndash; Z</option>
+        </select>
+      </label>
+      <label style="color:#bbb; font-size:.85rem;">Search
+        <input id="pb-card-search" type="search" placeholder="Card name…" oninput="setPublicBinderSearch(this.value)" style="background:#141414; color:#fff; border:1px solid #2a2a2a; border-radius:6px; padding:.4rem .6rem; margin-left:.4rem; min-width:180px;" />
+      </label>
+    </div>
     <div id="pb-cards"></div>
   </section>
 </main>
@@ -4090,18 +4115,74 @@ async function showPublicBinder(uid) {
   }
   renderPublicBinder(data);
 }
+// Current binder being viewed + the user's chosen filter/sort/search state.
+// We re-render in place when any of them change rather than re-fetching.
+let _pbCurrentData    = null;
+let _pbColorFilter    = 'all';
+let _pbSortBy         = 'custom';
+let _pbSearch         = '';
+
+function _pbCardMatchesColor(card, filter) {
+  if (filter === 'all') return true;
+  const ci = (card && card.color_identity) || [];
+  if (filter === 'C') return ci.length === 0;
+  if (filter === 'M') return ci.length >= 2;
+  return ci.length === 1 && ci[0] === filter;
+}
+function setPublicBinderColorFilter(v) { _pbColorFilter = v || 'all'; _renderPbCards(); }
+function setPublicBinderSortBy(v)      { _pbSortBy      = v || 'custom'; _renderPbCards(); }
+function setPublicBinderSearch(v)      { _pbSearch      = (v || '').trim().toLowerCase(); _renderPbCards(); }
+
 function renderPublicBinder(data) {
+  _pbCurrentData = data;
   document.getElementById('pb-title').textContent = data.handle || 'Public binder';
   const fmt = n => '$' + (Number(n) || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   const count = data.cardCount || (data.cards && data.cards.size) || 0;
   document.getElementById('pb-stats').textContent =
     `${count.toLocaleString()} card${count === 1 ? '' : 's'} · ${fmt(data.totalValue)}`;
+  // Reset filter inputs to defaults whenever we open a new binder so stale
+  // filters from a previous viewing don't carry over.
+  _pbColorFilter = 'all'; _pbSortBy = 'custom'; _pbSearch = '';
+  const colorEl  = document.getElementById('pb-color');       if (colorEl)  colorEl.value  = 'all';
+  const sortEl   = document.getElementById('pb-sort-cards');  if (sortEl)   sortEl.value   = 'custom';
+  const searchEl = document.getElementById('pb-card-search'); if (searchEl) searchEl.value = '';
+  _renderPbCards();
+}
+
+function _renderPbCards() {
   const host = document.getElementById('pb-cards');
+  const data = _pbCurrentData;
+  if (!host) return;
+  if (!data) { host.innerHTML = ''; return; }
+  const fmt = n => '$' + (Number(n) || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   const wl = (data.watchlist || '').split('\n').map(s => s.trim()).filter(Boolean);
-  const cells = wl.map(entry => {
+  // Build a list of {entry, card} pairs, dropping anything without card data.
+  let items = wl.map(entry => {
     const v = data.cards.get(entry);
     const card = v && v.d;
-    if (!card) return '';
+    return card ? { entry, card } : null;
+  }).filter(Boolean);
+  // Apply filters.
+  if (_pbColorFilter !== 'all') {
+    items = items.filter(it => _pbCardMatchesColor(it.card, _pbColorFilter));
+  }
+  if (_pbSearch) {
+    items = items.filter(it => ((it.card.name || it.entry) || '').toLowerCase().includes(_pbSearch));
+  }
+  // Apply sort (stable - mirrors the personal binder behavior).
+  if (_pbSortBy === 'highest') {
+    items.sort((a, b) => (b.card.price_usd || 0) - (a.card.price_usd || 0));
+  } else if (_pbSortBy === 'lowest') {
+    items.sort((a, b) => {
+      const ap = a.card.price_usd == null ? Infinity : a.card.price_usd;
+      const bp = b.card.price_usd == null ? Infinity : b.card.price_usd;
+      return ap - bp;
+    });
+  } else if (_pbSortBy === 'alpha') {
+    items.sort((a, b) => ((a.card.name || a.entry) || '').localeCompare((b.card.name || b.entry) || ''));
+  }
+  const cells = items.map(it => {
+    const card = it.card;
     const safeId  = (card.id     || '').replace(/'/g, "\\'");
     const safeFin = (card.finish || 'normal').replace(/'/g, "\\'");
     const price = (card.price_usd != null) ? fmt(card.price_usd) : '';
@@ -4112,10 +4193,15 @@ function renderPublicBinder(data) {
       ${imgUrl ? `<img src="${escapeHtml(imgUrl)}" loading="lazy" alt="" />` : ''}
       ${price ? `<div class="pr">${price}</div>` : ''}
     </div>`;
-  }).filter(Boolean).join('');
-  host.innerHTML = cells
-    ? `<div class="deck-cards">${cells}</div>`
-    : '<p style="text-align:center;color:#aaa;padding:2rem;">No card data yet — the owner may not have finished loading their binder.</p>';
+  }).join('');
+  if (!cells) {
+    const emptyMsg = (wl.length && (_pbColorFilter !== 'all' || _pbSearch))
+      ? 'No cards match your filters.'
+      : 'No card data yet — the owner may not have finished loading their binder.';
+    host.innerHTML = `<p style="text-align:center;color:#aaa;padding:2rem;">${emptyMsg}</p>`;
+    return;
+  }
+  host.innerHTML = `<div class="deck-cards">${cells}</div>`;
 }
 
 function flashMsg(text) {

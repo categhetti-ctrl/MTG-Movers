@@ -522,13 +522,20 @@
     .modal .actions button:focus-visible { outline:2px solid #5b8cff; outline-offset:2px;}
     .modal .actions .primary { color:#fff; border-color:#3f63b8; background:linear-gradient(180deg,#4373d8 0%,#274f9e 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 1px 4px rgba(0,0,0,.5);}
     .tc-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(100px, 1fr)); gap:.4rem;}
+    .tc-grid-lg { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:.6rem;}
     .tc-card { position:relative; cursor:pointer; border-radius:6px; overflow:hidden; border:2px solid transparent; transition: border-color .12s ease, transform .08s ease; aspect-ratio: 5/7; background:#000;}
     .tc-card img { display:block; width:100%; height:100%; object-fit:cover;}
     .tc-card .nm { position:absolute; left:0; right:0; bottom:0; background:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.85) 100%); color:#fff; font-size:.65rem; padding:1rem .25rem .15rem; text-align:center; pointer-events:none; line-height:1.1;}
+    .tc-card .pr { position:absolute; top:.25rem; left:.3rem; background:rgba(0,0,0,.7); color:#4cd964; font-size:.7rem; font-weight:600; padding:.05rem .35rem; border-radius:3px;}
     .tc-card.picked { border-color:#4cd964; transform:scale(.97);}
     .tc-card.picked::after { content:"\2713"; position:absolute; top:.2rem; right:.3rem; background:#4cd964; color:#000; width:1.2rem; height:1.2rem; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:.85rem;}
-    [data-theme="light"] .tc-grid { }
-    [data-theme="light"] #tc-their-cards, [data-theme="light"] #tc-my-cards { background:#f5f7fa; border-color:#cdd3de;}
+    .tc-step { display:inline-flex; align-items:center; gap:.35rem; color:#666;}
+    .tc-step.active { color:#9ecbff;}
+    .tc-step.done { color:#4cd964;}
+    .tc-bullet { display:inline-flex; width:1.4rem; height:1.4rem; align-items:center; justify-content:center; border-radius:50%; background:#1a1a1a; border:1px solid #333; font-weight:700; font-size:.75rem;}
+    .tc-step.active .tc-bullet { background:#1a2a3a; border-color:#3a4f6a; color:#9ecbff;}
+    .tc-step.done .tc-bullet { background:#0d3320; border-color:#1f5132; color:#4cd964;}
+    [data-theme="light"] #tc-pick-grid, [data-theme="light"] #tc-review { background:#f5f7fa; border-color:#cdd3de;}
     .wl-tab { padding:.4rem .9rem; border:1px solid #2a2a2a; background:#0c0c0c; color:#bbb; border-radius:6px; cursor:pointer; font-size:.85rem; font-weight:600;}
     .wl-tab.active { background:#1a1a1a; color:#9ecbff; border-color:#3a4f6a;}
     .wl-tab:hover { color:#fff;}
@@ -1122,23 +1129,40 @@
 </div>
 
 <div id="trade-modal" class="modal" onclick="if(event.target.id==='trade-modal')closeTradeComposer()">
-  <div class="panel" style="width:min(960px, 96vw); max-height:92vh;">
-    <h3 id="trade-modal-title">Propose a trade</h3>
-    <div class="help">Click cards to add or remove them from each side. The recipient will see your offer and can accept or decline. Once accepted, you'll both see each other's trade contact info.</div>
-    <div class="tc-cols" style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:.6rem; min-height:0; overflow:hidden;">
-      <div style="display:flex; flex-direction:column; min-height:0;">
-        <h4 style="margin:.1rem 0 .4rem; color:#9ecbff;">Requesting from them <span id="tc-req-summary" style="color:#888; font-weight:400; font-size:.85rem;"></span></h4>
-        <div id="tc-their-cards" class="tc-grid" style="flex:1; overflow-y:auto; border:1px solid #2a2a2a; border-radius:6px; padding:.4rem; background:#0a0a0a;"></div>
-      </div>
-      <div style="display:flex; flex-direction:column; min-height:0;">
-        <h4 style="margin:.1rem 0 .4rem; color:#9ecbff;">Offering from your binder <span id="tc-off-summary" style="color:#888; font-weight:400; font-size:.85rem;"></span></h4>
-        <div id="tc-my-cards" class="tc-grid" style="flex:1; overflow-y:auto; border:1px solid #2a2a2a; border-radius:6px; padding:.4rem; background:#0a0a0a;"></div>
-      </div>
+  <div class="panel" style="width:min(1080px, 96vw); max-height:94vh; display:flex; flex-direction:column;">
+    <h3 id="trade-modal-title" style="margin:0 0 .25rem;">Propose a trade</h3>
+    <div id="tc-stepper" style="display:flex; gap:.6rem; align-items:center; flex-wrap:wrap; margin:0 0 .6rem; font-size:.8rem; color:#bbb;">
+      <span class="tc-step" data-step="1"><span class="tc-bullet">1</span> Pick from their binder</span>
+      <span style="color:#444;">&rarr;</span>
+      <span class="tc-step" data-step="2"><span class="tc-bullet">2</span> Pick from yours</span>
+      <span style="color:#444;">&rarr;</span>
+      <span class="tc-step" data-step="3"><span class="tc-bullet">3</span> Review &amp; send</span>
     </div>
-    <textarea id="tc-message" placeholder="Optional message to the recipient..." style="margin-top:.6rem; min-height:60px;"></textarea>
+    <div id="tc-step-help" class="help" style="margin:0 0 .6rem;">Click cards to add or remove them from the request. Search the binder, filter by color, or sort. Once you have what you want, hit Next.</div>
+    <div id="tc-filter-bar" style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; margin:0 0 .6rem;">
+      <input id="tc-search" type="search" placeholder="Search card name..." oninput="_tcOnSearch(this.value)" style="flex:1 1 220px; min-width:180px; background:#000; color:#fff; border:1px solid #2a2a2a; border-radius:6px; padding:.4rem .6rem;" />
+      <select id="tc-color" onchange="_tcOnColor(this.value)" style="background:#141414; color:#fff; border:1px solid #2a2a2a; border-radius:6px; padding:.4rem .55rem;">
+        <option value="all">All colors</option>
+        <option value="W">White</option><option value="U">Blue</option>
+        <option value="B">Black</option><option value="R">Red</option>
+        <option value="G">Green</option>
+        <option value="C">Colorless</option><option value="M">Multicolor</option>
+      </select>
+      <select id="tc-sort" onchange="_tcOnSort(this.value)" style="background:#141414; color:#fff; border:1px solid #2a2a2a; border-radius:6px; padding:.4rem .55rem;">
+        <option value="custom">List order</option>
+        <option value="highest">Highest value</option>
+        <option value="lowest">Lowest value</option>
+        <option value="alpha">A &ndash; Z</option>
+      </select>
+      <span id="tc-picked-count" style="margin-left:auto; color:#9ecbff; font-size:.85rem; font-weight:600;"></span>
+    </div>
+    <div id="tc-pick-grid" class="tc-grid-lg" style="flex:1 1 auto; overflow-y:auto; border:1px solid #2a2a2a; border-radius:6px; padding:.6rem; background:#0a0a0a; min-height:200px; max-height:55vh;"></div>
+    <div id="tc-review" style="display:none; flex:1 1 auto; overflow-y:auto; border:1px solid #2a2a2a; border-radius:6px; padding:.6rem; background:#0a0a0a; min-height:200px; max-height:55vh;"></div>
+    <textarea id="tc-message" placeholder="Optional message to the recipient..." style="margin-top:.6rem; min-height:56px; display:none;"></textarea>
     <div class="actions">
+      <button id="tc-back" onclick="_tcBack()" style="margin-right:auto; display:none;">&larr; Back</button>
       <button onclick="closeTradeComposer()">Cancel</button>
-      <button id="tc-send" class="primary" onclick="sendTradeOffer()">Send offer</button>
+      <button id="tc-next" class="primary" onclick="_tcNext()">Next &rarr;</button>
     </div>
   </div>
 </div>
@@ -4343,12 +4367,18 @@ function renderPublicBinder(data) {
 }
 
 // ---- Trade composer ------------------------------------------------------
-// Picks cards from the public binder I'm viewing (left col) and from my own
-// binder (right col), then writes a trades/{tradeId} doc. The recipient sees
-// it in their inbox and can accept/decline. Trade-contact info is hidden in
-// the UI until the trade is accepted by both sides.
+// 3-step wizard:
+//   1. Pick from their binder (with search/filter/sort, binder-sized grid)
+//   2. Pick from your binder (same)
+//   3. Review both sides, optional message, confirm + send
+// The recipient sees the offer in their inbox and can accept/decline. Trade-
+// contact info is hidden in the UI until the trade is accepted by both sides.
 let _tcPickedTheir = new Set();  // entry-strings from their binder I'm requesting
 let _tcPickedMine  = new Set();  // entry-strings from my binder I'm offering
+let _tcStep        = 1;          // 1 / 2 / 3
+let _tcSearch      = '';
+let _tcColor       = 'all';
+let _tcSort        = 'custom';
 
 function _tcCardSnapshot(entry, card) {
   // Compact card snapshot embedded in the trade doc so the recipient can
@@ -4364,49 +4394,199 @@ function _tcCardSnapshot(entry, card) {
     set_name: card.set_name || '',
   };
 }
-function _tcRenderGrid(hostId, entries, cardsMap, picked, side) {
-  const host = document.getElementById(hostId);
+function _tcMatchesColor(card, filter) {
+  if (filter === 'all') return true;
+  const ci = (card && card.color_identity) || [];
+  if (filter === 'C') return ci.length === 0;
+  if (filter === 'M') return ci.length >= 2;
+  return ci.length === 1 && ci[0] === filter;
+}
+function _tcOnSearch(v) { _tcSearch = (v || '').trim().toLowerCase(); _tcRenderPickStep(); }
+function _tcOnColor(v)  { _tcColor  = v || 'all'; _tcRenderPickStep(); }
+function _tcOnSort(v)   { _tcSort   = v || 'custom'; _tcRenderPickStep(); }
+
+function _tcSourceForStep() {
+  // Returns {entries, cardsMap, picked, label} for whichever step is active.
+  if (_tcStep === 1) {
+    return {
+      entries: (_pbCurrentData && _pbCurrentData.watchlist || '').split('\n').map(s => s.trim()).filter(Boolean),
+      cardsMap: _pbCurrentData ? _pbCurrentData.cards : new Map(),
+      picked: _tcPickedTheir,
+      label: 'their binder',
+    };
+  }
+  return {
+    entries: loadWatchlist(),
+    cardsMap: _binderMemCache,
+    picked: _tcPickedMine,
+    label: 'your binder',
+  };
+}
+function _tcTogglePick(entry) {
+  const src = _tcSourceForStep();
+  if (src.picked.has(entry)) src.picked.delete(entry); else src.picked.add(entry);
+  _tcRenderPickStep();
+}
+function _tcRenderPickStep() {
+  const src = _tcSourceForStep();
+  const host = document.getElementById('tc-pick-grid');
   if (!host) return;
-  const items = entries.map(entry => {
-    const v = cardsMap.get(entry);
+  // Hydrate items, apply filters and sort.
+  let items = src.entries.map(entry => {
+    const v = src.cardsMap.get(entry);
     const card = v && v.d;
     return card ? { entry, card } : null;
   }).filter(Boolean);
+  if (_tcColor !== 'all') items = items.filter(it => _tcMatchesColor(it.card, _tcColor));
+  if (_tcSearch) items = items.filter(it => ((it.card.name || it.entry) || '').toLowerCase().includes(_tcSearch));
+  if (_tcSort === 'highest') items.sort((a,b) => (b.card.price_usd || 0) - (a.card.price_usd || 0));
+  else if (_tcSort === 'lowest') items.sort((a,b) => {
+    const ap = a.card.price_usd == null ? Infinity : a.card.price_usd;
+    const bp = b.card.price_usd == null ? Infinity : b.card.price_usd;
+    return ap - bp;
+  });
+  else if (_tcSort === 'alpha') items.sort((a,b) => ((a.card.name||a.entry)||'').localeCompare((b.card.name||b.entry)||''));
   if (!items.length) {
-    host.innerHTML = `<div style="padding:1rem; color:#888; text-align:center;">${side === 'mine' ? 'Your binder is empty (or no images cached yet).' : 'No cards to pick from.'}</div>`;
-    return;
+    const empty = (src.entries.length === 0)
+      ? `No cards in ${src.label}.`
+      : (_tcSearch || _tcColor !== 'all')
+        ? 'No cards match your filters.'
+        : `No card images cached yet for ${src.label}.`;
+    host.innerHTML = `<div style="padding:1.5rem; color:#888; text-align:center;">${empty}</div>`;
+  } else {
+    const fmt = n => '$' + (Number(n) || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    host.innerHTML = items.map(it => {
+      const img = it.card.img || it.card.image_uri || '';
+      const isPicked = src.picked.has(it.entry);
+      const pr = (it.card.price_usd != null) ? fmt(it.card.price_usd) : '';
+      return `<div class="tc-card ${isPicked ? 'picked' : ''}" data-entry="${escapeHtml(it.entry)}" onclick="_tcTogglePick(this.dataset.entry)" title="${escapeHtml(it.card.name || it.entry)}">
+        ${img ? `<img src="${escapeHtml(img)}" loading="lazy" alt="" />` : ''}
+        ${pr ? `<div class="pr">${pr}</div>` : ''}
+        <div class="nm">${escapeHtml(it.card.name || it.entry)}</div>
+      </div>`;
+    }).join('');
   }
-  host.innerHTML = items.map(it => {
-    const img = it.card.img || it.card.image_uri || '';
-    const safeEntry = (it.entry || '').replace(/'/g, "\\'");
-    const isPicked = picked.has(it.entry);
-    return `<div class="tc-card ${isPicked ? 'picked' : ''}" data-entry="${escapeHtml(it.entry)}" onclick="_tcTogglePick('${side}', this.dataset.entry)">
-      ${img ? `<img src="${escapeHtml(img)}" loading="lazy" alt="" />` : ''}
-      <div class="nm">${escapeHtml(it.card.name || it.entry)}</div>
+  // Count widget shows current step's picked count.
+  const cnt = document.getElementById('tc-picked-count');
+  if (cnt) cnt.textContent = src.picked.size ? `${src.picked.size} picked` : '';
+}
+function _tcRenderReview() {
+  const host = document.getElementById('tc-review');
+  if (!host) return;
+  const fmt = n => '$' + (Number(n) || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const sumValue = arr => arr.reduce((s, x) => s + (Number(x.card.price_usd) || 0), 0);
+  const theirPicks = [..._tcPickedTheir].map(e => {
+    const v = _pbCurrentData.cards.get(e); const c = v && v.d;
+    return c ? { entry: e, card: c } : null;
+  }).filter(Boolean);
+  const myPicks = [..._tcPickedMine].map(e => {
+    const v = _binderMemCache.get(e); const c = v && v.d;
+    return c ? { entry: e, card: c } : null;
+  }).filter(Boolean);
+  const renderRow = items => {
+    if (!items.length) return '<div style="color:#888; font-size:.85rem;">Nothing</div>';
+    return `<div class="tc-grid">${items.map(it => {
+      const img = it.card.img || it.card.image_uri || '';
+      const pr = (it.card.price_usd != null) ? fmt(it.card.price_usd) : '';
+      return `<div class="tc-card" style="cursor:default;" title="${escapeHtml(it.card.name || it.entry)}">
+        ${img ? `<img src="${escapeHtml(img)}" loading="lazy" alt="" />` : ''}
+        ${pr ? `<div class="pr">${pr}</div>` : ''}
+        <div class="nm">${escapeHtml(it.card.name || it.entry)}</div>
+      </div>`;
+    }).join('')}</div>`;
+  };
+  const reqTotal = sumValue(theirPicks);
+  const offTotal = sumValue(myPicks);
+  const diff = offTotal - reqTotal;
+  const diffColor = Math.abs(diff) < 0.01 ? '#888' : (diff > 0 ? '#ffb74d' : '#4cd964');
+  const diffLabel = Math.abs(diff) < 0.01
+    ? 'Roughly even'
+    : (diff > 0 ? `You'd be giving up ${fmt(diff)} more in value` : `You'd be getting ${fmt(-diff)} more in value`);
+  host.innerHTML = `
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+      <div>
+        <h4 style="margin:0 0 .4rem; color:#9ecbff;">Requesting from them <span style="color:#888; font-weight:400; font-size:.85rem;">${theirPicks.length} card${theirPicks.length === 1 ? '' : 's'} &middot; ${fmt(reqTotal)}</span></h4>
+        ${renderRow(theirPicks)}
+      </div>
+      <div>
+        <h4 style="margin:0 0 .4rem; color:#9ecbff;">Offering from your binder <span style="color:#888; font-weight:400; font-size:.85rem;">${myPicks.length} card${myPicks.length === 1 ? '' : 's'} &middot; ${fmt(offTotal)}</span></h4>
+        ${renderRow(myPicks)}
+      </div>
+    </div>
+    <div style="margin-top:.6rem; padding:.5rem .7rem; background:#0f0f0f; border:1px solid #2a2a2a; border-radius:6px; font-size:.85rem;">
+      <span style="color:${diffColor}; font-weight:600;">${diffLabel}</span>
+      <span style="color:#666; margin-left:.5rem;">(based on cached prices; treat as a rough guide)</span>
     </div>`;
-  }).join('');
 }
-function _tcRefresh() {
-  const data = _pbCurrentData;
-  if (!data) return;
-  // Their side: iterate their watchlist; only show entries we have card data for.
-  const theirEntries = (data.watchlist || '').split('\n').map(s => s.trim()).filter(Boolean);
-  _tcRenderGrid('tc-their-cards', theirEntries, data.cards, _tcPickedTheir, 'theirs');
-  // My side: iterate my watchlist; use my own binder mem cache.
-  const myEntries = loadWatchlist();
-  _tcRenderGrid('tc-my-cards', myEntries, _binderMemCache, _tcPickedMine, 'mine');
-  _tcUpdateSummaries();
+function _tcApplyStepUI() {
+  // Step indicator state.
+  document.querySelectorAll('#tc-stepper .tc-step').forEach(el => {
+    const s = parseInt(el.dataset.step, 10);
+    el.classList.toggle('active', s === _tcStep);
+    el.classList.toggle('done',   s <  _tcStep);
+  });
+  const help    = document.getElementById('tc-step-help');
+  const filter  = document.getElementById('tc-filter-bar');
+  const grid    = document.getElementById('tc-pick-grid');
+  const review  = document.getElementById('tc-review');
+  const msg     = document.getElementById('tc-message');
+  const back    = document.getElementById('tc-back');
+  const next    = document.getElementById('tc-next');
+  const search  = document.getElementById('tc-search');
+  const color   = document.getElementById('tc-color');
+  const sort    = document.getElementById('tc-sort');
+  // Reset filter inputs each step so they don't leak between picking sides.
+  _tcSearch = ''; _tcColor = 'all'; _tcSort = 'custom';
+  if (search) search.value = '';
+  if (color)  color.value  = 'all';
+  if (sort)   sort.value   = 'custom';
+  if (_tcStep === 1) {
+    if (help) help.textContent = "Pick what you want from their binder. Use search and filter to find specific cards.";
+    if (filter) filter.style.display = '';
+    if (grid)   grid.style.display = '';
+    if (review) review.style.display = 'none';
+    if (msg)    msg.style.display = 'none';
+    if (back)   back.style.display = 'none';
+    if (next)   next.textContent = 'Next: pick yours →';
+    _tcRenderPickStep();
+  } else if (_tcStep === 2) {
+    if (help) help.textContent = "Now pick what you're offering from your own binder.";
+    if (filter) filter.style.display = '';
+    if (grid)   grid.style.display = '';
+    if (review) review.style.display = 'none';
+    if (msg)    msg.style.display = 'none';
+    if (back)   back.style.display = '';
+    if (next)   next.textContent = 'Next: review →';
+    _tcRenderPickStep();
+  } else {
+    if (help) help.textContent = "Review both sides. Add an optional message, then confirm to send.";
+    if (filter) filter.style.display = 'none';
+    if (grid)   grid.style.display = 'none';
+    if (review) review.style.display = '';
+    if (msg)    msg.style.display = '';
+    if (back)   back.style.display = '';
+    if (next)   next.textContent = 'Send offer';
+    _tcRenderReview();
+  }
 }
-function _tcUpdateSummaries() {
-  const reqEl = document.getElementById('tc-req-summary');
-  const offEl = document.getElementById('tc-off-summary');
-  if (reqEl) reqEl.textContent = _tcPickedTheir.size ? `(${_tcPickedTheir.size})` : '';
-  if (offEl) offEl.textContent = _tcPickedMine.size  ? `(${_tcPickedMine.size})`  : '';
+function _tcNext() {
+  if (_tcStep === 1) {
+    if (_tcPickedTheir.size === 0 && !confirm("You haven't picked any cards from their binder. Continue anyway? (It's allowed - this would be a gift.)")) return;
+    _tcStep = 2;
+    _tcApplyStepUI();
+  } else if (_tcStep === 2) {
+    if (_tcPickedMine.size === 0 && !confirm("You haven't picked any cards to offer. Continue anyway? (It's allowed - this would be a request without an offer.)")) return;
+    _tcStep = 3;
+    _tcApplyStepUI();
+  } else {
+    sendTradeOffer();
+  }
 }
-function _tcTogglePick(side, entry) {
-  const set = (side === 'mine') ? _tcPickedMine : _tcPickedTheir;
-  if (set.has(entry)) set.delete(entry); else set.add(entry);
-  _tcRefresh();
+function _tcBack() {
+  if (_tcStep > 1) {
+    _tcStep -= 1;
+    _tcApplyStepUI();
+  }
 }
 function openTradeComposer() {
   if (!_syncUid) { flashMsg('Sign in first to propose a trade.'); return; }
@@ -4418,11 +4598,12 @@ function openTradeComposer() {
   }
   _tcPickedTheir.clear();
   _tcPickedMine.clear();
+  _tcStep = 1;
   const msgEl = document.getElementById('tc-message');
   if (msgEl) msgEl.value = '';
   const title = document.getElementById('trade-modal-title');
   if (title) title.textContent = `Propose a trade with ${_pbCurrentData.handle || 'this user'}`;
-  _tcRefresh();
+  _tcApplyStepUI();
   document.getElementById('trade-modal').classList.add('show');
 }
 function closeTradeComposer() {
@@ -4438,11 +4619,9 @@ async function sendTradeOffer() {
     flashMsg('Set your Trade contact first.');
     return;
   }
-  const btn = document.getElementById('tc-send');
+  const btn = document.getElementById('tc-next');
   if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
   try {
-    // Build compact snapshots so neither side needs to fetch the other binder
-    // to render the trade later.
     const requested = [..._tcPickedTheir].map(e => {
       const v = _pbCurrentData.cards.get(e); const c = v && v.d;
       return c ? _tcCardSnapshot(e, c) : null;
@@ -4459,12 +4638,11 @@ async function sendTradeOffer() {
       fromContact: _tradeContact,
       toUid: _pbCurrentData.uid,
       toHandle: _pbCurrentData.handle || 'Anonymous',
-      // toContact is left empty - recipient fills it when they accept.
       offered: offered,
       requested: requested,
       message: message,
       status: 'pending',
-      notified: false,        // server pipeline flips to true after emailing
+      notified: false,
       createdAt: now,
       updatedAt: now,
     });

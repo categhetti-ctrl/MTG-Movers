@@ -1128,6 +1128,15 @@
   </div>
 </div>
 
+<div id="trade-detail-modal" class="modal" onclick="if(event.target.id==='trade-detail-modal')closeTradeDetail()">
+  <div class="panel" style="width:min(1080px, 96vw); max-height:94vh; display:flex; flex-direction:column;">
+    <div id="td-content" style="flex:1 1 auto; overflow-y:auto; padding-right:.25rem;"></div>
+    <div class="actions" id="td-actions">
+      <button onclick="closeTradeDetail()">Close</button>
+    </div>
+  </div>
+</div>
+
 <div id="trade-modal" class="modal" onclick="if(event.target.id==='trade-modal')closeTradeComposer()">
   <div class="panel" style="width:min(1080px, 96vw); max-height:94vh; display:flex; flex-direction:column;">
     <h3 id="trade-modal-title" style="margin:0 0 .25rem;">Propose a trade</h3>
@@ -4747,6 +4756,14 @@ function _renderTradeCardHtml(t) {
     'declined':  `<span style="background:#5a2a2a; color:#ffb0b0; padding:.15rem .5rem; border-radius:999px; font-size:.7rem; font-weight:600;">Declined</span>`,
     'cancelled': `<span style="background:#444; color:#ccc; padding:.15rem .5rem; border-radius:999px; font-size:.7rem; font-weight:600;">Cancelled</span>`,
   }[t.status] || '';
+  // Per-trade value diff at a glance (from THIS user's perspective).
+  // For sender:    "you give offered, get requested" -> diff = requested - offered (positive = good for you)
+  // For recipient: "you give requested, get offered" -> diff = offered  - requested (positive = good for you)
+  const diff = meIsSender ? (reqTotal - offTotal) : (offTotal - reqTotal);
+  const diffColor = Math.abs(diff) < 0.01 ? '#888' : (diff > 0 ? '#4cd964' : '#ffb74d');
+  const diffLabel = Math.abs(diff) < 0.01
+    ? '~Even'
+    : (diff > 0 ? `+${fmt(diff)} to you` : `${fmt(diff)} to you`);
   const showContacts = t.status === 'accepted';
   const contactHtml = showContacts
     ? `<div style="margin-top:.5rem; padding:.5rem .7rem; background:#0a1a0a; border:1px solid #1f5132; border-radius:6px; font-size:.85rem;">
@@ -4760,28 +4777,28 @@ function _renderTradeCardHtml(t) {
   let actions = '';
   if (t.status === 'pending') {
     if (meIsSender) {
-      actions = `<button class="wl-btn" onclick="cancelTrade('${t.id}')">Cancel offer</button>`;
+      actions = `<button class="wl-btn" onclick="event.stopPropagation();cancelTrade('${t.id}')">Cancel offer</button>`;
     } else {
-      actions = `<button class="wl-btn" onclick="declineTrade('${t.id}')">Decline</button>
-                 <button class="wl-btn" style="background:linear-gradient(180deg,#1f5132 0%,#0d3320 100%); border-color:#1f5132;" onclick="acceptTrade('${t.id}')">Accept</button>`;
+      actions = `<button class="wl-btn" onclick="event.stopPropagation();declineTrade('${t.id}')">Decline</button>
+                 <button class="wl-btn" style="background:linear-gradient(180deg,#1f5132 0%,#0d3320 100%); border-color:#1f5132;" onclick="event.stopPropagation();acceptTrade('${t.id}')">Accept</button>`;
     }
   }
   const ts = t.createdAt ? new Date(t.createdAt).toLocaleString() : '';
-  return `<div style="border:1px solid #2a2a2a; border-radius:8px; padding:.8rem; margin-bottom:.8rem; background:#0d0d0d;">
+  return `<div style="border:1px solid #2a2a2a; border-radius:8px; padding:.8rem; margin-bottom:.8rem; background:#0d0d0d; cursor:pointer; transition:border-color .15s ease;" onmouseover="this.style.borderColor='#3a4f6a'" onmouseout="this.style.borderColor='#2a2a2a'" onclick="showTradeDetail('${t.id}')" title="Click for details and price charts">
     <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:.8rem; flex-wrap:wrap;">
       <div>
         <div style="font-size:.95rem;">${dirLabel} ${statusBadge}</div>
-        <div style="font-size:.75rem; color:#888; margin-top:.15rem;">${escapeHtml(ts)}</div>
+        <div style="font-size:.75rem; color:#888; margin-top:.15rem;">${escapeHtml(ts)} &middot; <span style="color:${diffColor}; font-weight:600;">${diffLabel}</span></div>
       </div>
       <div style="display:flex; gap:.4rem;">${actions}</div>
     </div>
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:.8rem; margin-top:.6rem;">
       <div>
-        <div style="font-size:.78rem; color:#9ecbff; margin-bottom:.25rem; text-transform:uppercase; letter-spacing:.04em;">${meIsSender ? 'You requesting' : 'They offer'} ${offered.length ? '· ' + fmt(reqTotal /* same shape both sides */) : ''}</div>
+        <div style="font-size:.78rem; color:#9ecbff; margin-bottom:.25rem; text-transform:uppercase; letter-spacing:.04em;">${meIsSender ? 'You requesting' : 'They offer'} ${offered.length ? '· ' + fmt(meIsSender ? reqTotal : offTotal) : ''}</div>
         <div class="tc-grid">${renderCardList(meIsSender ? requested : offered)}</div>
       </div>
       <div>
-        <div style="font-size:.78rem; color:#9ecbff; margin-bottom:.25rem; text-transform:uppercase; letter-spacing:.04em;">${meIsSender ? 'You offering' : 'They want'} ${requested.length ? '· ' + fmt(offTotal) : ''}</div>
+        <div style="font-size:.78rem; color:#9ecbff; margin-bottom:.25rem; text-transform:uppercase; letter-spacing:.04em;">${meIsSender ? 'You offering' : 'They want'} ${requested.length ? '· ' + fmt(meIsSender ? offTotal : reqTotal) : ''}</div>
         <div class="tc-grid">${renderCardList(meIsSender ? offered : requested)}</div>
       </div>
     </div>
@@ -4789,6 +4806,207 @@ function _renderTradeCardHtml(t) {
     ${contactHtml}
   </div>`;
 }
+// ---- Trade detail modal (clicked from inbox) -----------------------------
+let _tdChartInstances = [];   // Chart.js instances to destroy on close
+let _tdCurrentTrade   = null;
+
+function _tdDestroyCharts() {
+  for (const c of _tdChartInstances) { try { c.destroy(); } catch (e) {} }
+  _tdChartInstances = [];
+}
+function _tdThemeColors() {
+  const light = document.documentElement.getAttribute('data-theme') === 'light';
+  return {
+    line:  light ? '#1e3a8a' : '#9ecbff',
+    fill:  light ? 'rgba(30,58,138,0.10)' : 'rgba(158,203,255,0.15)',
+    grid:  light ? '#e2e8f0' : '#222',
+    text:  light ? '#445' : '#888',
+  };
+}
+function _tdRenderCardCell(c, side, idx) {
+  // Used inside the trade-detail modal to show one card with a sparkline.
+  const fmt = n => '$' + (Number(n) || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const img = c.img || '';
+  const price = (c.price != null) ? fmt(c.price) : '';
+  const canvasId = `td-spark-${side}-${idx}`;
+  const setLabel = c.set ? c.set.toUpperCase() : '';
+  return `<div style="border:1px solid #2a2a2a; border-radius:6px; padding:.5rem; background:#0a0a0a; display:grid; grid-template-columns:80px 1fr; gap:.6rem; align-items:center; margin-bottom:.5rem;">
+    <div style="width:80px; aspect-ratio:5/7; border-radius:4px; overflow:hidden; background:#000; cursor:pointer;" onclick="closeTradeDetail();goCard('${(c.id||'').replace(/'/g,"\\'")}','${(c.finish||'normal').replace(/'/g,"\\'")}','market')">
+      ${img ? `<img src="${escapeHtml(img)}" style="width:100%;height:100%;object-fit:cover;" loading="lazy" alt="" />` : ''}
+    </div>
+    <div style="min-width:0;">
+      <div style="display:flex; justify-content:space-between; align-items:baseline; gap:.5rem;">
+        <div style="font-weight:600; font-size:.9rem; color:#9ecbff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(c.name || '(unknown)')}</div>
+        <div style="font-size:.85rem; font-weight:600; color:#4cd964; flex-shrink:0;">${price}</div>
+      </div>
+      ${setLabel ? `<div style="font-size:.7rem; color:#888; text-transform:uppercase; letter-spacing:.04em;">${escapeHtml(setLabel)} &middot; ${escapeHtml(c.finish || 'normal')}</div>` : ''}
+      <div style="height:42px; margin-top:.25rem;"><canvas id="${canvasId}"></canvas></div>
+    </div>
+  </div>`;
+}
+function _tdMountSparkline(canvasId, series, theme) {
+  const el = document.getElementById(canvasId);
+  if (!el || !series || series.length < 2) {
+    if (el) {
+      const ctx = el.getContext('2d');
+      ctx.fillStyle = theme.text;
+      ctx.font = '11px sans-serif';
+      ctx.fillText('no price history available', 0, 14);
+    }
+    return null;
+  }
+  try {
+    const chart = new Chart(el, {
+      type: 'line',
+      data: {
+        labels: series.map(s => s[0]),
+        datasets: [{
+          data: series.map(s => s[1]),
+          borderColor: theme.line,
+          backgroundColor: theme.fill,
+          fill: true,
+          borderWidth: 1.5,
+          pointRadius: 0,
+          tension: 0.25,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: { legend: { display: false }, tooltip: { enabled: true, displayColors: false } },
+        scales: { x: { display: false }, y: { display: false } },
+      },
+    });
+    return chart;
+  } catch (e) { console.warn('sparkline failed', e); return null; }
+}
+async function showTradeDetail(tradeId) {
+  const t = _tradesCache.find(x => x.id === tradeId);
+  if (!t) return;
+  _tdCurrentTrade = t;
+  document.getElementById('trade-detail-modal').classList.add('show');
+  await _tdRender(t);
+}
+function closeTradeDetail() {
+  _tdDestroyCharts();
+  _tdCurrentTrade = null;
+  document.getElementById('trade-detail-modal').classList.remove('show');
+}
+async function _tdRender(t) {
+  // Make sure bulk prices are loaded so sparklines have data.
+  if (typeof loadBinderBulkPrices === 'function') {
+    try { await loadBinderBulkPrices(); } catch (e) {}
+  }
+  // Inject every card on both sides into HISTORY so clicking the thumbnail
+  // can route to the card detail page. injectBinderIntoHistory expects the
+  // binder-cache shape, so map snapshot fields back to that shape.
+  const _injectSnap = (c) => {
+    if (!c || !c.id || HISTORY[c.id] || typeof injectBinderIntoHistory !== 'function') return;
+    injectBinderIntoHistory({
+      id: c.id,
+      name: c.name || '',
+      set: c.set || '',
+      set_name: c.set_name || '',
+      collector_number: '',
+      img: c.img || '',
+      price_usd: (c.price != null) ? Number(c.price) : null,
+      purchase_uri: '',
+    });
+  };
+  (t.offered   || []).forEach(_injectSnap);
+  (t.requested || []).forEach(_injectSnap);
+  const fmt = n => '$' + (Number(n) || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const offered   = t.offered   || [];
+  const requested = t.requested || [];
+  const offTotal = offered.reduce((s, c) => s + (Number(c.price) || 0), 0);
+  const reqTotal = requested.reduce((s, c) => s + (Number(c.price) || 0), 0);
+  const meIsSender = t.fromUid === _syncUid;
+  const otherHandle = meIsSender ? (t.toHandle || 'Anonymous') : (t.fromHandle || 'Anonymous');
+  const youSide      = meIsSender ? offered   : requested;   // what you give
+  const themSide     = meIsSender ? requested : offered;     // what you get
+  const youTotal     = meIsSender ? offTotal  : reqTotal;
+  const themTotal    = meIsSender ? reqTotal  : offTotal;
+  const diff = themTotal - youTotal;
+  const diffColor = Math.abs(diff) < 0.01 ? '#888' : (diff > 0 ? '#4cd964' : '#ffb74d');
+  const diffLabel = Math.abs(diff) < 0.01
+    ? 'Roughly even'
+    : (diff > 0 ? `You gain ${fmt(diff)} in cached value` : `You lose ${fmt(-diff)} in cached value`);
+  const statusBadge = {
+    'pending':   `<span style="background:#3a4f6a; color:#9ecbff; padding:.15rem .5rem; border-radius:999px; font-size:.75rem; font-weight:600;">Pending</span>`,
+    'accepted':  `<span style="background:#1f5132; color:#a3ff9e; padding:.15rem .5rem; border-radius:999px; font-size:.75rem; font-weight:600;">Accepted</span>`,
+    'declined':  `<span style="background:#5a2a2a; color:#ffb0b0; padding:.15rem .5rem; border-radius:999px; font-size:.75rem; font-weight:600;">Declined</span>`,
+    'cancelled': `<span style="background:#444; color:#ccc; padding:.15rem .5rem; border-radius:999px; font-size:.75rem; font-weight:600;">Cancelled</span>`,
+  }[t.status] || '';
+  const ts = t.createdAt ? new Date(t.createdAt).toLocaleString() : '';
+  const youCellsHtml  = youSide.map((c, i)  => _tdRenderCardCell(c, 'you',  i)).join('') || '<div style="color:#888; font-size:.85rem;">Nothing on this side.</div>';
+  const themCellsHtml = themSide.map((c, i) => _tdRenderCardCell(c, 'them', i)).join('') || '<div style="color:#888; font-size:.85rem;">Nothing on this side.</div>';
+  const contactHtml = (t.status === 'accepted')
+    ? `<div style="margin:.6rem 0; padding:.6rem .8rem; background:#0a1a0a; border:1px solid #1f5132; border-radius:6px; font-size:.9rem;">
+         <div><b>${meIsSender ? otherHandle : t.fromHandle}'s trade contact:</b> ${escapeHtml(meIsSender ? (t.toContact || '(not set)') : (t.fromContact || '(not set)'))}</div>
+         <div style="margin-top:.25rem; color:#888; font-size:.85rem;">Reach out to coordinate the swap. Trades complete off-platform.</div>
+       </div>`
+    : '';
+  const msgHtml = t.message
+    ? `<div style="margin:.6rem 0; padding:.5rem .7rem; background:#141414; border-radius:6px; font-size:.9rem; color:#ccc; border:1px solid #2a2a2a;"><b style="color:#9ecbff;">Message:</b> ${escapeHtml(t.message)}</div>`
+    : '';
+  const host = document.getElementById('td-content');
+  host.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:.8rem; flex-wrap:wrap; margin-bottom:.4rem;">
+      <div>
+        <h3 style="margin:0 0 .15rem;">${meIsSender ? 'You proposed to' : 'Offer from'} <span style="color:#9ecbff;">${escapeHtml(otherHandle)}</span></h3>
+        <div style="font-size:.8rem; color:#888;">${escapeHtml(ts)} &middot; ${statusBadge}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:.75rem; color:#888; text-transform:uppercase; letter-spacing:.04em;">Value swing</div>
+        <div style="font-size:1.1rem; font-weight:700; color:${diffColor};">${diffLabel}</div>
+      </div>
+    </div>
+    ${msgHtml}
+    ${contactHtml}
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:.6rem;">
+      <div>
+        <h4 style="margin:0 0 .4rem; color:#9ecbff;">You give (${youSide.length}) &middot; ${fmt(youTotal)}</h4>
+        ${youCellsHtml}
+      </div>
+      <div>
+        <h4 style="margin:0 0 .4rem; color:#9ecbff;">You get (${themSide.length}) &middot; ${fmt(themTotal)}</h4>
+        ${themCellsHtml}
+      </div>
+    </div>
+    <div style="margin-top:.5rem; color:#666; font-size:.75rem;">Charts use the bulk 30-day price file; sparklines may be blank for very new cards or printings without bulk data.</div>
+  `;
+  // Update action buttons based on status / role.
+  const acts = document.getElementById('td-actions');
+  if (acts) {
+    let extra = '';
+    if (t.status === 'pending') {
+      if (meIsSender) {
+        extra = `<button class="wl-btn" onclick="cancelTrade('${t.id}');closeTradeDetail();">Cancel offer</button>`;
+      } else {
+        extra = `<button class="wl-btn" onclick="declineTrade('${t.id}');closeTradeDetail();">Decline</button>
+                 <button class="wl-btn" style="background:linear-gradient(180deg,#1f5132 0%,#0d3320 100%); border-color:#1f5132;" onclick="acceptTrade('${t.id}');closeTradeDetail();">Accept</button>`;
+      }
+    }
+    acts.innerHTML = `${extra}<button onclick="closeTradeDetail()">Close</button>`;
+  }
+  // Now wire up sparklines for each card cell.
+  _tdDestroyCharts();
+  const theme = _tdThemeColors();
+  const mount = (side, cards) => {
+    cards.forEach((c, i) => {
+      const series = (c.id && typeof getBulkPriceSeries === 'function')
+        ? (getBulkPriceSeries(c.id, c.finish === 'foil' ? 'f' : (c.finish === 'etched' ? 'e' : 'n'))
+           || getBulkPriceSeries(c.id, 'n'))
+        : null;
+      const chart = _tdMountSparkline(`td-spark-${side}-${i}`, series, theme);
+      if (chart) _tdChartInstances.push(chart);
+    });
+  };
+  mount('you',  youSide);
+  mount('them', themSide);
+}
+
 async function acceptTrade(tradeId) {
   if (!_fbDb || !_syncUid) return;
   if (!_tradeContact || !_tradeContact.trim()) {

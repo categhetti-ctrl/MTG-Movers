@@ -521,6 +521,19 @@
     .modal .actions button:active { transform:translateY(1px);}
     .modal .actions button:focus-visible { outline:2px solid #5b8cff; outline-offset:2px;}
     .modal .actions .primary { color:#fff; border-color:#3f63b8; background:linear-gradient(180deg,#4373d8 0%,#274f9e 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 1px 4px rgba(0,0,0,.5);}
+    .tc-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(100px, 1fr)); gap:.4rem;}
+    .tc-card { position:relative; cursor:pointer; border-radius:6px; overflow:hidden; border:2px solid transparent; transition: border-color .12s ease, transform .08s ease; aspect-ratio: 5/7; background:#000;}
+    .tc-card img { display:block; width:100%; height:100%; object-fit:cover;}
+    .tc-card .nm { position:absolute; left:0; right:0; bottom:0; background:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.85) 100%); color:#fff; font-size:.65rem; padding:1rem .25rem .15rem; text-align:center; pointer-events:none; line-height:1.1;}
+    .tc-card.picked { border-color:#4cd964; transform:scale(.97);}
+    .tc-card.picked::after { content:"\2713"; position:absolute; top:.2rem; right:.3rem; background:#4cd964; color:#000; width:1.2rem; height:1.2rem; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:.85rem;}
+    [data-theme="light"] .tc-grid { }
+    [data-theme="light"] #tc-their-cards, [data-theme="light"] #tc-my-cards { background:#f5f7fa; border-color:#cdd3de;}
+    .wl-tab { padding:.4rem .9rem; border:1px solid #2a2a2a; background:#0c0c0c; color:#bbb; border-radius:6px; cursor:pointer; font-size:.85rem; font-weight:600;}
+    .wl-tab.active { background:#1a1a1a; color:#9ecbff; border-color:#3a4f6a;}
+    .wl-tab:hover { color:#fff;}
+    [data-theme="light"] .wl-tab { background:#eef0f4; color:#4a5570; border-color:#cdd3de;}
+    [data-theme="light"] .wl-tab.active { background:#ffffff; color:#1e3a8a; border-color:#7a9bd6;}
     .wl-search { margin-bottom:.5rem;}
     .wl-search input { width:100%; padding:.5rem .75rem; background:#000; color:#fff; border:1px solid #2a2a2a; border-radius:6px; font-size:.9rem; box-sizing:border-box;}
     .wl-results { max-height:280px; overflow-y:auto; border:1px solid #2a2a2a; border-radius:6px; margin-top:.5rem; display:none; background:#000;}
@@ -706,6 +719,7 @@
     <a href="#binder" data-v="binder" onclick="goBinder();return false;">Binder</a>
     <a href="#decks" data-v="decks" onclick="goDecks();return false;">Decks</a>
     <a href="#public" data-v="public" id="nav-browse" onclick="location.hash='#public';return false;" style="display:none;">Browse</a>
+    <a href="#trades" data-v="trades" id="nav-trades" onclick="location.hash='#trades';return false;" style="display:none;">Trades<span id="nav-trades-badge" style="display:none; background:#e35a5a; color:#fff; border-radius:999px; padding:.05rem .4rem; margin-left:.3rem; font-size:.7rem; font-weight:700;">0</span></a>
     <button type="button" class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Switch between light and dark theme" title="Toggle light / dark theme">
       <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg>
       <svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
@@ -910,6 +924,12 @@
         <input type="text" id="binder-public-handle" maxlength="40" placeholder="e.g. Jared's Cube" onchange="onHandleChange(this.value)" onblur="onHandleChange(this.value)" style="flex:1 1 180px; min-width:140px; background:#000; color:#fff; border:1px solid #2a2a2a; border-radius:6px; padding:.4rem .6rem;" />
         <label class="wl-toggle"><input type="checkbox" id="binder-public-toggle" onchange="toggleBinderPublic(this.checked)" /> Make public</label>
       </div>
+      <h4>Trades</h4>
+      <div class="row">
+        <span class="swatch-label">Trade contact</span>
+        <input type="text" id="trade-contact" maxlength="120" placeholder="e.g. Discord: jared#1234, or your email" onchange="onTradeContactChange(this.value)" onblur="onTradeContactChange(this.value)" style="flex:1 1 240px; min-width:200px; background:#000; color:#fff; border:1px solid #2a2a2a; border-radius:6px; padding:.4rem .6rem;" />
+      </div>
+      <div class="help" style="margin-top:.25rem;">Shown to another user only after they accept a trade with you. Leave blank to disable trade offers on your binder.</div>
     </div>
 
     <p class="meta" style="text-align:center; margin-top:.75rem; color:#aaa; font-size:.8rem;">Card images and prices fetched from <a href="https://scryfall.com" target="_blank" rel="noopener" style="color:#9ecbff">Scryfall</a> on demand and cached in your browser for 12 hours.</p>
@@ -977,10 +997,13 @@
   <!-- PUBLIC BINDER VIEWER -->
   <section id="view-public-binder" class="hidden">
     <a href="#public" class="back" onclick="location.hash='#public';return false;">&larr; back to public binders</a>
-    <div class="detail-head">
+    <div class="detail-head" style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap;">
       <div>
         <h2 id="pb-title" style="color:#9ecbff;">-</h2>
         <div class="sub" id="pb-stats"></div>
+      </div>
+      <div style="display:flex; gap:.5rem; align-items:center;">
+        <button id="pb-propose-trade" class="wl-btn" style="display:none;" onclick="openTradeComposer()">Propose trade</button>
       </div>
     </div>
     <div class="binder-controls" id="pb-filter-bar" style="justify-content:flex-start; margin:0 0 1rem;">
@@ -1009,18 +1032,41 @@
       </label>
     </div>
     <div id="pb-cards"></div>
+    <div id="pb-wants-section" style="display:none; margin-top:2rem;">
+      <h3 style="color:#9ecbff; margin:0 0 .5rem;">Wants</h3>
+      <div class="help" style="margin-bottom:.5rem;">Cards this user is looking for. If you have any, hit "Propose trade" above.</div>
+      <div id="pb-wants" style="font-size:.9rem; line-height:1.6;"></div>
+    </div>
+  </section>
+
+  <!-- TRADES INBOX -->
+  <section id="view-trades" class="hidden">
+    <a href="#" class="back" onclick="goHome();return false;">&larr; back to movers</a>
+    <h2 style="margin:.75rem 0 1rem;">Trades</h2>
+    <div class="wl-tabs" role="tablist" style="display:flex; gap:.4rem; margin:0 0 .8rem;">
+      <button type="button" class="wl-tab active" id="trades-tab-incoming" onclick="setTradesTab('incoming')">Incoming <span id="trades-cnt-incoming" style="color:#888; font-weight:400;"></span></button>
+      <button type="button" class="wl-tab" id="trades-tab-outgoing" onclick="setTradesTab('outgoing')">Outgoing <span id="trades-cnt-outgoing" style="color:#888; font-weight:400;"></span></button>
+      <button type="button" class="wl-tab" id="trades-tab-closed" onclick="setTradesTab('closed')">Closed <span id="trades-cnt-closed" style="color:#888; font-weight:400;"></span></button>
+    </div>
+    <div id="trades-list"></div>
   </section>
 </main>
 
 <div id="wl-modal" class="modal" onclick="if(event.target.id==='wl-modal')closeWatchlist()">
   <div class="panel">
-    <h3>Your watchlist</h3>
-    <div class="help">Search to find a specific printing, or type / paste card names directly into the list below. To bulk-import a deck list (e.g. <code>1 Aetherize</code> / <code>4 Lightning Bolt</code>), paste it below and click <b>Import deck list</b> - leading counts and section headers (Sideboard, Commander, etc.) get stripped automatically. Saved in your browser only - nothing leaves your device.</div>
+    <h3>Your lists</h3>
+    <div class="wl-tabs" role="tablist" style="display:flex; gap:.4rem; margin:0 0 .6rem;">
+      <button type="button" id="wl-tab-have" class="wl-tab active" onclick="setWlTab('have')">Have</button>
+      <button type="button" id="wl-tab-want" class="wl-tab" onclick="setWlTab('want')">Want</button>
+    </div>
+    <div class="help" id="wl-help-have">Cards you OWN. Search to find a specific printing, or type / paste card names directly into the list below. To bulk-import a deck list (e.g. <code>1 Aetherize</code> / <code>4 Lightning Bolt</code>), paste it below and click <b>Import deck list</b> - leading counts and section headers get stripped automatically. Saved in your browser and synced to your account.</div>
+    <div class="help" id="wl-help-want" style="display:none;">Cards you WANT. Used to advertise what you're looking for when you share your binder, and to let other users see they have something you want when proposing trades. Same format as the Have list.</div>
     <div class="wl-search">
       <input id="wl-search" type="search" placeholder="Search printings (e.g. 'Force of Will')..." autocomplete="off" />
       <div id="wl-results" class="wl-results"></div>
     </div>
     <textarea id="wl-text" placeholder="Force of Will&#10;Force of Will (STA-12)&#10;Boseiju"></textarea>
+    <textarea id="wl-text-want" placeholder="Cards you're looking for..." style="display:none;"></textarea>
     <div class="actions">
       <button onclick="importDeckList()" style="margin-right:auto" title="Strip counts and dedupe entries above">Import deck list</button>
       <button onclick="closeWatchlist()">Cancel</button>
@@ -1071,6 +1117,28 @@
       <button onclick="importDeckTextClean()" style="margin-right:auto" title="Strip counts/headers and dedupe">Clean list</button>
       <button onclick="closeDeckEditor()">Cancel</button>
       <button class="primary" onclick="saveDeckFromEditor()">Save deck</button>
+    </div>
+  </div>
+</div>
+
+<div id="trade-modal" class="modal" onclick="if(event.target.id==='trade-modal')closeTradeComposer()">
+  <div class="panel" style="width:min(960px, 96vw); max-height:92vh;">
+    <h3 id="trade-modal-title">Propose a trade</h3>
+    <div class="help">Click cards to add or remove them from each side. The recipient will see your offer and can accept or decline. Once accepted, you'll both see each other's trade contact info.</div>
+    <div class="tc-cols" style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:.6rem; min-height:0; overflow:hidden;">
+      <div style="display:flex; flex-direction:column; min-height:0;">
+        <h4 style="margin:.1rem 0 .4rem; color:#9ecbff;">Requesting from them <span id="tc-req-summary" style="color:#888; font-weight:400; font-size:.85rem;"></span></h4>
+        <div id="tc-their-cards" class="tc-grid" style="flex:1; overflow-y:auto; border:1px solid #2a2a2a; border-radius:6px; padding:.4rem; background:#0a0a0a;"></div>
+      </div>
+      <div style="display:flex; flex-direction:column; min-height:0;">
+        <h4 style="margin:.1rem 0 .4rem; color:#9ecbff;">Offering from your binder <span id="tc-off-summary" style="color:#888; font-weight:400; font-size:.85rem;"></span></h4>
+        <div id="tc-my-cards" class="tc-grid" style="flex:1; overflow-y:auto; border:1px solid #2a2a2a; border-radius:6px; padding:.4rem; background:#0a0a0a;"></div>
+      </div>
+    </div>
+    <textarea id="tc-message" placeholder="Optional message to the recipient..." style="margin-top:.6rem; min-height:60px;"></textarea>
+    <div class="actions">
+      <button onclick="closeTradeComposer()">Cancel</button>
+      <button id="tc-send" class="primary" onclick="sendTradeOffer()">Send offer</button>
     </div>
   </div>
 </div>
@@ -1449,6 +1517,9 @@ function showDecks() {
   document.getElementById('view-detail').classList.add('hidden');
   document.getElementById('view-binder').classList.add('hidden');
   document.getElementById('view-decks').classList.remove('hidden');
+  const tradesView = document.getElementById('view-trades'); if (tradesView) tradesView.classList.add('hidden');
+  const pubView = document.getElementById('view-public'); if (pubView) pubView.classList.add('hidden');
+  const pbView = document.getElementById('view-public-binder'); if (pbView) pbView.classList.add('hidden');
   window.scrollTo(0, 0);
 }
 function showDeckShelf() { document.getElementById('deck-shelf-wrap').classList.remove('hidden'); document.getElementById('deck-open-wrap').classList.add('hidden'); }
@@ -1704,6 +1775,9 @@ function showList() {
   document.getElementById('view-detail').classList.add('hidden');
   document.getElementById('view-binder').classList.add('hidden');
   document.getElementById('view-decks').classList.add('hidden');
+  const tradesView = document.getElementById('view-trades'); if (tradesView) tradesView.classList.add('hidden');
+  const pubView = document.getElementById('view-public'); if (pubView) pubView.classList.add('hidden');
+  const pbView = document.getElementById('view-public-binder'); if (pbView) pbView.classList.add('hidden');
   window.scrollTo(0,0);
 }
 function showDetail() {
@@ -1711,6 +1785,9 @@ function showDetail() {
   document.getElementById('view-detail').classList.remove('hidden');
   document.getElementById('view-binder').classList.add('hidden');
   document.getElementById('view-decks').classList.add('hidden');
+  const tradesView = document.getElementById('view-trades'); if (tradesView) tradesView.classList.add('hidden');
+  const pubView = document.getElementById('view-public'); if (pubView) pubView.classList.add('hidden');
+  const pbView = document.getElementById('view-public-binder'); if (pbView) pbView.classList.add('hidden');
   window.scrollTo(0,0);
 }
 function showBinder() {
@@ -1755,6 +1832,10 @@ function route() {
     const uid = pub[1] ? decodeURIComponent(pub[1]) : '';
     if (uid) { if (typeof showPublicBinder === 'function') showPublicBinder(uid); }
     else     { if (typeof showPublic       === 'function') showPublic(); }
+    return;
+  }
+  if (/^#trades/.test(location.hash)) {
+    if (typeof showTrades === 'function') showTrades();
     return;
   }
   const m = location.hash.match(/^#card\/([^\/]+)(?:\/([^\/]*)(?:\/([^\/]*))?)?/);
@@ -1979,10 +2060,47 @@ function renderDetail(id, preferFinish, preferFeed) {
     cell('30d low',  fmtPrice(lo, activePt));
 }
 // ---- WATCHLIST (browser-local) -------------------------------------------
-const WL_KEY = 'mtg-movers-watchlist-v1';
+const WL_KEY   = 'mtg-movers-watchlist-v1';
+const WANT_KEY = 'mtg-movers-wantlist-v1';
+// Which tab the user is currently editing in the wl-modal. Saved across opens
+// so the tab the user was last on is the one they return to. Affects which
+// textarea Save targets, which list addPrintingToWatchlist appends to, and
+// which textarea importDeckList operates on.
+let _wlActiveTab = 'have';
 function loadWatchlist() {
   const raw = localStorage.getItem(WL_KEY) || '';
   return raw.split('\n').map(s => s.trim()).filter(Boolean);
+}
+function loadWantlist() {
+  const raw = localStorage.getItem(WANT_KEY) || '';
+  return raw.split('\n').map(s => s.trim()).filter(Boolean);
+}
+function _wlActiveTextareaId() {
+  return _wlActiveTab === 'want' ? 'wl-text-want' : 'wl-text';
+}
+function _wlActiveStorageKey() {
+  return _wlActiveTab === 'want' ? WANT_KEY : WL_KEY;
+}
+function setWlTab(name) {
+  _wlActiveTab = (name === 'want') ? 'want' : 'have';
+  const haveTab = document.getElementById('wl-tab-have');
+  const wantTab = document.getElementById('wl-tab-want');
+  const haveTa  = document.getElementById('wl-text');
+  const wantTa  = document.getElementById('wl-text-want');
+  const haveHlp = document.getElementById('wl-help-have');
+  const wantHlp = document.getElementById('wl-help-want');
+  if (haveTab) haveTab.classList.toggle('active', _wlActiveTab === 'have');
+  if (wantTab) wantTab.classList.toggle('active', _wlActiveTab === 'want');
+  if (haveTa)  haveTa.style.display  = _wlActiveTab === 'have' ? '' : 'none';
+  if (wantTa)  wantTa.style.display  = _wlActiveTab === 'want' ? '' : 'none';
+  if (haveHlp) haveHlp.style.display = _wlActiveTab === 'have' ? '' : 'none';
+  if (wantHlp) wantHlp.style.display = _wlActiveTab === 'want' ? '' : 'none';
+  // Clear search results so a leftover search from the other tab doesn't
+  // accidentally add to the wrong list.
+  const r = document.getElementById('wl-results');
+  if (r) { r.innerHTML = ''; r.classList.remove('show'); }
+  const s = document.getElementById('wl-search');
+  if (s) s.value = '';
 }
 function parseWatchlistEntry(line) {
   // Supported entry formats:
@@ -2014,7 +2132,13 @@ function updateWatchlistCount() {
   document.getElementById('wl-count').textContent = loadWatchlist().length;
 }
 function openWatchlist() {
-  document.getElementById('wl-text').value = loadWatchlist().join('\n');
+  // Populate both textareas so a Save preserves whichever tab the user wasn't
+  // viewing too.
+  const haveTa = document.getElementById('wl-text');
+  const wantTa = document.getElementById('wl-text-want');
+  if (haveTa) haveTa.value = loadWatchlist().join('\n');
+  if (wantTa) wantTa.value = loadWantlist().join('\n');
+  setWlTab(_wlActiveTab);   // re-apply tab visibility (defaults to 'have' on first open)
   document.getElementById('wl-modal').classList.add('show');
 }
 function closeWatchlist() {
@@ -2025,7 +2149,7 @@ function closeWatchlist() {
   r.classList.remove('show');
 }
 function importDeckList() {
-  const ta = document.getElementById('wl-text');
+  const ta = document.getElementById(_wlActiveTextareaId());
   if (!ta) return;
   // Handles formats:
   //   "1 Aetherize"                 -> Aetherize
@@ -2088,8 +2212,12 @@ function importDeckList() {
   flashMsg(parts.join(', '));
 }
 function saveWatchlist() {
-  const v = document.getElementById('wl-text').value;
-  localStorage.setItem(WL_KEY, v);
+  // Persist BOTH lists; the modal shows one at a time but we always populated
+  // both on open, so saving them together is safe.
+  const haveV = (document.getElementById('wl-text') || {}).value || '';
+  const wantV = (document.getElementById('wl-text-want') || {}).value || '';
+  localStorage.setItem(WL_KEY, haveV);
+  localStorage.setItem(WANT_KEY, wantV);
   markLocalChanged();
   bumpBinderCompute();   // watchlist changed -> totals stale
   updateWatchlistCount();
@@ -2100,6 +2228,8 @@ function saveWatchlist() {
       && !document.getElementById('view-binder').classList.contains('hidden')) {
     renderBinder();
   }
+  // Public binder publishes wantlist too, so a change is worth pushing.
+  if (typeof _markPublicBinderDirty === 'function') _markPublicBinderDirty();
 }
 
 // ---- BINDER (browser-side, fetches from Scryfall) ------------------------
@@ -3414,24 +3544,30 @@ function rowMatchesWatchlist(r, entries) {
 }
 function addPrintingToWatchlist(name, setCode, num) {
   const entry = `${name} (${(setCode||'').toUpperCase()}${num ? '-'+num : ''})`;
-  const list = loadWatchlist();
+  // Route to whichever list the user is currently editing (Have vs Want).
+  const isWant = _wlActiveTab === 'want';
+  const key = isWant ? WANT_KEY : WL_KEY;
+  const list = isWant ? loadWantlist() : loadWatchlist();
+  const listLabel = isWant ? 'wantlist' : 'watchlist';
   if (list.some(l => l.trim().toLowerCase() === entry.toLowerCase())) {
-    flashMsg(`Already in watchlist: ${entry}`);
+    flashMsg(`Already in ${listLabel}: ${entry}`);
     return;
   }
   list.push(entry);
-  localStorage.setItem(WL_KEY, list.join('\n'));
+  localStorage.setItem(key, list.join('\n'));
   markLocalChanged();
-  bumpBinderCompute();   // watchlist changed -> totals stale
-  updateWatchlistCount();
+  if (!isWant) {
+    bumpBinderCompute();   // watchlist changed -> totals stale
+    updateWatchlistCount();
+  }
   // If modal is open, mirror the new entry into the textarea so a Save
   // doesn't accidentally erase it.
-  const ta = document.getElementById('wl-text');
+  const ta = document.getElementById(isWant ? 'wl-text-want' : 'wl-text');
   const modal = document.getElementById('wl-modal');
   if (ta && modal && modal.classList.contains('show')) {
     ta.value = list.join('\n');
   }
-  flashMsg(`Added: ${entry}`);
+  flashMsg(`Added to ${listLabel}: ${entry}`);
 }
 function escapeHtml(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -3510,7 +3646,10 @@ function _fallbackCopy(text, done) {
 // Everything the user builds lives in this browser (localStorage + IndexedDB),
 // so a backup bundles those into one downloadable JSON. The IndexedDB card/price
 // CACHE is intentionally excluded - it's large and re-fetched automatically.
-const BACKUP_KEYS = [WL_KEY, DECKS_KEY, BINDER_COLOR_KEY, BINDER_PREFS_KEY, 'mtg-theme'];
+// Note: 'mtg-movers-trade-contact-v1' is also the value of TRADE_CONTACT_KEY
+// (defined later when the trade module loads). Hardcoded here to avoid a
+// temporal-dead-zone issue (BACKUP_KEYS is parsed before TRADE_CONTACT_KEY).
+const BACKUP_KEYS = [WL_KEY, WANT_KEY, DECKS_KEY, BINDER_COLOR_KEY, BINDER_PREFS_KEY, 'mtg-movers-trade-contact-v1', 'mtg-theme'];
 function exportBackup() {
   const data = { app: 'mtg-movers', backupVersion: 1, exportedAt: new Date().toISOString(),
                  localStorage: {}, images: {} };
@@ -3577,7 +3716,7 @@ const FIREBASE_CONFIG = {
 let _fbAuth = null, _fbDb = null;
 let _syncUid = null, _syncUnsub = null, _syncPushTimer = null, _syncSuppress = false;
 let _syncLocalAt = Number(localStorage.getItem('mtg-sync-at') || 0);
-const SYNC_MAP = { wl: WL_KEY, decks: DECKS_KEY, binderColors: BINDER_COLOR_KEY, binderPrefs: BINDER_PREFS_KEY };
+const SYNC_MAP = { wl: WL_KEY, want: WANT_KEY, decks: DECKS_KEY, binderColors: BINDER_COLOR_KEY, binderPrefs: BINDER_PREFS_KEY, tradeContact: 'mtg-movers-trade-contact-v1' };
 
 function _collectSyncBundle() {
   const b = {};
@@ -3602,6 +3741,11 @@ function _refreshAfterSync() {
   try { updateWatchlistCount(); } catch (e) {}
   try { renderLeftTicker(); } catch (e) {}
   try { applyBinderColors(loadBinderColors()); } catch (e) {}
+  // Re-pull trade contact in case a sync brought a fresh value.
+  try {
+    _tradeContact = localStorage.getItem('mtg-movers-trade-contact-v1') || '';
+    if (typeof _updatePublicUI === 'function') _updatePublicUI();
+  } catch (e) {}
   try { if (!document.getElementById('view-list').classList.contains('hidden')) renderList(); } catch (e) {}
   try {
     if (!document.getElementById('view-binder').classList.contains('hidden')) {
@@ -3739,7 +3883,7 @@ function _clearLocalUserData() {
   // Wipe THIS device's personal collection data so it can't carry over between
   // accounts on a shared device. Cloud data is untouched and re-pulls on sign-in.
   try {
-    [WL_KEY, DECKS_KEY, BINDER_COLOR_KEY, BINDER_PREFS_KEY, 'mtg-sync-at']
+    [WL_KEY, WANT_KEY, DECKS_KEY, BINDER_COLOR_KEY, BINDER_PREFS_KEY, 'mtg-movers-trade-contact-v1', 'mtg-sync-at']
       .forEach(k => localStorage.removeItem(k));
   } catch (e) {}
   try { _binderMemCache.clear(); _binderMemHist.clear(); _customImages.clear(); } catch (e) {}
@@ -3901,6 +4045,12 @@ let _publicHandle = '';
 let _publicPushTimer = null, _publicDirty = false;
 let _publicBindersAll = [];   // last-fetched directory, filtered/sorted client-side
 
+// Free-form trade contact (Discord handle, email, eBay, whatever). Lives in
+// localStorage; pushed into publicBinders so users we trade with can see it
+// only AFTER they accept a trade. Empty string = trades disabled for this user.
+const TRADE_CONTACT_KEY = 'mtg-movers-trade-contact-v1';
+let _tradeContact = localStorage.getItem(TRADE_CONTACT_KEY) || '';
+
 function _publicBinderTotal() {
   let t = 0;
   for (const e of loadWatchlist()) {
@@ -3938,12 +4088,19 @@ async function _pushPublicBinder() {
   _publicDirty = false;
   try {
     const list = loadWatchlist();
+    const wantList = loadWantlist();
     const docRef = _fbDb.collection('publicBinders').doc(_syncUid);
     await docRef.set({
       handle: _publicHandle || 'Anonymous',
       cardCount: list.length,
+      wantCount: wantList.length,
       totalValue: Math.round(_publicBinderTotal() * 100) / 100,
       watchlist: localStorage.getItem(WL_KEY) || '',
+      wantlist: localStorage.getItem(WANT_KEY) || '',
+      tradesEnabled: !!(_tradeContact || '').trim(),
+      // Note: tradeContact itself is NOT in this public doc - it's revealed
+      // only inside a trade doc after the recipient accepts. Keeping it out
+      // here means random visitors can't scrape contact info.
       updatedAt: Date.now(),
     });
     const entries = Array.from(_binderMemCache.entries());
@@ -3998,13 +4155,28 @@ function onHandleChange(value) {
   _publicHandle = (value || '').trim();
   if (_publicBinderEnabled) _markPublicBinderDirty();
 }
+function onTradeContactChange(value) {
+  const v = (value || '').trim();
+  if (v === _tradeContact) return;
+  _tradeContact = v;
+  localStorage.setItem(TRADE_CONTACT_KEY, v);
+  markLocalChanged();
+  // Public binder doc carries a tradesEnabled flag derived from this value,
+  // so changing it should push.
+  if (_publicBinderEnabled) _markPublicBinderDirty();
+}
 function _updatePublicUI() {
   const tg = document.getElementById('binder-public-toggle');
   const hi = document.getElementById('binder-public-handle');
+  const tc = document.getElementById('trade-contact');
   if (tg) tg.checked = !!_publicBinderEnabled;
   if (hi && document.activeElement !== hi) hi.value = _publicHandle || '';
+  if (tc && document.activeElement !== tc) tc.value = _tradeContact || '';
   const browseLink = document.getElementById('nav-browse');
   if (browseLink) browseLink.style.display = _syncUid ? '' : 'none';
+  const tradesLink = document.getElementById('nav-trades');
+  if (tradesLink) tradesLink.style.display = _syncUid ? '' : 'none';
+  if (_syncUid && typeof _refreshTradesBadge === 'function') _refreshTradesBadge();
 }
 async function fetchPublicBinders() {
   if (!_fbDb) return [];
@@ -4033,7 +4205,7 @@ async function fetchPublicBinder(uid) {
   } catch (e) { console.warn('fetch public binder failed', e); return null; }
 }
 function showPublic() {
-  ['view-list', 'view-detail', 'view-binder', 'view-decks', 'view-public-binder'].forEach(id => {
+  ['view-list', 'view-detail', 'view-binder', 'view-decks', 'view-public-binder', 'view-trades'].forEach(id => {
     const el = document.getElementById(id); if (el) el.classList.add('hidden');
   });
   const el = document.getElementById('view-public'); if (el) el.classList.remove('hidden');
@@ -4099,7 +4271,7 @@ function renderPublicList(items) {
     </div>`).join('');
 }
 async function showPublicBinder(uid) {
-  ['view-list', 'view-detail', 'view-binder', 'view-decks', 'view-public'].forEach(id => {
+  ['view-list', 'view-detail', 'view-binder', 'view-decks', 'view-public', 'view-trades'].forEach(id => {
     const el = document.getElementById(id); if (el) el.classList.add('hidden');
   });
   const el = document.getElementById('view-public-binder'); if (el) el.classList.remove('hidden');
@@ -4147,6 +4319,355 @@ function renderPublicBinder(data) {
   const sortEl   = document.getElementById('pb-sort-cards');  if (sortEl)   sortEl.value   = 'custom';
   const searchEl = document.getElementById('pb-card-search'); if (searchEl) searchEl.value = '';
   _renderPbCards();
+  // Wants section: render the owner's wantlist as a simple text list.
+  const wantsSec  = document.getElementById('pb-wants-section');
+  const wantsHost = document.getElementById('pb-wants');
+  const wants = (data.wantlist || '').split('\n').map(s => s.trim()).filter(Boolean);
+  if (wantsSec && wantsHost) {
+    if (wants.length) {
+      wantsHost.innerHTML = wants.map(w => `<div>${escapeHtml(w)}</div>`).join('');
+      wantsSec.style.display = '';
+    } else {
+      wantsSec.style.display = 'none';
+    }
+  }
+  // Propose trade button: only show if I'm signed in, I'm not the owner, and
+  // they've enabled trades by setting a contact.
+  const btn = document.getElementById('pb-propose-trade');
+  if (btn) {
+    const canPropose = !!_syncUid
+      && data.uid && data.uid !== _syncUid
+      && !!data.tradesEnabled;
+    btn.style.display = canPropose ? '' : 'none';
+  }
+}
+
+// ---- Trade composer ------------------------------------------------------
+// Picks cards from the public binder I'm viewing (left col) and from my own
+// binder (right col), then writes a trades/{tradeId} doc. The recipient sees
+// it in their inbox and can accept/decline. Trade-contact info is hidden in
+// the UI until the trade is accepted by both sides.
+let _tcPickedTheir = new Set();  // entry-strings from their binder I'm requesting
+let _tcPickedMine  = new Set();  // entry-strings from my binder I'm offering
+
+function _tcCardSnapshot(entry, card) {
+  // Compact card snapshot embedded in the trade doc so the recipient can
+  // render it without needing to fetch the other binder's data.
+  return {
+    entry: entry,
+    id: card.id || '',
+    name: card.name || entry,
+    img: card.img || card.image_uri || '',
+    price: (card.price_usd != null) ? Number(card.price_usd) : null,
+    finish: card.finish || 'normal',
+    set: card.set || '',
+    set_name: card.set_name || '',
+  };
+}
+function _tcRenderGrid(hostId, entries, cardsMap, picked, side) {
+  const host = document.getElementById(hostId);
+  if (!host) return;
+  const items = entries.map(entry => {
+    const v = cardsMap.get(entry);
+    const card = v && v.d;
+    return card ? { entry, card } : null;
+  }).filter(Boolean);
+  if (!items.length) {
+    host.innerHTML = `<div style="padding:1rem; color:#888; text-align:center;">${side === 'mine' ? 'Your binder is empty (or no images cached yet).' : 'No cards to pick from.'}</div>`;
+    return;
+  }
+  host.innerHTML = items.map(it => {
+    const img = it.card.img || it.card.image_uri || '';
+    const safeEntry = (it.entry || '').replace(/'/g, "\\'");
+    const isPicked = picked.has(it.entry);
+    return `<div class="tc-card ${isPicked ? 'picked' : ''}" data-entry="${escapeHtml(it.entry)}" onclick="_tcTogglePick('${side}', this.dataset.entry)">
+      ${img ? `<img src="${escapeHtml(img)}" loading="lazy" alt="" />` : ''}
+      <div class="nm">${escapeHtml(it.card.name || it.entry)}</div>
+    </div>`;
+  }).join('');
+}
+function _tcRefresh() {
+  const data = _pbCurrentData;
+  if (!data) return;
+  // Their side: iterate their watchlist; only show entries we have card data for.
+  const theirEntries = (data.watchlist || '').split('\n').map(s => s.trim()).filter(Boolean);
+  _tcRenderGrid('tc-their-cards', theirEntries, data.cards, _tcPickedTheir, 'theirs');
+  // My side: iterate my watchlist; use my own binder mem cache.
+  const myEntries = loadWatchlist();
+  _tcRenderGrid('tc-my-cards', myEntries, _binderMemCache, _tcPickedMine, 'mine');
+  _tcUpdateSummaries();
+}
+function _tcUpdateSummaries() {
+  const reqEl = document.getElementById('tc-req-summary');
+  const offEl = document.getElementById('tc-off-summary');
+  if (reqEl) reqEl.textContent = _tcPickedTheir.size ? `(${_tcPickedTheir.size})` : '';
+  if (offEl) offEl.textContent = _tcPickedMine.size  ? `(${_tcPickedMine.size})`  : '';
+}
+function _tcTogglePick(side, entry) {
+  const set = (side === 'mine') ? _tcPickedMine : _tcPickedTheir;
+  if (set.has(entry)) set.delete(entry); else set.add(entry);
+  _tcRefresh();
+}
+function openTradeComposer() {
+  if (!_syncUid) { flashMsg('Sign in first to propose a trade.'); return; }
+  if (!_pbCurrentData) { flashMsg('No binder selected.'); return; }
+  if (_pbCurrentData.uid === _syncUid) { flashMsg("That's your own binder."); return; }
+  if (!_tradeContact || !_tradeContact.trim()) {
+    flashMsg('Set your Trade contact in your binder Customize panel first.');
+    return;
+  }
+  _tcPickedTheir.clear();
+  _tcPickedMine.clear();
+  const msgEl = document.getElementById('tc-message');
+  if (msgEl) msgEl.value = '';
+  const title = document.getElementById('trade-modal-title');
+  if (title) title.textContent = `Propose a trade with ${_pbCurrentData.handle || 'this user'}`;
+  _tcRefresh();
+  document.getElementById('trade-modal').classList.add('show');
+}
+function closeTradeComposer() {
+  document.getElementById('trade-modal').classList.remove('show');
+}
+async function sendTradeOffer() {
+  if (!_syncUid || !_fbDb || !_pbCurrentData) return;
+  if (!_tcPickedTheir.size && !_tcPickedMine.size) {
+    flashMsg('Pick at least one card on either side.');
+    return;
+  }
+  if (!_tradeContact || !_tradeContact.trim()) {
+    flashMsg('Set your Trade contact first.');
+    return;
+  }
+  const btn = document.getElementById('tc-send');
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
+  try {
+    // Build compact snapshots so neither side needs to fetch the other binder
+    // to render the trade later.
+    const requested = [..._tcPickedTheir].map(e => {
+      const v = _pbCurrentData.cards.get(e); const c = v && v.d;
+      return c ? _tcCardSnapshot(e, c) : null;
+    }).filter(Boolean);
+    const offered = [..._tcPickedMine].map(e => {
+      const v = _binderMemCache.get(e); const c = v && v.d;
+      return c ? _tcCardSnapshot(e, c) : null;
+    }).filter(Boolean);
+    const message = ((document.getElementById('tc-message') || {}).value || '').trim().slice(0, 1000);
+    const now = Date.now();
+    await _fbDb.collection('trades').add({
+      fromUid: _syncUid,
+      fromHandle: _publicHandle || 'Anonymous',
+      fromContact: _tradeContact,
+      toUid: _pbCurrentData.uid,
+      toHandle: _pbCurrentData.handle || 'Anonymous',
+      // toContact is left empty - recipient fills it when they accept.
+      offered: offered,
+      requested: requested,
+      message: message,
+      status: 'pending',
+      notified: false,        // server pipeline flips to true after emailing
+      createdAt: now,
+      updatedAt: now,
+    });
+    flashMsg('Trade offer sent.');
+    closeTradeComposer();
+  } catch (e) {
+    console.warn('trade send failed', e);
+    flashMsg('Trade send failed: ' + (e && e.message || e));
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Send offer'; }
+  }
+}
+
+// ---- Trades inbox --------------------------------------------------------
+let _tradesCache = [];           // last-fetched array (both directions)
+let _tradesTab   = 'incoming';   // 'incoming' | 'outgoing' | 'closed'
+
+function _tradeIsClosed(t) { return t.status === 'accepted' || t.status === 'declined' || t.status === 'cancelled'; }
+
+async function fetchTrades() {
+  if (!_fbDb || !_syncUid) return [];
+  try {
+    // Two queries: trades sent TO me, and trades sent FROM me. Combined client-side.
+    const [toSnap, fromSnap] = await Promise.all([
+      _fbDb.collection('trades').where('toUid', '==', _syncUid).get(),
+      _fbDb.collection('trades').where('fromUid', '==', _syncUid).get(),
+    ]);
+    const out = {};
+    toSnap.forEach(d => out[d.id]  = Object.assign({ id: d.id }, d.data()));
+    fromSnap.forEach(d => out[d.id]= Object.assign({ id: d.id }, d.data()));
+    return Object.values(out).sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0));
+  } catch (e) { console.warn('fetchTrades failed', e); return []; }
+}
+
+function showTrades() {
+  ['view-list', 'view-detail', 'view-binder', 'view-decks', 'view-public', 'view-public-binder']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.classList.add('hidden'); });
+  const el = document.getElementById('view-trades'); if (el) el.classList.remove('hidden');
+  window.scrollTo(0, 0);
+  if (!_syncUid) {
+    document.getElementById('trades-list').innerHTML =
+      '<p style="text-align:center;color:#aaa;padding:2rem;">Sign in to see your trades.</p>';
+    return;
+  }
+  document.getElementById('trades-list').innerHTML =
+    '<p style="text-align:center;color:#aaa;padding:2rem;">Loading…</p>';
+  fetchTrades().then(items => {
+    _tradesCache = items || [];
+    _renderTradesList();
+    _refreshTradesBadge();
+  });
+}
+function setTradesTab(name) {
+  _tradesTab = (name === 'outgoing' || name === 'closed') ? name : 'incoming';
+  for (const t of ['incoming','outgoing','closed']) {
+    const el = document.getElementById('trades-tab-' + t);
+    if (el) el.classList.toggle('active', t === _tradesTab);
+  }
+  _renderTradesList();
+}
+function _renderTradesList() {
+  const host = document.getElementById('trades-list');
+  if (!host) return;
+  let incoming = [], outgoing = [], closed = [];
+  for (const t of _tradesCache) {
+    if (_tradeIsClosed(t)) closed.push(t);
+    else if (t.toUid === _syncUid) incoming.push(t);
+    else if (t.fromUid === _syncUid) outgoing.push(t);
+  }
+  // Update tab counts.
+  const setCnt = (id, n) => { const el = document.getElementById(id); if (el) el.textContent = n ? ` (${n})` : ''; };
+  setCnt('trades-cnt-incoming', incoming.length);
+  setCnt('trades-cnt-outgoing', outgoing.length);
+  setCnt('trades-cnt-closed',   closed.length);
+  const items = _tradesTab === 'incoming' ? incoming : (_tradesTab === 'outgoing' ? outgoing : closed);
+  if (!items.length) {
+    host.innerHTML = `<p style="text-align:center;color:#aaa;padding:2rem;">No ${_tradesTab} trades.</p>`;
+    return;
+  }
+  host.innerHTML = items.map(_renderTradeCardHtml).join('');
+}
+function _renderTradeCardHtml(t) {
+  const fmt = n => '$' + (Number(n) || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const sumValue = arr => (arr || []).reduce((s, c) => s + (Number(c.price) || 0), 0);
+  const renderCardList = arr => (arr || []).map(c => {
+    const img = c.img || '';
+    return `<div class="tc-card" style="cursor:default;" title="${escapeHtml(c.name || '')}${c.set ? ' (' + escapeHtml(c.set.toUpperCase()) + ')' : ''}${c.price != null ? ' - ' + fmt(c.price) : ''}">
+      ${img ? `<img src="${escapeHtml(img)}" loading="lazy" alt="" />` : ''}
+      <div class="nm">${escapeHtml(c.name || '')}</div>
+    </div>`;
+  }).join('');
+  const meIsSender = t.fromUid === _syncUid;
+  const otherHandle = meIsSender ? (t.toHandle || 'Anonymous') : (t.fromHandle || 'Anonymous');
+  const dirLabel = meIsSender
+    ? `You proposed to <b>${escapeHtml(otherHandle)}</b>`
+    : `<b>${escapeHtml(otherHandle)}</b> proposed to you`;
+  const offered = t.offered || [], requested = t.requested || [];
+  const offTotal = sumValue(offered), reqTotal = sumValue(requested);
+  const statusBadge = {
+    'pending':   `<span style="background:#3a4f6a; color:#9ecbff; padding:.15rem .5rem; border-radius:999px; font-size:.7rem; font-weight:600;">Pending</span>`,
+    'accepted':  `<span style="background:#1f5132; color:#a3ff9e; padding:.15rem .5rem; border-radius:999px; font-size:.7rem; font-weight:600;">Accepted</span>`,
+    'declined':  `<span style="background:#5a2a2a; color:#ffb0b0; padding:.15rem .5rem; border-radius:999px; font-size:.7rem; font-weight:600;">Declined</span>`,
+    'cancelled': `<span style="background:#444; color:#ccc; padding:.15rem .5rem; border-radius:999px; font-size:.7rem; font-weight:600;">Cancelled</span>`,
+  }[t.status] || '';
+  const showContacts = t.status === 'accepted';
+  const contactHtml = showContacts
+    ? `<div style="margin-top:.5rem; padding:.5rem .7rem; background:#0a1a0a; border:1px solid #1f5132; border-radius:6px; font-size:.85rem;">
+         <div><b>Their trade contact:</b> ${escapeHtml(meIsSender ? (t.toContact || '(not set)') : (t.fromContact || '(not set)'))}</div>
+         <div style="margin-top:.2rem; color:#888;">Reach out to coordinate the swap. Trades complete off-platform.</div>
+       </div>`
+    : '';
+  const msgHtml = t.message
+    ? `<div style="margin-top:.5rem; padding:.4rem .6rem; background:#141414; border-radius:6px; font-size:.85rem; color:#ccc; border:1px solid #2a2a2a;">${escapeHtml(t.message)}</div>`
+    : '';
+  let actions = '';
+  if (t.status === 'pending') {
+    if (meIsSender) {
+      actions = `<button class="wl-btn" onclick="cancelTrade('${t.id}')">Cancel offer</button>`;
+    } else {
+      actions = `<button class="wl-btn" onclick="declineTrade('${t.id}')">Decline</button>
+                 <button class="wl-btn" style="background:linear-gradient(180deg,#1f5132 0%,#0d3320 100%); border-color:#1f5132;" onclick="acceptTrade('${t.id}')">Accept</button>`;
+    }
+  }
+  const ts = t.createdAt ? new Date(t.createdAt).toLocaleString() : '';
+  return `<div style="border:1px solid #2a2a2a; border-radius:8px; padding:.8rem; margin-bottom:.8rem; background:#0d0d0d;">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:.8rem; flex-wrap:wrap;">
+      <div>
+        <div style="font-size:.95rem;">${dirLabel} ${statusBadge}</div>
+        <div style="font-size:.75rem; color:#888; margin-top:.15rem;">${escapeHtml(ts)}</div>
+      </div>
+      <div style="display:flex; gap:.4rem;">${actions}</div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:.8rem; margin-top:.6rem;">
+      <div>
+        <div style="font-size:.78rem; color:#9ecbff; margin-bottom:.25rem; text-transform:uppercase; letter-spacing:.04em;">${meIsSender ? 'You requesting' : 'They offer'} ${offered.length ? '· ' + fmt(reqTotal /* same shape both sides */) : ''}</div>
+        <div class="tc-grid">${renderCardList(meIsSender ? requested : offered)}</div>
+      </div>
+      <div>
+        <div style="font-size:.78rem; color:#9ecbff; margin-bottom:.25rem; text-transform:uppercase; letter-spacing:.04em;">${meIsSender ? 'You offering' : 'They want'} ${requested.length ? '· ' + fmt(offTotal) : ''}</div>
+        <div class="tc-grid">${renderCardList(meIsSender ? offered : requested)}</div>
+      </div>
+    </div>
+    ${msgHtml}
+    ${contactHtml}
+  </div>`;
+}
+async function acceptTrade(tradeId) {
+  if (!_fbDb || !_syncUid) return;
+  if (!_tradeContact || !_tradeContact.trim()) {
+    flashMsg('Set your Trade contact first (Binder Customize > Trades).');
+    return;
+  }
+  try {
+    await _fbDb.collection('trades').doc(tradeId).update({
+      status: 'accepted',
+      toContact: _tradeContact,
+      notified: false,    // tell the email pipeline to ping the sender
+      updatedAt: Date.now(),
+    });
+    flashMsg('Trade accepted.');
+    showTrades();   // reload
+  } catch (e) { console.warn('acceptTrade failed', e); flashMsg('Accept failed: ' + (e.message || e)); }
+}
+async function declineTrade(tradeId) {
+  if (!_fbDb || !_syncUid) return;
+  if (!confirm('Decline this trade offer?')) return;
+  try {
+    await _fbDb.collection('trades').doc(tradeId).update({
+      status: 'declined',
+      notified: false,
+      updatedAt: Date.now(),
+    });
+    flashMsg('Trade declined.');
+    showTrades();
+  } catch (e) { console.warn('declineTrade failed', e); flashMsg('Decline failed: ' + (e.message || e)); }
+}
+async function cancelTrade(tradeId) {
+  if (!_fbDb || !_syncUid) return;
+  if (!confirm('Cancel this trade offer?')) return;
+  try {
+    await _fbDb.collection('trades').doc(tradeId).update({
+      status: 'cancelled',
+      updatedAt: Date.now(),
+    });
+    flashMsg('Trade cancelled.');
+    showTrades();
+  } catch (e) { console.warn('cancelTrade failed', e); flashMsg('Cancel failed: ' + (e.message || e)); }
+}
+async function _refreshTradesBadge() {
+  if (!_fbDb || !_syncUid) {
+    const n = document.getElementById('nav-trades-badge'); if (n) n.style.display = 'none';
+    return;
+  }
+  try {
+    const snap = await _fbDb.collection('trades')
+      .where('toUid', '==', _syncUid).where('status', '==', 'pending').get();
+    const cnt = snap.size;
+    const badge = document.getElementById('nav-trades-badge');
+    if (badge) {
+      if (cnt > 0) { badge.textContent = String(cnt); badge.style.display = ''; }
+      else { badge.style.display = 'none'; }
+    }
+  } catch (e) { console.warn('trades badge refresh failed', e); }
 }
 
 function _renderPbCards() {

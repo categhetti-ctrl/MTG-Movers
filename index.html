@@ -4683,6 +4683,14 @@ function _renderPbCards() {
     const card = v && v.d;
     return card ? { entry, card } : null;
   }).filter(Boolean);
+  // Inject each card into HISTORY so clicking opens the detail page. The
+  // route handler looks up HISTORY[id] - without this, public-binder cards
+  // route back to the movers list because they were never indexed.
+  for (const it of items) {
+    if (it.card.id && !HISTORY[it.card.id] && typeof injectBinderIntoHistory === 'function') {
+      injectBinderIntoHistory(it.card);
+    }
+  }
   // Apply filters.
   if (_pbColorFilter !== 'all') {
     items = items.filter(it => _pbCardMatchesColor(it.card, _pbColorFilter));

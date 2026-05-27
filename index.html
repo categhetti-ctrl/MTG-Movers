@@ -4105,8 +4105,11 @@ function renderPublicBinder(data) {
     const safeId  = (card.id     || '').replace(/'/g, "\\'");
     const safeFin = (card.finish || 'normal').replace(/'/g, "\\'");
     const price = (card.price_usd != null) ? fmt(card.price_usd) : '';
+    // The binder cache stores the image URL as `img`; older code paths used
+    // `image_uri`. Read both so we render whatever shape the publisher pushed.
+    const imgUrl = card.img || card.image_uri || '';
     return `<div class="deck-card" onclick="goCard('${safeId}','${safeFin}','market')">
-      ${card.image_uri ? `<img src="${escapeHtml(card.image_uri)}" loading="lazy" alt="" />` : ''}
+      ${imgUrl ? `<img src="${escapeHtml(imgUrl)}" loading="lazy" alt="" />` : ''}
       ${price ? `<div class="pr">${price}</div>` : ''}
     </div>`;
   }).filter(Boolean).join('');

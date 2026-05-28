@@ -22,7 +22,26 @@
       } catch (e) { document.documentElement.setAttribute('data-theme', 'dark'); }
     })();
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script>
+    // Lazy-load Chart.js. The movers list (landing page) doesn't need it,
+    // and on slow mobile networks pulling ~75KB of JS before first paint is
+    // wasteful. Call loadChartJs() right before any `new Chart(...)`; the
+    // promise resolves once the global Chart is available, and subsequent
+    // calls return immediately.
+    window.loadChartJs = function() {
+      if (window.Chart) return Promise.resolve(window.Chart);
+      if (window._chartJsLoadingPromise) return window._chartJsLoadingPromise;
+      window._chartJsLoadingPromise = new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+        s.async = true;
+        s.onload = () => { if (window.Chart) resolve(window.Chart); else reject(new Error('Chart.js loaded but global not present')); };
+        s.onerror = () => reject(new Error('Chart.js failed to load from CDN'));
+        document.head.appendChild(s);
+      });
+      return window._chartJsLoadingPromise;
+    };
+  </script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -1665,17 +1684,20 @@ function renderOpenDeck(id) {
   renderDeckCards(cards);
 }
 function renderDeckChart(cards) {
-  const canvas = document.getElementById('deck-chart'); if (!canvas || typeof Chart === 'undefined') return;
+  const canvas = document.getElementById('deck-chart'); if (!canvas) return;
   const hist = deckValueHistory(cards);
   if (_deckChart) { _deckChart.destroy(); _deckChart = null; }
   if (!hist || hist.length < 2) return;
-  _deckChart = new Chart(canvas, {
-    type: 'line',
-    data: { labels: hist.map(p => p[0]), datasets: [{ data: hist.map(p => p[1]), borderColor: '#9ecbff', backgroundColor: 'rgba(158,203,255,.14)', fill: true, tension: .25, pointRadius: 0, borderWidth: 2 }] },
-    options: { maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => '$' + ctx.parsed.y.toFixed(2) } } },
-      scales: { x: { ticks: { color: '#888', maxRotation: 0, autoSkip: true, maxTicksLimit: 6 }, grid: { color: '#232938' } }, y: { ticks: { color: '#888', callback: v => '$' + Math.round(v).toLocaleString() }, grid: { color: '#232938' } } } }
-  });
-  refreshChartsForTheme();
+  loadChartJs().then(() => {
+    if (!document.getElementById('deck-chart')) return;   // user navigated away
+    _deckChart = new Chart(canvas, {
+      type: 'line',
+      data: { labels: hist.map(p => p[0]), datasets: [{ data: hist.map(p => p[1]), borderColor: '#9ecbff', backgroundColor: 'rgba(158,203,255,.14)', fill: true, tension: .25, pointRadius: 0, borderWidth: 2 }] },
+      options: { maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => '$' + ctx.parsed.y.toFixed(2) } } },
+        scales: { x: { ticks: { color: '#888', maxRotation: 0, autoSkip: true, maxTicksLimit: 6 }, grid: { color: '#232938' } }, y: { ticks: { color: '#888', callback: v => '$' + Math.round(v).toLocaleString() }, grid: { color: '#232938' } } } }
+    });
+    refreshChartsForTheme();
+  }).catch(e => console.warn('Chart.js load failed for deck chart', e));
 }
 function renderDeckMovers(cards) {
   const host = document.getElementById('deck-movers'); if (!host) return;
@@ -2109,23 +2131,27 @@ function renderDetail(id, preferFinish, preferFeed) {
   const labels = series.map(p => p[0]);
   const prices = series.map(p => p[1]);
   if (chart) chart.destroy();
-  chart = new Chart(document.getElementById('d-chart'), {
-    type:'line',
-    data:{labels, datasets:[{
-      label:`${PT_LABELS[activePt] || activePt} - ${activeFinish} (${currencyOf(activePt)})`,
-      data:prices, borderColor:'#9ecbff', backgroundColor:'rgba(158,203,255,.08)',
-      fill:true, tension:.2, pointRadius:2
-    }]},
-    options:{
-      maintainAspectRatio:false,
-      plugins:{legend:{display:true, labels:{color:'#bbb'}}},
-      scales:{
-        x:{ticks:{color:'#aaa', maxRotation:0, autoSkip:true, maxTicksLimit:8}, grid:{color:'#2a2a2a'}},
-        y:{ticks:{color:'#aaa'}, grid:{color:'#2a2a2a'}}
+  loadChartJs().then(() => {
+    const dChart = document.getElementById('d-chart');
+    if (!dChart) return;
+    chart = new Chart(dChart, {
+      type:'line',
+      data:{labels, datasets:[{
+        label:`${PT_LABELS[activePt] || activePt} - ${activeFinish} (${currencyOf(activePt)})`,
+        data:prices, borderColor:'#9ecbff', backgroundColor:'rgba(158,203,255,.08)',
+        fill:true, tension:.2, pointRadius:2
+      }]},
+      options:{
+        maintainAspectRatio:false,
+        plugins:{legend:{display:true, labels:{color:'#bbb'}}},
+        scales:{
+          x:{ticks:{color:'#aaa', maxRotation:0, autoSkip:true, maxTicksLimit:8}, grid:{color:'#2a2a2a'}},
+          y:{ticks:{color:'#aaa'}, grid:{color:'#2a2a2a'}}
+        }
       }
-    }
-  });
-  refreshChartsForTheme();
+    });
+    refreshChartsForTheme();
+  }).catch(e => console.warn('Chart.js load failed for detail chart', e));
   document.getElementById('d-stats-title').textContent =
     `Movement - ${PT_LABELS[activePt] || activePt} (${activeFinish}, ${currencyOf(activePt)})`;
   const d1  = pctChange(series, 1);
@@ -3064,25 +3090,28 @@ function renderBinderTotalChart() {
   const labels = history.map(p => p[0]);
   const prices = history.map(p => p[1]);
   if (_binderTotalChart) _binderTotalChart.destroy();
-  _binderTotalChart = new Chart(canvas, {
-    type: 'line',
-    data: { labels, datasets: [{
-      label: 'Total value (USD)',
-      data: prices,
-      borderColor: '#9ecbff',
-      backgroundColor: 'rgba(158,203,255,.14)',
-      fill: true, tension: .25, pointRadius: 0, borderWidth: 2,
-    }] },
-    options: {
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => '$' + ctx.parsed.y.toFixed(2) } } },
-      scales: {
-        x: { ticks: { color: '#888', maxRotation: 0, autoSkip: true, maxTicksLimit: 6 }, grid: { color: '#232938' } },
-        y: { ticks: { color: '#888', callback: v => '$' + Math.round(v).toLocaleString() }, grid: { color: '#232938' } }
+  loadChartJs().then(() => {
+    if (!document.getElementById('bt-chart')) return;
+    _binderTotalChart = new Chart(canvas, {
+      type: 'line',
+      data: { labels, datasets: [{
+        label: 'Total value (USD)',
+        data: prices,
+        borderColor: '#9ecbff',
+        backgroundColor: 'rgba(158,203,255,.14)',
+        fill: true, tension: .25, pointRadius: 0, borderWidth: 2,
+      }] },
+      options: {
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => '$' + ctx.parsed.y.toFixed(2) } } },
+        scales: {
+          x: { ticks: { color: '#888', maxRotation: 0, autoSkip: true, maxTicksLimit: 6 }, grid: { color: '#232938' } },
+          y: { ticks: { color: '#888', callback: v => '$' + Math.round(v).toLocaleString() }, grid: { color: '#232938' } }
+        }
       }
-    }
-  });
-  refreshChartsForTheme();
+    });
+    refreshChartsForTheme();
+  }).catch(e => console.warn('Chart.js load failed for binder total chart', e));
 }
 function renderBinderTotal() {
   renderBinderTotalChart();
@@ -5042,7 +5071,9 @@ async function _tdRender(t) {
     }
     acts.innerHTML = `${extra}<button onclick="closeTradeDetail()">Close</button>`;
   }
-  // Now wire up sparklines for each card cell.
+  // Now wire up sparklines for each card cell. Chart.js loads lazily; while
+  // it's loading, _tdMountSparkline will detect the absent global and just
+  // skip drawing (cells stay blank). Once loaded we'll re-mount.
   _tdDestroyCharts();
   const theme = _tdThemeColors();
   const mount = (side, cards) => {
@@ -5055,8 +5086,12 @@ async function _tdRender(t) {
       if (chart) _tdChartInstances.push(chart);
     });
   };
-  mount('you',  youSide);
-  mount('them', themSide);
+  loadChartJs().then(() => {
+    // Verify the modal is still open before drawing (user may have closed).
+    if (!_tdCurrentTrade || _tdCurrentTrade.id !== t.id) return;
+    mount('you',  youSide);
+    mount('them', themSide);
+  }).catch(e => console.warn('Chart.js load failed for trade sparklines', e));
 }
 
 async function acceptTrade(tradeId) {

@@ -2213,6 +2213,16 @@ const _NO_CATALYST_PATTERNS = [
   'unfortunately, no', 'unfortunately no',
   // Without-a-clear variants
   'without a clear', 'without identifying',
+  // "Found no evidence" / "not mentioned" patterns - caught Sudden Impact
+  // ("is not mentioned in any of the major price spike reports") and
+  // Hero of Goma Fada ("I found no evidence of recent tournament wins...").
+  'found no evidence', 'no evidence of',
+  'is not mentioned', 'not mentioned in',
+  'is not listed', 'not listed in',
+  'does not appear in', 'do not appear in',
+  // Filler-intro pattern often used when the model is about to admit it
+  // didn't find anything specific
+  'i found no', 'we found no',
 ];
 function _synopsisIsUseful(text) {
   if (!text) return false;

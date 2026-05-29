@@ -2184,25 +2184,51 @@ let _statsCurrentRows = [];
 let _statsCurrentTop  = null;
 let _ttChart = null;
 
+// Synopsis sentences that mean "Claude couldn't find anything." Filtered out
+// of the stories panel because a story with no story isn't worth surfacing.
+const _NO_CATALYST_PATTERNS = [
+  'no specific catalyst',
+  'no clear catalyst',
+  'no specific cause',
+  'no clear cause',
+  "couldn't find",
+  'could not find',
+  'was unable to find',
+  'unable to identify',
+  'no specific event',
+  'no specific news',
+  'no specific news catalyst',
+  'no concrete trigger',
+  'no clear trigger',
+];
+function _synopsisIsUseful(text) {
+  if (!text) return false;
+  const lower = text.toLowerCase();
+  for (const p of _NO_CATALYST_PATTERNS) {
+    if (lower.includes(p)) return false;
+  }
+  return true;
+}
 // "Today's stories" - top movers in the current filtered set that have an AI
 // synopsis attached. Rendered above the table.
 function renderStories(rows) {
   const wrap = document.getElementById('stories-wrap');
   const host = document.getElementById('stories');
   if (!wrap || !host) return;
-  // Find rows whose card has a synopsis. Use HISTORY[scryfall_id].synopsis -
-  // publish_static.py attaches it during the build.
+  // Find rows whose card has a USEFUL synopsis (skip "no catalyst found").
+  // Use HISTORY[scryfall_id].synopsis - publish_static.py attaches it during
+  // the build.
   const seen = new Set();
   const candidates = [];
   for (const r of rows) {
     if (!r.scryfall_id || seen.has(r.scryfall_id)) continue;
     const card = HISTORY[r.scryfall_id];
-    if (!card || !card.synopsis) continue;
+    if (!card || !_synopsisIsUseful(card.synopsis)) continue;
     seen.add(r.scryfall_id);
     candidates.push({ row: r, card });
   }
   candidates.sort((a, b) => Math.abs(b.row.pct_change || 0) - Math.abs(a.row.pct_change || 0));
-  const top = candidates.slice(0, 4);
+  const top = candidates.slice(0, 5);
   if (!top.length) { wrap.style.display = 'none'; host.innerHTML = ''; return; }
   wrap.style.display = '';
   host.innerHTML = top.map(({ row, card }) => {
@@ -2999,12 +3025,18 @@ function renderSpikeContext(card) {
       }
     }
   }
-  if (!spike && !crash) { panel.style.display = 'none'; return; }
+  // Show the panel if EITHER there's an active spike/crash OR we have a
+  // cached synopsis. Synopses are generated when a card crosses the
+  // threshold, but the card's price history may have settled by the time
+  // someone clicks in - we still want the explanation visible.
+  const hasSynopsis = !!(card.synopsis && card.synopsis.trim());
+  if (!spike && !crash && !hasSynopsis) { panel.style.display = 'none'; return; }
   panel.style.display = '';
   const title = document.getElementById('d-spike-title');
   if (title) title.textContent = (spike && crash) ? 'Why is this card moving so much?'
                                 : spike            ? 'Why is this card spiking?'
-                                                   : 'Why is this card crashing?';
+                                : crash            ? 'Why is this card crashing?'
+                                                   : 'Why was this card moving?';
   // Synopsis (cached daily from Claude with web search). Hidden when missing.
   const syn  = document.getElementById('d-spike-synopsis');
   const disc = document.getElementById('d-spike-disclaimer');

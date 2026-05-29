@@ -8,17 +8,27 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <meta name="theme-color" content="#0d0d0d" id="meta-theme-color" />
   <link rel="apple-touch-icon" href="icon-192.png" />
+  <!-- Cinzel: used by the Collector theme for headings and nav. Preconnect
+       so the font fetch overlaps with the rest of page load. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&display=swap" media="print" onload="this.media='all'">
   <script>
     /* Apply saved theme (or the visitor's OS preference) before first paint so
-       there is no flash of the wrong theme. */
+       there is no flash of the wrong theme. Themes: dark, light, collector. */
     (function () {
       try {
         var s = localStorage.getItem('mtg-theme');
-        var t = (s === 'light' || s === 'dark') ? s
+        var valid = { dark: 1, light: 1, collector: 1, mox: 1 };
+        var t = valid[s] ? s
               : (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
         document.documentElement.setAttribute('data-theme', t);
         var mc = document.getElementById('meta-theme-color');
-        if (mc) mc.setAttribute('content', t === 'light' ? '#ffffff' : '#0d0d0d');
+        if (mc) mc.setAttribute('content',
+          t === 'light' ? '#ffffff'
+          : t === 'collector' ? '#0e0a06'
+          : t === 'mox' ? '#000000'
+          : '#0d0d0d');
       } catch (e) { document.documentElement.setAttribute('data-theme', 'dark'); }
     })();
   </script>
@@ -720,6 +730,249 @@
     [data-theme="light"] .ticker-item:hover { background:#e9ebef; }
     [data-theme="light"] .ticker-item .nm { color:#1c2230; }
     [data-theme="light"] .ticker-empty { color:#8a90a0; }
+
+    /* ================================================================== */
+    /* COLLECTOR THEME                                                     */
+    /* Premium MTG / vintage card shop vibe: warm dark backgrounds, aged   */
+    /* gold leaf accents, serif Cinzel display type. Activates on a third  */
+    /* tap of the theme toggle (dark -> light -> collector -> dark).       */
+    /* ================================================================== */
+    [data-theme="collector"] body { background:#0e0a06; color:#e8dcc0; }
+    [data-theme="collector"] h1, [data-theme="collector"] h2, [data-theme="collector"] h3, [data-theme="collector"] h4 {
+      font-family: 'Cinzel', Georgia, serif; color:#e8dcc0; letter-spacing:.02em;
+    }
+    [data-theme="collector"] .header-nav a {
+      font-family:'Cinzel', Georgia, serif; font-size:.78rem; letter-spacing:.12em;
+      text-transform:uppercase; color:#c8a951; background:#1a140e;
+      border-color:#3a2f1f; border-radius:4px;
+      box-shadow: inset 0 1px 0 rgba(200,169,81,.08);
+    }
+    [data-theme="collector"] .header-nav a:hover { color:#e6c45a; border-color:#6b5635; filter:none; }
+    [data-theme="collector"] .header-nav a.active {
+      color:#0e0a06; background:#c8a951; border-color:#8b6f2e;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 1px 4px rgba(0,0,0,.5);
+    }
+    [data-theme="collector"] header.site-header,
+    [data-theme="collector"] .site-header { background:#1a140e; border-bottom:1px solid #3a2f1f; }
+    [data-theme="collector"] .wl-btn {
+      font-family:'Cinzel', Georgia, serif; font-size:.78rem; letter-spacing:.1em;
+      text-transform:uppercase; color:#c8a951; background:#1a140e;
+      border:1px solid #3a2f1f; border-radius:4px;
+      box-shadow: inset 0 1px 0 rgba(200,169,81,.06);
+    }
+    [data-theme="collector"] .wl-btn:hover { color:#e6c45a; border-color:#6b5635; filter:none;}
+    [data-theme="collector"] .wl-btn.primary,
+    [data-theme="collector"] button.primary {
+      color:#0e0a06; background:#c8a951; border-color:#8b6f2e;
+    }
+    [data-theme="collector"] .wl-toggle { color:#e8dcc0;}
+    [data-theme="collector"] .toolbar select,
+    [data-theme="collector"] .toolbar input,
+    [data-theme="collector"] textarea,
+    [data-theme="collector"] input[type="text"],
+    [data-theme="collector"] input[type="search"],
+    [data-theme="collector"] input[type="number"],
+    [data-theme="collector"] select {
+      background:#14110a; color:#e8dcc0; border:1px solid #3a2f1f; border-radius:4px;
+    }
+    [data-theme="collector"] .table-wrap, [data-theme="collector"] #alerts {
+      background:#14110a; border-color:#3a2f1f;
+    }
+    [data-theme="collector"] #alerts thead { background:#1a140e; }
+    [data-theme="collector"] #alerts th {
+      font-family:'Cinzel', Georgia, serif; font-size:.72rem; letter-spacing:.14em;
+      text-transform:uppercase; color:#8b7f6b; border-color:#3a2f1f;
+    }
+    [data-theme="collector"] #alerts td { border-color:#251d12; color:#e8dcc0; }
+    [data-theme="collector"] #alerts a { color:#e8dcc0; }
+    [data-theme="collector"] tr.row:hover { background:rgba(200,169,81,.05); }
+    [data-theme="collector"] tr.row.up { background:rgba(74,140,90,.08);}
+    [data-theme="collector"] tr.row.down { background:rgba(168,52,52,.08);}
+    [data-theme="collector"] .pos { color:#7bbe85;}
+    [data-theme="collector"] .neg { color:#d27272;}
+    [data-theme="collector"] .chip {
+      background:#2a2118; color:#c8a951; border:1px solid #3a2f1f;
+    }
+    [data-theme="collector"] .chip.spike { background:#3a2a1a; color:#e6c45a;}
+    [data-theme="collector"] .meta, [data-theme="collector"] .sub,
+    [data-theme="collector"] .help { color:#8b7f6b; font-style:italic;}
+    [data-theme="collector"] .back { color:#c8a951;}
+    [data-theme="collector"] .back:hover { color:#e6c45a;}
+    [data-theme="collector"] .ticker-header {
+      font-family:'Cinzel', Georgia, serif; letter-spacing:.14em; text-transform:uppercase;
+      background:#1a140e; border-bottom-color:#3a2f1f; color:#c8a951;
+    }
+    [data-theme="collector"] aside.ticker { background:#0e0a06; border-color:#3a2f1f;}
+    [data-theme="collector"] .ticker-item { border-bottom-color:#251d12;}
+    [data-theme="collector"] .ticker-item:hover { background:#1a140e;}
+    [data-theme="collector"] .ticker-item .nm { color:#e8dcc0;}
+    [data-theme="collector"] .modal .panel,
+    [data-theme="collector"] .panel { background:#1a140e; border:1px solid #3a2f1f; color:#e8dcc0;}
+    [data-theme="collector"] .wl-results { background:#14110a; border-color:#3a2f1f;}
+    [data-theme="collector"] .wl-result { border-bottom-color:#251d12;}
+    [data-theme="collector"] .wl-result:hover { background:#1a140e;}
+    [data-theme="collector"] .wl-result .nm { color:#c8a951;}
+    [data-theme="collector"] .wl-tab { background:#14110a; color:#8b7f6b; border-color:#3a2f1f;}
+    [data-theme="collector"] .wl-tab.active { background:#2a2118; color:#c8a951; border-color:#6b5635;}
+    [data-theme="collector"] .bp-card { background:#14110a; border:1px solid #3a2f1f; border-left-width:3px;}
+    [data-theme="collector"] .bp-card.bp-buy { border-left-color:#4a8c5a;}
+    [data-theme="collector"] .bp-card.bp-sell { border-left-color:#c8a951;}
+    [data-theme="collector"] .bp-card.bp-buy .bp-price { color:#7bbe85;}
+    [data-theme="collector"] .bp-card.bp-sell .bp-price { color:#c8a951;}
+    [data-theme="collector"] .bp-label, [data-theme="collector"] .bp-feed { color:#8b7f6b;}
+    [data-theme="collector"] .binder-total, [data-theme="collector"] .binder-page,
+    [data-theme="collector"] .deck-open-head, [data-theme="collector"] .detail-head {
+      background:#14110a; border-color:#3a2f1f;
+    }
+    [data-theme="collector"] .bt-amount, [data-theme="collector"] .deck-open-value {
+      font-family:'Cinzel', Georgia, serif; color:#c8a951;
+    }
+    [data-theme="collector"] .bt-period button { background:#14110a; color:#8b7f6b; border-color:#3a2f1f;}
+    [data-theme="collector"] .bt-period button.active { background:#c8a951; color:#0e0a06; border-color:#8b6f2e;}
+    [data-theme="collector"] .deck-card,
+    [data-theme="collector"] .tc-card { background:#0e0a06; border-color:#3a2f1f;}
+    [data-theme="collector"] .deck-card .pr,
+    [data-theme="collector"] .tc-card .pr { color:#c8a951;}
+    [data-theme="collector"] .stat { background:#14110a; border:1px solid #3a2f1f;}
+    [data-theme="collector"] .stat .label { color:#8b7f6b;}
+    [data-theme="collector"] .stat .val { color:#e8dcc0;}
+    [data-theme="collector"] .stat.best-buy .val { color:#7bbe85;}
+    [data-theme="collector"] .stat.best-sell .val { color:#c8a951;}
+    /* Accent line above special panels (mockup hairline) */
+    [data-theme="collector"] .detail-head, [data-theme="collector"] .binder-total,
+    [data-theme="collector"] .bp-card, [data-theme="collector"] .modal .panel { position:relative;}
+    [data-theme="collector"] .detail-head::before, [data-theme="collector"] .binder-total::before,
+    [data-theme="collector"] .modal .panel::before {
+      content:""; position:absolute; top:-1px; left:8%; right:8%; height:1px;
+      background:linear-gradient(90deg, transparent, #c8a951 25%, #c8a951 75%, transparent);
+      opacity:.55; pointer-events:none;
+    }
+
+    /* ================================================================== */
+    /* MOX THEME                                                           */
+    /* Pure black backgrounds with WUBRG mana-color jewel accents used     */
+    /* sparingly. Restrained and premium - lets the data breathe. The      */
+    /* feed badges (TCG/CK/Cardmarket/Mana Pool/MTGJSON) cycle through     */
+    /* the five mana colors as a subtle WUBRG hint.                        */
+    /* ================================================================== */
+    [data-theme="mox"] body { background:#000000; color:#e8e6e0; }
+    [data-theme="mox"] h1, [data-theme="mox"] h2, [data-theme="mox"] h3, [data-theme="mox"] h4 {
+      font-family:'Cinzel', Georgia, serif; color:#f5f1e8; letter-spacing:.04em;
+    }
+    [data-theme="mox"] aside.ticker { background:#000000; border-color:#1a1a1a; }
+    [data-theme="mox"] .ticker-header {
+      background:#0a0a0a; border-bottom-color:#1a1a1a;
+      font-family:'Cinzel', Georgia, serif; letter-spacing:.16em;
+      text-transform:uppercase; color:#a5a3a0; font-size:.7rem;
+    }
+    [data-theme="mox"] .ticker-item { border-bottom-color:#141414; }
+    [data-theme="mox"] .ticker-item:hover { background:#0a0a0a; }
+    [data-theme="mox"] .ticker-item .nm { color:#e8e6e0; }
+    [data-theme="mox"] header.site-header, [data-theme="mox"] .site-header {
+      background:#000000; border-bottom:1px solid #1a1a1a;
+    }
+    [data-theme="mox"] .header-nav a {
+      color:#a5a3a0; background:transparent; border:1px solid #1a1a1a;
+      border-radius:3px; font-weight:500; letter-spacing:.06em;
+      box-shadow:none;
+    }
+    [data-theme="mox"] .header-nav a:hover { color:#e8e6e0; border-color:#2a2a2a; filter:none; }
+    [data-theme="mox"] .header-nav a.active {
+      color:#5b8cdb; background:rgba(91,140,219,.10); border-color:rgba(91,140,219,.35);
+      box-shadow:none;
+    }
+    [data-theme="mox"] .wl-btn {
+      color:#a5a3a0; background:transparent; border:1px solid #1a1a1a;
+      border-radius:3px; font-weight:500; box-shadow:none;
+    }
+    [data-theme="mox"] .wl-btn:hover { color:#e8e6e0; border-color:#2a2a2a; filter:none; }
+    [data-theme="mox"] .wl-btn.primary, [data-theme="mox"] button.primary {
+      color:#000000; background:#5b8cdb; border-color:#5b8cdb;
+    }
+    [data-theme="mox"] .wl-toggle { color:#a5a3a0; }
+    [data-theme="mox"] .toolbar select, [data-theme="mox"] .toolbar input,
+    [data-theme="mox"] textarea, [data-theme="mox"] input[type="text"],
+    [data-theme="mox"] input[type="search"], [data-theme="mox"] input[type="number"],
+    [data-theme="mox"] select {
+      background:#0a0a0a; color:#e8e6e0; border:1px solid #1a1a1a; border-radius:3px;
+    }
+    [data-theme="mox"] .table-wrap, [data-theme="mox"] #alerts {
+      background:#000000; border-color:#1a1a1a;
+    }
+    [data-theme="mox"] #alerts thead { background:#0a0a0a; }
+    [data-theme="mox"] #alerts th {
+      color:#7a7a78; letter-spacing:.1em; text-transform:uppercase;
+      font-size:.72rem; border-color:#1a1a1a; font-weight:500;
+    }
+    [data-theme="mox"] #alerts td { border-color:#141414; color:#e8e6e0; }
+    [data-theme="mox"] #alerts a { color:#f5f1e8; }
+    [data-theme="mox"] tr.row:hover { background:rgba(245,241,232,.03); }
+    [data-theme="mox"] tr.row.up { background:rgba(111,168,107,.06); }
+    [data-theme="mox"] tr.row.down { background:rgba(212,80,78,.06); }
+    [data-theme="mox"] .pos { color:#6fa86b; }
+    [data-theme="mox"] .neg { color:#d4504e; }
+    /* Feed chips cycle WUBRG. Falls back to a neutral if class isn't set. */
+    [data-theme="mox"] .chip {
+      background:transparent; color:#a5a3a0;
+      border:1px solid #1a1a1a; font-size:.7rem;
+    }
+    [data-theme="mox"] .chip.market, [data-theme="mox"] .chip.feed-market {
+      color:#f5f1e8; background:rgba(245,241,232,.06); border-color:rgba(245,241,232,.25);
+    }
+    [data-theme="mox"] .chip.cm_avg, [data-theme="mox"] .chip.feed-cm_avg {
+      color:#5b8cdb; background:rgba(91,140,219,.08); border-color:rgba(91,140,219,.3);
+    }
+    [data-theme="mox"] .chip.ck_buylist, [data-theme="mox"] .chip.feed-ck_buylist,
+    [data-theme="mox"] .chip.ck_retail, [data-theme="mox"] .chip.feed-ck_retail {
+      color:#7a6f7e; background:rgba(122,111,126,.1); border-color:rgba(122,111,126,.35);
+    }
+    [data-theme="mox"] .chip.manapool, [data-theme="mox"] .chip.feed-manapool {
+      color:#d4504e; background:rgba(212,80,78,.08); border-color:rgba(212,80,78,.3);
+    }
+    [data-theme="mox"] .chip.mtgjson, [data-theme="mox"] .chip.feed-mtgjson {
+      color:#6fa86b; background:rgba(111,168,107,.08); border-color:rgba(111,168,107,.3);
+    }
+    [data-theme="mox"] .chip.spike { color:#b67aff; background:rgba(182,122,255,.1); border-color:rgba(182,122,255,.35); }
+    [data-theme="mox"] .meta, [data-theme="mox"] .sub, [data-theme="mox"] .help { color:#7a7a78; }
+    [data-theme="mox"] .back { color:#5b8cdb; }
+    [data-theme="mox"] .back:hover { color:#7da8e8; }
+    [data-theme="mox"] .modal .panel, [data-theme="mox"] .panel {
+      background:#0a0a0a; border:1px solid #1a1a1a; color:#e8e6e0;
+    }
+    [data-theme="mox"] .wl-results { background:#000000; border-color:#1a1a1a; }
+    [data-theme="mox"] .wl-result { border-bottom-color:#141414; }
+    [data-theme="mox"] .wl-result:hover { background:#0a0a0a; }
+    [data-theme="mox"] .wl-result .nm { color:#5b8cdb; }
+    [data-theme="mox"] .wl-tab { background:transparent; color:#7a7a78; border-color:#1a1a1a; }
+    [data-theme="mox"] .wl-tab.active { background:rgba(91,140,219,.1); color:#5b8cdb; border-color:rgba(91,140,219,.35); }
+    [data-theme="mox"] .bp-card { background:#0a0a0a; border:1px solid #1a1a1a; border-left-width:3px; }
+    [data-theme="mox"] .bp-card.bp-buy { border-left-color:#6fa86b; }
+    [data-theme="mox"] .bp-card.bp-sell { border-left-color:#5b8cdb; }
+    [data-theme="mox"] .bp-card.bp-buy .bp-price { color:#6fa86b; }
+    [data-theme="mox"] .bp-card.bp-sell .bp-price { color:#5b8cdb; }
+    [data-theme="mox"] .bp-label, [data-theme="mox"] .bp-feed { color:#7a7a78; }
+    [data-theme="mox"] .binder-total, [data-theme="mox"] .binder-page,
+    [data-theme="mox"] .deck-open-head, [data-theme="mox"] .detail-head {
+      background:#0a0a0a; border-color:#1a1a1a;
+    }
+    [data-theme="mox"] .bt-amount, [data-theme="mox"] .deck-open-value {
+      font-family:'Cinzel', Georgia, serif; color:#f5f1e8;
+    }
+    [data-theme="mox"] .bt-period button {
+      background:transparent; color:#7a7a78; border-color:#1a1a1a;
+    }
+    [data-theme="mox"] .bt-period button.active {
+      background:rgba(91,140,219,.12); color:#5b8cdb; border-color:rgba(91,140,219,.4);
+    }
+    [data-theme="mox"] .deck-card, [data-theme="mox"] .tc-card {
+      background:#000000; border-color:#1a1a1a;
+    }
+    [data-theme="mox"] .deck-card .pr, [data-theme="mox"] .tc-card .pr { color:#5b8cdb; }
+    [data-theme="mox"] .stat { background:#0a0a0a; border:1px solid #1a1a1a; }
+    [data-theme="mox"] .stat .label { color:#7a7a78; }
+    [data-theme="mox"] .stat .val { color:#e8e6e0; }
+    [data-theme="mox"] .stat.best-buy .val { color:#6fa86b; }
+    [data-theme="mox"] .stat.best-sell .val { color:#5b8cdb; }
   </style>
 </head>
 <body>
@@ -1352,12 +1605,19 @@ function refreshChartsForTheme() {
     } catch (e) {}
   });
 }
+// Cycle: dark -> light -> collector -> mox -> dark. Four themes, one button.
+const _THEME_CYCLE = ['dark', 'light', 'collector', 'mox'];
+const _THEME_META_COLOR = { dark:'#0d0d0d', light:'#ffffff', collector:'#0e0a06', mox:'#000000' };
 function toggleTheme() {
-  const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+  const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+  const i = _THEME_CYCLE.indexOf(cur);
+  const next = _THEME_CYCLE[(i + 1) % _THEME_CYCLE.length];
   document.documentElement.setAttribute('data-theme', next);
   try { localStorage.setItem('mtg-theme', next); } catch (e) {}
   const mc = document.getElementById('meta-theme-color');
-  if (mc) mc.setAttribute('content', next === 'light' ? '#ffffff' : '#0d0d0d');
+  if (mc) mc.setAttribute('content', _THEME_META_COLOR[next] || '#0d0d0d');
+  // Flash a hint so users know what theme they cycled into.
+  if (typeof flashMsg === 'function') flashMsg(next.charAt(0).toUpperCase() + next.slice(1) + ' theme');
   refreshChartsForTheme();
 }
 const PAGE_SIZE = 100;

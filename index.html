@@ -544,7 +544,11 @@
        theme; per-theme overrides at the bottom of the stylesheet recolor for
        light/collector/mox. */
     .stats-strip { display:grid; grid-template-columns:repeat(4, 1fr); gap:.6rem; margin:0 0 1rem;}
-    .stat-card { background:#141414; border:1px solid #2a2a2a; border-radius:6px; padding:.7rem .9rem; min-width:0;}
+    .stat-card { background:#141414; border:1px solid #2a2a2a; border-radius:6px; padding:.7rem .9rem; min-width:0; cursor:pointer; transition: border-color .15s ease, background .15s ease;}
+    .stat-card:hover { border-color:#3a4f6a; background:#1a1a1a;}
+    [data-theme="light"] .stat-card:hover { border-color:#7a9bd6; background:#f7f9fc;}
+    [data-theme="collector"] .stat-card:hover { border-color:#6b5635; background:#1a140e;}
+    [data-theme="mox"] .stat-card:hover { border-color:#2a2a2a; background:#101010;}
     .stat-label { font-size:.7rem; color:#888; text-transform:uppercase; letter-spacing:.08em; margin-bottom:.25rem;}
     .stat-value { font-size:1.4rem; font-weight:600; color:#e6edf5; line-height:1.1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
     .stat-value-name { font-size:1rem; font-weight:500;}
@@ -1083,22 +1087,22 @@
       <span class="meta tb-showing">Showing <span id="count">-</span></span>
     </div>
     <div id="stats-strip" class="stats-strip">
-      <div class="stat-card">
+      <div class="stat-card" onclick="openTotalTrackedChart()" title="Click to see how the total has moved over the last 30 days">
         <div class="stat-label">Total tracked</div>
         <div class="stat-value" id="stat-total">$0.00</div>
         <div class="stat-sub" id="stat-total-sub">&nbsp;</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card" onclick="goToTopMover()" title="Click to view this card">
         <div class="stat-label">Top mover</div>
         <div class="stat-value stat-value-name" id="stat-top-name">—</div>
         <div class="stat-sub" id="stat-top-pct">&nbsp;</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card" onclick="filterByDirection('up')" title="Click to show only movers going up">
         <div class="stat-label">Movers up</div>
         <div class="stat-value pos" id="stat-up">0</div>
         <div class="stat-sub">&nbsp;</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card" onclick="filterByDirection('down')" title="Click to show only movers going down">
         <div class="stat-label">Movers down</div>
         <div class="stat-value neg" id="stat-down">0</div>
         <div class="stat-sub">&nbsp;</div>
@@ -1471,6 +1475,31 @@
   </div>
 </div>
 
+<div id="total-tracked-modal" class="modal" onclick="if(event.target.id==='total-tracked-modal')closeTotalTrackedChart()">
+  <div class="panel" style="width:min(720px, 94vw);">
+    <h3 style="margin:0 0 .25rem;">Total tracked over time</h3>
+    <div class="help" id="tt-sub" style="margin-bottom:.75rem;">Sum of current prices across the alert set (EUR rows converted to USD).</div>
+    <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:.5rem; margin-bottom:.75rem;">
+      <div class="stat-card" style="cursor:default;">
+        <div class="stat-label">1 day</div>
+        <div class="stat-value" id="tt-1d">—</div>
+      </div>
+      <div class="stat-card" style="cursor:default;">
+        <div class="stat-label">7 day</div>
+        <div class="stat-value" id="tt-7d">—</div>
+      </div>
+      <div class="stat-card" style="cursor:default;">
+        <div class="stat-label">30 day</div>
+        <div class="stat-value" id="tt-30d">—</div>
+      </div>
+    </div>
+    <div style="height:260px;"><canvas id="tt-chart"></canvas></div>
+    <div class="actions">
+      <button onclick="closeTotalTrackedChart()">Close</button>
+    </div>
+  </div>
+</div>
+
 <div id="trade-detail-modal" class="modal" onclick="if(event.target.id==='trade-detail-modal')closeTradeDetail()">
   <div class="panel" style="width:min(1080px, 96vw); max-height:94vh; display:flex; flex-direction:column;">
     <div id="td-content" style="flex:1 1 auto; overflow-y:auto; padding-right:.25rem;"></div>
@@ -1743,10 +1772,17 @@ function clearColumnFilters() {
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   applyFilters();
 }
+// Remembered between renders so stat-card click handlers (e.g. "go to top
+// mover") can act on the same set the user is currently looking at.
+let _statsCurrentRows = [];
+let _statsCurrentTop  = null;
+let _ttChart = null;
+
 // Compute the four stat-strip metrics from a list of alert rows. Called from
 // renderList() with the already-filtered, already-collapsed set so the cards
 // reflect what the user is actually looking at.
 function renderStatsStrip(rows) {
+  _statsCurrentRows = rows || [];
   const elTotal    = document.getElementById('stat-total');
   if (!elTotal) return;   // stats strip isn't on this view
   const elTotalSub = document.getElementById('stat-total-sub');
@@ -1769,6 +1805,7 @@ function renderStatsStrip(rows) {
     else if (r.pct_change < 0) down++;
     if (!top || Math.abs(r.pct_change || 0) > Math.abs(top.pct_change || 0)) top = r;
   }
+  _statsCurrentTop = top;
   elTotal.textContent = fmtUSD.format(totalUSD);
   elTotalSub.textContent = `${rows.length.toLocaleString()} ${rows.length === 1 ? 'row' : 'rows'}`;
   if (top) {
@@ -1783,6 +1820,105 @@ function renderStatsStrip(rows) {
   }
   elUp.textContent   = up.toLocaleString();
   elDown.textContent = down.toLocaleString();
+}
+
+// ---- Stats strip click handlers ------------------------------------------
+function goToTopMover() {
+  const t = _statsCurrentTop;
+  if (!t || !t.scryfall_id) { flashMsg('No top mover in the current view.'); return; }
+  goCard(t.scryfall_id, t.finish || 'normal', t.price_type || 'market');
+}
+function filterByDirection(dir) {
+  const sel = document.getElementById('f-dir');
+  if (!sel) return;
+  // If the user re-clicks the same one, toggle back to "all" so the strip
+  // works like a quick filter pill rather than a one-way trap.
+  sel.value = (sel.value === dir) ? '' : dir;
+  applyFilters();
+  // Scroll to the top of the table so the new view is visible.
+  const tbl = document.getElementById('alerts');
+  if (tbl) tbl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+async function openTotalTrackedChart() {
+  if (!_statsCurrentRows.length) { flashMsg('Nothing to chart in the current view.'); return; }
+  document.getElementById('total-tracked-modal').classList.add('show');
+  document.getElementById('tt-1d').textContent  = '…';
+  document.getElementById('tt-7d').textContent  = '…';
+  document.getElementById('tt-30d').textContent = '…';
+  document.getElementById('tt-sub').textContent =
+    `${_statsCurrentRows.length.toLocaleString()} card${_statsCurrentRows.length === 1 ? '' : 's'} in the current view.`;
+  try { if (typeof loadBinderBulkPrices === 'function') await loadBinderBulkPrices(); } catch (e) {}
+  // Build a Map<date, totalUSD> by summing each card's nonfoil 30-day series.
+  // Cards without bulk data are simply skipped (they don't contribute to past
+  // points but their current price is in the strip's headline number).
+  const sums = new Map();
+  const fxToUsd = (v, pt) => (typeof _toUsd === 'function') ? _toUsd(v, pt) : v;
+  for (const r of _statsCurrentRows) {
+    const finishKey = r.finish === 'foil' ? 'f' : r.finish === 'etched' ? 'e' : 'n';
+    const series = (typeof getBulkPriceSeries === 'function')
+      ? (getBulkPriceSeries(r.scryfall_id, finishKey) || getBulkPriceSeries(r.scryfall_id, 'n'))
+      : null;
+    if (!series || !series.length) continue;
+    for (const [d, p] of series) {
+      if (p == null) continue;
+      const usd = fxToUsd(Number(p), r.price_type);
+      if (usd == null || isNaN(usd)) continue;
+      sums.set(d, (sums.get(d) || 0) + usd);
+    }
+  }
+  const dates = Array.from(sums.keys()).sort();
+  const series = dates.map(d => [d, sums.get(d)]);
+  if (series.length < 2) {
+    document.getElementById('tt-sub').textContent += ' Not enough bulk-price history to chart.';
+    return;
+  }
+  const fmtUSD = new Intl.NumberFormat('en-US', { style:'currency', currency:'USD' });
+  const last = series[series.length - 1][1];
+  const findDeltaPct = days => {
+    const lastDate = new Date(series[series.length - 1][0]);
+    const target = new Date(lastDate.getTime() - days * 86400000);
+    let pick = null;
+    for (const [d, v] of series) {
+      if (new Date(d) <= target) pick = [d, v]; else break;
+    }
+    if (!pick || pick[1] === 0) return null;
+    return ((last - pick[1]) / pick[1]) * 100;
+  };
+  const setDelta = (id, pct) => {
+    const el = document.getElementById(id);
+    if (pct == null || isNaN(pct)) { el.textContent = '—'; el.className = 'stat-value'; return; }
+    const sign = pct >= 0 ? '+' : '';
+    el.textContent = `${sign}${pct.toFixed(1)}%`;
+    el.className = 'stat-value ' + (pct >= 0 ? 'pos' : 'neg');
+  };
+  setDelta('tt-1d',  findDeltaPct(1));
+  setDelta('tt-7d',  findDeltaPct(7));
+  setDelta('tt-30d', findDeltaPct(30));
+  // Mount the chart.
+  if (_ttChart) { try { _ttChart.destroy(); } catch (e) {} _ttChart = null; }
+  try { await loadChartJs(); } catch (e) { return; }
+  if (!document.getElementById('total-tracked-modal').classList.contains('show')) return;
+  _ttChart = new Chart(document.getElementById('tt-chart'), {
+    type: 'line',
+    data: { labels: dates, datasets: [{
+      data: series.map(s => s[1]),
+      borderColor: '#9ecbff',
+      backgroundColor: 'rgba(158,203,255,.14)',
+      fill: true, tension: .25, pointRadius: 0, borderWidth: 2,
+    }]},
+    options: {
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => fmtUSD.format(ctx.parsed.y) } } },
+      scales: {
+        x: { ticks: { color:'#888', maxRotation: 0, autoSkip: true, maxTicksLimit: 6 }, grid: { color: '#232938' } },
+        y: { ticks: { color:'#888', callback: v => fmtUSD.format(v) }, grid: { color: '#232938' } },
+      },
+    },
+  });
+}
+function closeTotalTrackedChart() {
+  document.getElementById('total-tracked-modal').classList.remove('show');
+  if (_ttChart) { try { _ttChart.destroy(); } catch (e) {} _ttChart = null; }
 }
 
 function renderList() {

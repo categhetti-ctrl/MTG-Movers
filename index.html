@@ -63,9 +63,33 @@
       return window._chartJsLoadingPromise;
     };
   </script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script>
+    /* Firebase SDK is ~120KB combined and only needed for sign-in / sync.
+       Movers list doesn't need it for first paint, so we load it after the
+       inline page script finishes. initSync() checks `typeof firebase` and
+       runs once the SDK is ready. */
+    window.loadFirebaseSDK = function() {
+      if (window._fbSdkPromise) return window._fbSdkPromise;
+      window._fbSdkPromise = new Promise((resolve) => {
+        if (window.firebase && window.firebase.firestore) return resolve();
+        const urls = [
+          'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js',
+          'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js',
+          'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js',
+        ];
+        let i = 0;
+        const next = () => {
+          if (i >= urls.length) return resolve();
+          const s = document.createElement('script');
+          s.src = urls[i++]; s.async = false;
+          s.onload = next; s.onerror = next;
+          document.head.appendChild(s);
+        };
+        next();
+      });
+      return window._fbSdkPromise;
+    };
+  </script>
   <style>
     html { overflow-x: hidden; }
     body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; background:#000; color:#fff; overflow-x: hidden; max-width: 100%; }
@@ -6501,7 +6525,14 @@ setTimeout(() => {
     }
   });
 }, 0);
-initSync();
+/* Firebase SDK loads async; once it's ready, kick off sign-in restoration.
+   The auth UI's "Sign in" button is briefly hidden until the SDK resolves
+   (~200ms on a warm CDN) so first paint isn't blocked. */
+if (typeof loadFirebaseSDK === 'function') {
+  loadFirebaseSDK().then(initSync);
+} else {
+  initSync();
+}
 </script>
 <script>
   /* Register the service worker for offline use + installability. */

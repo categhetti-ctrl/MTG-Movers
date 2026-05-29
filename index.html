@@ -575,12 +575,25 @@
     .binder-customize .reset { background:transparent; color:#9ecbff; border:1px solid transparent; border-radius:8px; cursor:pointer; font-size:.85rem; font-weight:600; margin-left:auto; padding:.4rem .7rem; transition: background .15s ease, border-color .15s ease; }
     .binder-customize .reset:hover { background:rgba(158,203,255,.10); border-color:rgba(158,203,255,.35); }
     .binder-customize .reset:focus-visible { outline:2px solid #5b8cff; outline-offset:2px; }
+    .global-search input { transition: border-color .12s ease;}
+    .global-search input:focus { outline:none; border-color:#5b8cff;}
+    [data-theme="plains"] .global-search input { background:#ffffff; color:#2a2418; border-color:#d4c89f;}
+    [data-theme="plains"] .global-search input:focus { border-color:#c9a14a;}
+    [data-theme="islands"] .global-search input { background:#102438; color:#d4e1f0; border-color:#1d3a5c;}
+    [data-theme="islands"] .global-search input:focus { border-color:#6ab4e0;}
+    [data-theme="swamps"] .global-search input { background:#15151a; color:#d6d2cc; border-color:#252530;}
+    [data-theme="swamps"] .global-search input:focus { border-color:#b8b4ae;}
+    [data-theme="mountains"] .global-search input { background:#261010; color:#e8d8c8; border-color:#4a2424;}
+    [data-theme="mountains"] .global-search input:focus { border-color:#b03434;}
+    [data-theme="forests"] .global-search input { background:#16241c; color:#e0e8d8; border-color:#2a3d2e;}
+    [data-theme="forests"] .global-search input:focus { border-color:#8cb86a;}
     /* Stats strip on the movers page - four metric cards. Defaults match dark
        theme; per-theme overrides at the bottom of the stylesheet recolor for
        light/collector/mox. */
     /* Legality + reprint info on the card detail page (lazy-fetched from Scryfall). */
-    .meta-strip { display:grid; grid-template-columns:1fr 1fr; gap:.6rem; margin:0 0 1rem;}
-    @media (max-width: 640px) { .meta-strip { grid-template-columns:1fr;} }
+    .meta-strip { display:grid; grid-template-columns:repeat(3, 1fr); gap:.6rem; margin:0 0 1rem;}
+    @media (max-width: 900px) { .meta-strip { grid-template-columns:1fr 1fr;} }
+    @media (max-width: 540px) { .meta-strip { grid-template-columns:1fr;} }
     .meta-panel { background:#141414; border:1px solid #2a2a2a; border-radius:6px; padding:.6rem .8rem;}
     .meta-panel-label { font-size:.7rem; color:#888; text-transform:uppercase; letter-spacing:.08em; margin-bottom:.4rem;}
     .meta-panel-body { display:flex; flex-wrap:wrap; gap:.3rem; align-items:center; font-size:.82rem; color:#e6edf5;}
@@ -1464,6 +1477,12 @@
       </div>
       <span class="meta tb-showing">Showing <span id="count">-</span></span>
     </div>
+    <div class="global-search" style="display:flex; align-items:center; gap:.5rem; margin:0 0 1rem;">
+      <input id="global-search" type="search" placeholder="Search by card name or set…" oninput="onGlobalSearch(this.value)" style="flex:1; min-width:0; background:#141414; color:#fff; border:1px solid #2a2a2a; border-radius:6px; padding:.5rem .75rem; font-size:.95rem; box-sizing:border-box;" autocomplete="off" />
+      <button type="button" id="surprise-btn" class="wl-btn" onclick="surpriseMeJump()" title="Jump to a random spiking card with a real story" style="flex-shrink:0;">
+        <span aria-hidden="true" style="font-size:1.05rem; line-height:1;">⚀</span> Surprise me
+      </button>
+    </div>
     <div id="stats-strip" class="stats-strip">
       <div class="stat-card" onclick="openTotalTrackedChart()" title="Click to see how the total has moved over the last 30 days">
         <div class="stat-label">Total tracked</div>
@@ -1541,6 +1560,12 @@
       <div class="meta-panel">
         <div class="meta-panel-label">This printing</div>
         <div class="meta-panel-body" id="d-printing">…</div>
+      </div>
+      <div class="meta-panel">
+        <div class="meta-panel-label">Commander context</div>
+        <div class="meta-panel-body" id="d-edhrec">
+          <a id="d-edhrec-link" href="#" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; gap:.35rem; font-size:.85rem;">View on EDHRec <span aria-hidden="true">↗</span></a>
+        </div>
       </div>
     </div>
     <div class="detail-body">
@@ -2339,6 +2364,54 @@ function renderStatsStrip(rows) {
   }
   elUp.textContent   = up.toLocaleString();
   elDown.textContent = down.toLocaleString();
+}
+
+// ---- Global search (top of movers page) ---------------------------------
+// Mirrors the value into the per-column name AND set filters so it works
+// like an "OR" across both. Debounced lightly so each keystroke doesn't
+// trigger a full re-render. Clears the column filters when emptied.
+let _globalSearchTimer = null;
+function onGlobalSearch(value) {
+  clearTimeout(_globalSearchTimer);
+  _globalSearchTimer = setTimeout(() => {
+    const v = (value || '').trim();
+    const nameEl = document.getElementById('f-name');
+    const setEl  = document.getElementById('f-set');
+    // Heuristic: 3-char-or-less alpha looks like a set code (e.g. "MMQ").
+    const isSet = /^[A-Za-z0-9]{2,5}$/.test(v) && !/\s/.test(v);
+    if (nameEl) nameEl.value = isSet ? '' : v;
+    if (setEl)  setEl.value  = isSet ? v  : '';
+    applyFilters();
+  }, 120);
+}
+
+// ---- Surprise me (random walk) ------------------------------------------
+// Pick a random card from the current RAW alert set that has a useful
+// synopsis attached, and jump to its detail page. Falls back to any random
+// mover if no synopses are available.
+function surpriseMeJump() {
+  const pool = [];
+  const seen = new Set();
+  for (const r of RAW) {
+    if (!r.scryfall_id || seen.has(r.scryfall_id)) continue;
+    const card = HISTORY[r.scryfall_id];
+    if (!card || !_synopsisIsUseful(card.synopsis)) continue;
+    seen.add(r.scryfall_id);
+    pool.push(r);
+  }
+  // No useful synopses yet? Fall back to any unique alert card.
+  if (!pool.length) {
+    seen.clear();
+    for (const r of RAW) {
+      if (!r.scryfall_id || seen.has(r.scryfall_id)) continue;
+      seen.add(r.scryfall_id);
+      pool.push(r);
+    }
+  }
+  if (!pool.length) { flashMsg('Nothing to surprise you with.'); return; }
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+  flashMsg('Surprise! → ' + (pick.name || 'a card'));
+  goCard(pick.scryfall_id, pick.finish || 'normal', pick.price_type || 'market');
 }
 
 // ---- Stats strip click handlers ------------------------------------------
@@ -3157,6 +3230,14 @@ async function fetchCardMeta(scryfallId) {
     return meta;
   } catch (e) { console.warn('fetchCardMeta failed', e); return null; }
 }
+// Build the EDHRec page slug for a card name. EDHRec lowercases, strips
+// apostrophes, replaces other non-alphanumeric with hyphens, and collapses.
+function _edhrecSlug(name) {
+  return (name || '').toLowerCase()
+    .replace(/['']/g, '')       // strip apostrophes (smart + plain)
+    .replace(/[^a-z0-9]+/g, '-') // everything else -> hyphen
+    .replace(/^-+|-+$/g, '');    // trim
+}
 function renderCardMeta(meta) {
   const strip = document.getElementById('d-meta-strip');
   const legalEl = document.getElementById('d-legality');
@@ -3208,6 +3289,10 @@ function renderDetail(id, preferFinish, preferFeed) {
   const stripEl = document.getElementById('d-meta-strip');
   if (stripEl) stripEl.style.display = 'none';
   fetchCardMeta(id).then(renderCardMeta);
+  // EDHRec link is built from the card name alone - no async fetch needed.
+  const edhLink = document.getElementById('d-edhrec-link');
+  if (edhLink) edhLink.setAttribute('href',
+    'https://edhrec.com/cards/' + _edhrecSlug(card.name));
   document.getElementById('d-sub').textContent =
     `${card.set_name || ''} (${(card.set_code||'').toUpperCase()}) - #${card.collector_no||''} - ${card.rarity||''}`;
   const img = document.getElementById('d-img');
@@ -5799,6 +5884,9 @@ function _tcBack() {
     _tcApplyStepUI();
   }
 }
+// When set, the next sendTradeOffer() will write a counter-offer doc and
+// flip the parent trade to status='countered'. Cleared on close/send.
+let _tcCounterOfTradeId = null;
 function openTradeComposer() {
   if (!_syncUid) { flashMsg('Sign in first to propose a trade.'); return; }
   if (!_pbCurrentData) { flashMsg('No binder selected.'); return; }
@@ -5807,6 +5895,7 @@ function openTradeComposer() {
     flashMsg('Set your Trade contact in your binder Customize panel first.');
     return;
   }
+  _tcCounterOfTradeId = null;
   _tcPickedTheir.clear();
   _tcPickedMine.clear();
   _tcStep = 1;
@@ -5817,8 +5906,50 @@ function openTradeComposer() {
   _tcApplyStepUI();
   document.getElementById('trade-modal').classList.add('show');
 }
+// Open the composer as a counter-offer to an existing incoming trade. Pre-
+// selects the same cards from the original trade (you can adjust before
+// sending). The new doc carries parentTradeId; the parent flips to
+// 'countered' when the new offer is sent.
+async function openCounterComposer(tradeId) {
+  const t = _tradesCache.find(x => x.id === tradeId);
+  if (!t || t.status !== 'pending') { flashMsg('Trade not available to counter.'); return; }
+  if (t.toUid !== _syncUid) { flashMsg('You can only counter trades sent to you.'); return; }
+  if (!_tradeContact || !_tradeContact.trim()) {
+    flashMsg('Set your Trade contact first.');
+    return;
+  }
+  // Close the trade detail modal if it's open behind us.
+  closeTradeDetail();
+  // Load the original sender's public binder so the composer can browse it
+  // for "their cards" (left column of the wizard).
+  const senderBinder = await fetchPublicBinder(t.fromUid);
+  if (!senderBinder) {
+    flashMsg("Couldn't load the original sender's binder to counter.");
+    return;
+  }
+  _pbCurrentData = senderBinder;
+  _tcCounterOfTradeId = tradeId;
+  _tcPickedTheir.clear();
+  _tcPickedMine.clear();
+  // Perspective flip: in the original trade, the sender was offering A and
+  // requesting B from me. In my counter, I'm now the sender, so what I
+  // "request" is A (the sender's original offerings) and what I "offer" is
+  // B (what they originally wanted).
+  for (const c of (t.offered   || [])) if (c.entry) _tcPickedTheir.add(c.entry);
+  for (const c of (t.requested || [])) if (c.entry) _tcPickedMine.add(c.entry);
+  _tcStep = 1;
+  const msgEl = document.getElementById('tc-message');
+  if (msgEl) msgEl.value = t.message
+    ? `Counter to "${t.message.slice(0, 100)}"`
+    : 'Counter-offer';
+  const title = document.getElementById('trade-modal-title');
+  if (title) title.textContent = `Counter-offer to ${t.fromHandle || 'this user'}`;
+  _tcApplyStepUI();
+  document.getElementById('trade-modal').classList.add('show');
+}
 function closeTradeComposer() {
   document.getElementById('trade-modal').classList.remove('show');
+  _tcCounterOfTradeId = null;
 }
 async function sendTradeOffer() {
   if (!_syncUid || !_fbDb || !_pbCurrentData) return;
@@ -5843,7 +5974,7 @@ async function sendTradeOffer() {
     }).filter(Boolean);
     const message = ((document.getElementById('tc-message') || {}).value || '').trim().slice(0, 1000);
     const now = Date.now();
-    await _fbDb.collection('trades').add({
+    const doc = {
       fromUid: _syncUid,
       fromHandle: _publicHandle || 'Anonymous',
       fromContact: _tradeContact,
@@ -5856,8 +5987,22 @@ async function sendTradeOffer() {
       notified: false,
       createdAt: now,
       updatedAt: now,
-    });
-    flashMsg('Trade offer sent.');
+    };
+    // Counter-offers reference the parent trade; we also flip the parent's
+    // status to 'countered' so neither side acts on the stale offer.
+    if (_tcCounterOfTradeId) doc.parentTradeId = _tcCounterOfTradeId;
+    await _fbDb.collection('trades').add(doc);
+    if (_tcCounterOfTradeId) {
+      try {
+        await _fbDb.collection('trades').doc(_tcCounterOfTradeId).update({
+          status: 'countered',
+          notified: false,
+          updatedAt: now,
+        });
+      } catch (e) { console.warn('parent trade status update failed', e); }
+    }
+    flashMsg(_tcCounterOfTradeId ? 'Counter-offer sent.' : 'Trade offer sent.');
+    _tcCounterOfTradeId = null;
     closeTradeComposer();
   } catch (e) {
     console.warn('trade send failed', e);
@@ -5871,7 +6016,7 @@ async function sendTradeOffer() {
 let _tradesCache = [];           // last-fetched array (both directions)
 let _tradesTab   = 'incoming';   // 'incoming' | 'outgoing' | 'closed'
 
-function _tradeIsClosed(t) { return t.status === 'accepted' || t.status === 'declined' || t.status === 'cancelled'; }
+function _tradeIsClosed(t) { return t.status === 'accepted' || t.status === 'declined' || t.status === 'cancelled' || t.status === 'countered'; }
 
 async function fetchTrades() {
   if (!_fbDb || !_syncUid) return [];
@@ -5957,6 +6102,7 @@ function _renderTradeCardHtml(t) {
     'accepted':  `<span style="background:#1f5132; color:#a3ff9e; padding:.15rem .5rem; border-radius:999px; font-size:.7rem; font-weight:600;">Accepted</span>`,
     'declined':  `<span style="background:#5a2a2a; color:#ffb0b0; padding:.15rem .5rem; border-radius:999px; font-size:.7rem; font-weight:600;">Declined</span>`,
     'cancelled': `<span style="background:#444; color:#ccc; padding:.15rem .5rem; border-radius:999px; font-size:.7rem; font-weight:600;">Cancelled</span>`,
+    'countered': `<span style="background:#3d2a55; color:#d4a8ff; padding:.15rem .5rem; border-radius:999px; font-size:.7rem; font-weight:600;">Countered</span>`,
   }[t.status] || '';
   // Per-trade value diff at a glance (from THIS user's perspective).
   // For sender:    "you give offered, get requested" -> diff = requested - offered (positive = good for you)
@@ -5982,6 +6128,7 @@ function _renderTradeCardHtml(t) {
       actions = `<button class="wl-btn" onclick="event.stopPropagation();cancelTrade('${t.id}')">Cancel offer</button>`;
     } else {
       actions = `<button class="wl-btn" onclick="event.stopPropagation();declineTrade('${t.id}')">Decline</button>
+                 <button class="wl-btn" onclick="event.stopPropagation();openCounterComposer('${t.id}')" title="Adjust the cards and send back a revised offer">Counter</button>
                  <button class="wl-btn" style="background:linear-gradient(180deg,#1f5132 0%,#0d3320 100%); border-color:#1f5132;" onclick="event.stopPropagation();acceptTrade('${t.id}')">Accept</button>`;
     }
   }
@@ -6187,6 +6334,7 @@ async function _tdRender(t) {
         extra = `<button class="wl-btn" onclick="cancelTrade('${t.id}');closeTradeDetail();">Cancel offer</button>`;
       } else {
         extra = `<button class="wl-btn" onclick="declineTrade('${t.id}');closeTradeDetail();">Decline</button>
+                 <button class="wl-btn" onclick="closeTradeDetail();openCounterComposer('${t.id}')" title="Adjust the cards and send back a revised offer">Counter</button>
                  <button class="wl-btn" style="background:linear-gradient(180deg,#1f5132 0%,#0d3320 100%); border-color:#1f5132;" onclick="acceptTrade('${t.id}');closeTradeDetail();">Accept</button>`;
       }
     } else if (t.status === 'accepted') {

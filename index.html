@@ -2186,20 +2186,33 @@ let _ttChart = null;
 
 // Synopsis sentences that mean "Claude couldn't find anything." Filtered out
 // of the stories panel because a story with no story isn't worth surfacing.
+// Aggressive list - we'd rather show fewer cards than a "story" that boils
+// down to "actually I don't know."
 const _NO_CATALYST_PATTERNS = [
-  'no specific catalyst',
-  'no clear catalyst',
-  'no specific cause',
-  'no clear cause',
-  "couldn't find",
-  'could not find',
-  'was unable to find',
-  'unable to identify',
-  'no specific event',
-  'no specific news',
-  'no specific news catalyst',
-  'no concrete trigger',
-  'no clear trigger',
+  // Explicit "no catalyst" admissions
+  'no specific catalyst', 'no clear catalyst', 'no concrete catalyst',
+  'no obvious catalyst', 'no identifiable catalyst', 'no apparent catalyst',
+  'no specific cause', 'no clear cause', 'no obvious cause', 'no apparent cause',
+  'no specific event', 'no specific news', 'no specific reason',
+  'no concrete trigger', 'no clear trigger', 'no obvious trigger',
+  'no particular news', 'no significant news', 'no clear news',
+  'no public information', 'no readily available',
+  'no readily apparent', 'no readily identifiable',
+  // "Couldn't find / was unable" admissions
+  "couldn't find", 'could not find', 'was unable to find', 'were unable to find',
+  'unable to identify', 'unable to pinpoint', 'cannot identify', 'cannot pinpoint',
+  "didn't find", 'did not find',
+  // "Remains unclear" / hedging
+  'remains unclear', 'remains uncertain', 'is unclear', 'are unclear',
+  'not entirely clear', 'not immediately clear',
+  // Generic non-answers
+  'general market', 'broader market', 'general collector interest',
+  'general demand', 'normal supply and demand', 'increased demand without',
+  'speculation only', 'pure speculation',
+  // Apologetic intros that signal nothing was found
+  'unfortunately, no', 'unfortunately no',
+  // Without-a-clear variants
+  'without a clear', 'without identifying',
 ];
 function _synopsisIsUseful(text) {
   if (!text) return false;
@@ -6468,7 +6481,16 @@ route();
 // Warm the per-card history in the background after first paint so opening a
 // card detail is instant. The alert table itself renders from RAW and doesn't
 // need this, so it never blocks initial load.
-setTimeout(loadAlertHistory, 0);
+setTimeout(() => {
+  loadAlertHistory().then(() => {
+    // Synopses live on HISTORY entries; once they're fetched, re-render the
+    // stories panel against the current filtered set so cards show up
+    // without the user having to interact with a filter or re-load.
+    if (typeof renderStories === 'function' && Array.isArray(_statsCurrentRows)) {
+      renderStories(_statsCurrentRows);
+    }
+  });
+}, 0);
 initSync();
 </script>
 <script>

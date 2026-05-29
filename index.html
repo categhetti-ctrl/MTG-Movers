@@ -1071,6 +1071,42 @@
     .theme-opt.active { background:#1a2a3a;}
     .theme-opt-name { flex:1; font-weight:600;}
     .theme-opt-sub { font-size:.72rem; opacity:.6;}
+    /* Plains is the only light theme - the picker UI needs a matching warm */
+    /* cream surface so the dropdown doesn't look like a dark hole pasted   */
+    /* onto the page.                                                      */
+    [data-theme="plains"] .theme-pick-btn {
+      color:#4a3a1c; background:linear-gradient(180deg,#ffffff,#f5ecd6);
+      border:1px solid #d4c89f;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 1px 2px rgba(0,0,0,.08);
+    }
+    [data-theme="plains"] .theme-pick-btn:hover { filter:none; color:#2a2418; border-color:#c9a14a;}
+    [data-theme="plains"] .theme-menu {
+      background:#ffffff; border:1px solid #d4c89f;
+      box-shadow:0 8px 24px rgba(106,86,40,.18);
+      color:#2a2418;
+    }
+    [data-theme="plains"] .theme-opt { color:#2a2418;}
+    [data-theme="plains"] .theme-opt:hover { background:#faf5ea;}
+    [data-theme="plains"] .theme-opt.active { background:#f5ecd6;}
+    [data-theme="plains"] .theme-opt-sub { color:#8a7e5c; opacity:1;}
+    /* The other four themes are all dark - tune the picker to each theme's */
+    /* panel surface so it doesn't look pasted on.                           */
+    [data-theme="islands"] .theme-pick-btn { color:#d4e1f0; background:#102438; border-color:#1d3a5c; box-shadow:none;}
+    [data-theme="islands"] .theme-menu { background:#102438; border-color:#1d3a5c;}
+    [data-theme="islands"] .theme-opt:hover { background:#163048;}
+    [data-theme="islands"] .theme-opt.active { background:rgba(106,180,224,.15);}
+    [data-theme="swamps"] .theme-pick-btn { color:#d6d2cc; background:#15151a; border-color:#252530; box-shadow:none;}
+    [data-theme="swamps"] .theme-menu { background:#15151a; border-color:#252530;}
+    [data-theme="swamps"] .theme-opt:hover { background:#1a1a22;}
+    [data-theme="swamps"] .theme-opt.active { background:rgba(184,180,174,.10);}
+    [data-theme="mountains"] .theme-pick-btn { color:#e8d8c8; background:#261010; border-color:#4a2424; box-shadow:none;}
+    [data-theme="mountains"] .theme-menu { background:#261010; border-color:#4a2424;}
+    [data-theme="mountains"] .theme-opt:hover { background:#321414;}
+    [data-theme="mountains"] .theme-opt.active { background:rgba(176,52,52,.18);}
+    [data-theme="forests"] .theme-pick-btn { color:#e0e8d8; background:#16241c; border-color:#2a3d2e; box-shadow:none;}
+    [data-theme="forests"] .theme-menu { background:#16241c; border-color:#2a3d2e;}
+    [data-theme="forests"] .theme-opt:hover { background:#1c3024;}
+    [data-theme="forests"] .theme-opt.active { background:rgba(140,184,106,.15);}
 
     /* ================================================================== */
     /* MANA-COLOR POLISH LAYER                                             */

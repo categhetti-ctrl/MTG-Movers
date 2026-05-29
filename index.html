@@ -12,24 +12,35 @@
        so the font fetch overlaps with the rest of page load. -->
   <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&display=swap" media="print" onload="this.media='all'">
+  <!-- Mana-color themes each have a signature headline face. Loaded with
+       media="print" + onload swap so the fetch doesn't block first paint. -->
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&family=Cinzel+Decorative:wght@500&family=Cormorant+Garamond:ital,wght@0,500;1,400&family=Bitter:wght@500&display=swap"
+    media="print" onload="this.media='all'">
   <script>
     /* Apply saved theme (or the visitor's OS preference) before first paint so
-       there is no flash of the wrong theme. Themes: dark, light, collector. */
+       there is no flash of the wrong theme. Themes are the five Magic colors:
+       plains (light), islands/swamps/mountains/forests (dark). Old theme names
+       (dark, light, collector, mox) from previous versions get mapped to the
+       nearest mana-color equivalent. */
     (function () {
       try {
         var s = localStorage.getItem('mtg-theme');
-        var valid = { dark: 1, light: 1, collector: 1, mox: 1 };
-        var t = valid[s] ? s
-              : (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+        var valid = { plains:1, islands:1, swamps:1, mountains:1, forests:1 };
+        var legacy = { dark:'forests', light:'plains', collector:'swamps', mox:'forests' };
+        var t = valid[s] ? s : (legacy[s] || null);
+        if (!t) {
+          t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches)
+            ? 'plains' : 'forests';
+        }
         document.documentElement.setAttribute('data-theme', t);
+        var meta = {
+          plains:'#f5f0e4', islands:'#0a1525', swamps:'#0c0a0e',
+          mountains:'#1a0808', forests:'#0e1812'
+        };
         var mc = document.getElementById('meta-theme-color');
-        if (mc) mc.setAttribute('content',
-          t === 'light' ? '#ffffff'
-          : t === 'collector' ? '#0e0a06'
-          : t === 'mox' ? '#000000'
-          : '#0d0d0d');
-      } catch (e) { document.documentElement.setAttribute('data-theme', 'dark'); }
+        if (mc) mc.setAttribute('content', meta[t] || '#0e1812');
+      } catch (e) { document.documentElement.setAttribute('data-theme', 'forests'); }
     })();
   </script>
   <script>
@@ -180,17 +191,17 @@
     .bp-native { font-size:.8rem; color:#aaa; font-weight:500; margin-left:.3rem; }
     .stat.best-buy  .val { color:#5dd39e; }
     .stat.best-sell .val { color:#9ecbff; }
-    [data-theme="light"] .bp-card { background:#ffffff; border-color:#e3e6ec; }
-    [data-theme="light"] .bp-card.bp-buy  { border-left-color:#1a9d6a; }
-    [data-theme="light"] .bp-card.bp-sell { border-left-color:#1a66cc; }
-    [data-theme="light"] .bp-label { color:#5a6172; }
-    [data-theme="light"] .bp-fin { color:#8a90a0; }
-    [data-theme="light"] .bp-feed { color:#1c2230; }
-    [data-theme="light"] .bp-card.bp-buy  .bp-price { color:#1a9d6a; }
-    [data-theme="light"] .bp-card.bp-sell .bp-price { color:#1a66cc; }
-    [data-theme="light"] .bp-native { color:#5a6172; }
-    [data-theme="light"] .stat.best-buy  .val { color:#1a9d6a; }
-    [data-theme="light"] .stat.best-sell .val { color:#1a66cc; }
+    [data-theme="plains"] .bp-card { background:#ffffff; border-color:#e0d6bc; }
+    [data-theme="plains"] .bp-card.bp-buy  { border-left-color:#6c8c52; }
+    [data-theme="plains"] .bp-card.bp-sell { border-left-color:#c9a14a; }
+    [data-theme="plains"] .bp-label { color:#8a7e5c; }
+    [data-theme="plains"] .bp-fin { color:#8a90a0; }
+    [data-theme="plains"] .bp-feed { color:#2a2418; }
+    [data-theme="plains"] .bp-card.bp-buy  .bp-price { color:#6c8c52; }
+    [data-theme="plains"] .bp-card.bp-sell .bp-price { color:#c9a14a; }
+    [data-theme="plains"] .bp-native { color:#8a7e5c; }
+    [data-theme="plains"] .stat.best-buy  .val { color:#6c8c52; }
+    [data-theme="plains"] .stat.best-sell .val { color:#c9a14a; }
     .detail-body { display:grid; grid-template-columns: 280px 1fr; gap:1.5rem; align-items:start;}
     @media (max-width: 800px) { .detail-body { grid-template-columns: 1fr; } }
     .card-art img { width:100%; border-radius:10px; box-shadow:0 4px 16px rgba(0,0,0,.4);}
@@ -546,9 +557,9 @@
     .stats-strip { display:grid; grid-template-columns:repeat(4, 1fr); gap:.6rem; margin:0 0 1rem;}
     .stat-card { background:#141414; border:1px solid #2a2a2a; border-radius:6px; padding:.7rem .9rem; min-width:0; cursor:pointer; transition: border-color .15s ease, background .15s ease;}
     .stat-card:hover { border-color:#3a4f6a; background:#1a1a1a;}
-    [data-theme="light"] .stat-card:hover { border-color:#7a9bd6; background:#f7f9fc;}
-    [data-theme="collector"] .stat-card:hover { border-color:#6b5635; background:#1a140e;}
-    [data-theme="mox"] .stat-card:hover { border-color:#2a2a2a; background:#101010;}
+    [data-theme="plains"] .stat-card:hover { border-color:#7a9bd6; background:#f7f9fc;}
+    [data-theme="swamps"] .stat-card:hover { border-color:#6b5635; background:#1a140e;}
+    [data-theme="forests"] .stat-card:hover { border-color:#2a2a2a; background:#101010;}
     .stat-label { font-size:.7rem; color:#888; text-transform:uppercase; letter-spacing:.08em; margin-bottom:.25rem;}
     .stat-value { font-size:1.4rem; font-weight:600; color:#e6edf5; line-height:1.1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
     .stat-value-name { font-size:1rem; font-weight:500;}
@@ -587,12 +598,12 @@
     .tc-bullet { display:inline-flex; width:1.4rem; height:1.4rem; align-items:center; justify-content:center; border-radius:50%; background:#1a1a1a; border:1px solid #333; font-weight:700; font-size:.75rem;}
     .tc-step.active .tc-bullet { background:#1a2a3a; border-color:#3a4f6a; color:#9ecbff;}
     .tc-step.done .tc-bullet { background:#0d3320; border-color:#1f5132; color:#4cd964;}
-    [data-theme="light"] #tc-pick-grid, [data-theme="light"] #tc-review { background:#f5f7fa; border-color:#cdd3de;}
+    [data-theme="plains"] #tc-pick-grid, [data-theme="plains"] #tc-review { background:#f5f7fa; border-color:#d4c89f;}
     .wl-tab { padding:.4rem .9rem; border:1px solid #2a2a2a; background:#0c0c0c; color:#bbb; border-radius:6px; cursor:pointer; font-size:.85rem; font-weight:600;}
     .wl-tab.active { background:#1a1a1a; color:#9ecbff; border-color:#3a4f6a;}
     .wl-tab:hover { color:#fff;}
-    [data-theme="light"] .wl-tab { background:#eef0f4; color:#4a5570; border-color:#cdd3de;}
-    [data-theme="light"] .wl-tab.active { background:#ffffff; color:#1e3a8a; border-color:#7a9bd6;}
+    [data-theme="plains"] .wl-tab { background:#f5ecd6; color:#4a5570; border-color:#d4c89f;}
+    [data-theme="plains"] .wl-tab.active { background:#ffffff; color:#1e3a8a; border-color:#7a9bd6;}
     .wl-search { margin-bottom:.5rem;}
     .wl-search input { width:100%; padding:.5rem .75rem; background:#000; color:#fff; border:1px solid #2a2a2a; border-radius:6px; font-size:.9rem; box-sizing:border-box;}
     .wl-results { max-height:280px; overflow-y:auto; border:1px solid #2a2a2a; border-radius:6px; margin-top:.5rem; display:none; background:#000;}
@@ -633,8 +644,8 @@
     .pb-controls input[type="search"] { flex:1 1 200px; min-width:140px; }
     .pb-controls input[type="number"] { width:6.5rem; }
     .pb-count { color:#aaa; font-size:.78rem; margin:0 0 .5rem; }
-    [data-theme="light"] .pb-controls input, [data-theme="light"] .pb-controls select { background:#ffffff; color:#1c2230; border-color:#cdd3de; }
-    [data-theme="light"] .pb-count { color:#5a6172; }
+    [data-theme="plains"] .pb-controls input, [data-theme="plains"] .pb-controls select { background:#ffffff; color:#2a2418; border-color:#d4c89f; }
+    [data-theme="plains"] .pb-count { color:#8a7e5c; }
     /* ===== Theme toggle button (both themes) ===== */
     .theme-toggle { display:inline-flex; align-items:center; justify-content:center; width:38px; height:38px; padding:0; border-radius:999px; cursor:pointer; border:1px solid #3a4150; background:linear-gradient(180deg,#262a32,#16181d); color:#dbe9ff; box-shadow: inset 0 1px 0 rgba(255,255,255,.10), 0 1px 2px rgba(0,0,0,.45); transition: filter .15s ease, transform .08s ease; }
     .theme-toggle:hover { filter:brightness(1.2); }
@@ -642,112 +653,116 @@
     .theme-toggle:focus-visible { outline:2px solid #5b8cff; outline-offset:2px; }
     .theme-toggle svg { width:18px; height:18px; display:block; }
     .theme-toggle .icon-moon { display:none; }
-    [data-theme="light"] .theme-toggle .icon-sun  { display:none; }
-    [data-theme="light"] .theme-toggle .icon-moon { display:block; }
+    [data-theme="plains"] .theme-toggle .icon-sun  { display:none; }
+    [data-theme="plains"] .theme-toggle .icon-moon { display:block; }
     /* ===== Light theme overrides ===== */
-    [data-theme="light"] body { background:#f4f5f7; color:#1c2230; }
-    [data-theme="light"] a { color:#1a66cc; }
-    [data-theme="light"] header { background:#ffffff; border-bottom-color:#e3e6ec; }
-    [data-theme="light"] header h1, [data-theme="light"] header h1 a { color:#1c2230; }
-    [data-theme="light"] header .meta { color:#5a6172; }
-    [data-theme="light"] .footer-meta { color:#1c2230; }
-    [data-theme="light"] .truck-anim [stroke="#fff"] { stroke:#1c2230; }
-    [data-theme="light"] .truck-anim [fill="#fff"] { fill:#1c2230; }
-    [data-theme="light"] .header-nav a { color:#27324a; border-color:#cdd3de; background:linear-gradient(180deg,#ffffff,#eef0f4); box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 1px 2px rgba(0,0,0,.12); }
-    [data-theme="light"] .header-nav a:hover { filter:brightness(.97); color:#0f1830; }
-    [data-theme="light"] .header-nav a.active { color:#fff; border-color:#2e5099; background:linear-gradient(180deg,#4f86e8,#2f5fbf); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 1px 4px rgba(0,0,0,.2); }
-    [data-theme="light"] .theme-toggle { border-color:#cdd3de; background:linear-gradient(180deg,#ffffff,#eef0f4); color:#27324a; }
-    [data-theme="light"] .toolbar select, [data-theme="light"] .toolbar input { background:#ffffff; color:#1c2230; border-color:#cdd3de; }
-    [data-theme="light"] .tb-hint { color:#aab0bd; }
-    [data-theme="light"] .tb-showing { color:#6b7280; }
-    [data-theme="light"] th, [data-theme="light"] td { border-bottom-color:#e3e6ec; }
-    [data-theme="light"] th { color:#5a6172; }
-    [data-theme="light"] #sort-row th:hover { color:#0f1830; }
-    [data-theme="light"] tr.row.up { background: rgba(26,157,106,.26); }
-    [data-theme="light"] tr.row.down { background: rgba(212,69,63,.22); }
-    [data-theme="light"] tr.row.up:hover { background: rgba(26,157,106,.38); }
-    [data-theme="light"] tr.row.down:hover { background: rgba(212,69,63,.34); }
-    [data-theme="light"] .pos, [data-theme="light"] .binder-total .bt-delta.pos, [data-theme="light"] .bt-mover-row .delta.pos, [data-theme="light"] .deck-open-delta.pos, [data-theme="light"] .wl-result .price { color:#1a9d6a; }
-    [data-theme="light"] .neg, [data-theme="light"] .binder-total .bt-delta.neg, [data-theme="light"] .bt-mover-row .delta.neg, [data-theme="light"] .deck-open-delta.neg { color:#d4453f; }
-    [data-theme="light"] .chip { background:#e6e8ee; color:#27324a; }
-    [data-theme="light"] .chip.feed-tcg { background:#b3261e; color:#fff; }
-    [data-theme="light"] .chip.feed-ck  { background:#1f4f9c; color:#fff; }
-    [data-theme="light"] .chip.feed-cm  { background:#b3661e; color:#fff; }
-    [data-theme="light"] .chip.feed-mp  { background:#0f7d6b; color:#fff; }
-    [data-theme="light"] .chip.spike { background:#5b3a90; color:#fff; }
-    [data-theme="light"] .chip.crash { background:#7a1414; color:#ffe0e0; }
-    [data-theme="light"] .chip.feed-pick.active { background:#27324a; color:#fff; border-color:#27324a; }
-    [data-theme="light"] .filter-row input, [data-theme="light"] .filter-row select { background:#ffffff; color:#1c2230; border-color:#cdd3de; }
-    [data-theme="light"] .name a, [data-theme="light"] .back, [data-theme="light"] .binder-empty a { color:#1a66cc; }
-    [data-theme="light"] .detail-head { border-bottom-color:#e3e6ec; }
-    [data-theme="light"] .detail-head h2 { color:#1a66cc; }
-    [data-theme="light"] .detail-head .sub, [data-theme="light"] .price-summary .stat .label { color:#5a6172; }
-    [data-theme="light"] .card-art .links a { color:#27324a; border-color:#cdd3de; background:linear-gradient(180deg,#ffffff,#eef0f4); box-shadow: inset 0 1px 0 rgba(255,255,255,.85), 0 1px 2px rgba(0,0,0,.12); }
-    [data-theme="light"] .card-art .links a:hover { filter:brightness(.97); }
-    [data-theme="light"] .panel { background:#ffffff; border-color:#e3e6ec; }
-    [data-theme="light"] .panel h3 { color:#5a6172; }
-    [data-theme="light"] .stat-grid .cell { background:#f4f6f9; border-color:#e3e6ec; }
-    [data-theme="light"] .stat-grid .cell .lbl { color:#5a6172; }
-    [data-theme="light"] footer { color:#5a6172; border-top-color:#e3e6ec; }
-    [data-theme="light"] .pagination button { color:#27324a; border-color:#cdd3de; background:linear-gradient(180deg,#ffffff,#eef0f4); box-shadow: inset 0 1px 0 rgba(255,255,255,.85), 0 1px 2px rgba(0,0,0,.12); }
-    [data-theme="light"] .pagination button:hover:not(:disabled) { filter:brightness(.97); }
-    [data-theme="light"] .pagination .info { color:#5a6172; }
-    [data-theme="light"] .binder-total { background:#ffffff; border-color:#e3e6ec; }
-    [data-theme="light"] .binder-total .bt-label { color:#5a6172; }
-    [data-theme="light"] .binder-total .bt-amount { color:#1c2230; }
-    [data-theme="light"] .binder-total .bt-toggle button { color:#27324a; border-color:#cdd3de; background:linear-gradient(180deg,#ffffff,#eef0f4); box-shadow: inset 0 1px 0 rgba(255,255,255,.85), 0 1px 2px rgba(0,0,0,.12); }
-    [data-theme="light"] .binder-total .bt-toggle button.active { color:#fff; border-color:#2e5099; background:linear-gradient(180deg,#4f86e8,#2f5fbf); }
-    [data-theme="light"] .binder-total .bt-delta { color:#5a6172; }
-    [data-theme="light"] .binder-total .bt-chart-hint { color:#8a90a0; }
-    [data-theme="light"] .bt-mover-row { border-bottom-color:#e3e6ec; }
-    [data-theme="light"] .bt-mover-row:hover { background:#f0f1f4; }
-    [data-theme="light"] .bt-mover-row .name { color:#1a66cc; }
-    [data-theme="light"] .bt-mover-row .prices { color:#5a6172; }
-    [data-theme="light"] .bt-mover-row img { background:#e3e6ec; }
-    [data-theme="light"] .deck-period button { color:#27324a; border-color:#cdd3de; background:linear-gradient(180deg,#ffffff,#eef0f4); box-shadow: inset 0 1px 0 rgba(255,255,255,.85), 0 1px 2px rgba(0,0,0,.12); }
-    [data-theme="light"] .deck-period button.active { color:#fff; border-color:#2e5099; background:linear-gradient(180deg,#4f86e8,#2f5fbf); }
-    [data-theme="light"] .binder-controls button { color:#27324a; border-color:#cdd3de; background:linear-gradient(180deg,#ffffff,#eef0f4); box-shadow: inset 0 1px 0 rgba(255,255,255,.85), 0 1px 2px rgba(0,0,0,.12); }
-    [data-theme="light"] .binder-controls button:hover:not(:disabled) { filter:brightness(.97); }
-    [data-theme="light"] .btm-period { color:#27324a; border-color:#cdd3de; background:linear-gradient(180deg,#ffffff,#eef0f4); box-shadow: inset 0 1px 0 rgba(255,255,255,.85), 0 1px 2px rgba(0,0,0,.12); }
-    [data-theme="light"] .btm-period:hover { filter:brightness(.97); }
-    [data-theme="light"] .btm-period.active { color:#fff; border-color:#2e5099; background:linear-gradient(180deg,#4f86e8,#2f5fbf); }
-    [data-theme="light"] .deck-open-delta { color:#5a6172; }
-    [data-theme="light"] .deck-sec-title { color:#5a6172; }
-    [data-theme="light"] .deck-box-add { border-color:#cdd3de; color:#8a90a0; }
-    [data-theme="light"] .deck-box-add:hover { border-color:#aab0bd; color:#5a6172; background:#eef0f4; }
-    [data-theme="light"] .binder-customize { background:#ffffff; border-color:#e3e6ec; }
-    [data-theme="light"] .binder-customize h4, [data-theme="light"] .binder-customize .swatch-label { color:#5a6172; }
-    [data-theme="light"] .binder-customize .preset.active { border-color:#1c2230; }
-    [data-theme="light"] .binder-empty { color:#5a6172; }
-    [data-theme="light"] .wl-btn { color:#27324a; border-color:#cdd3de; background:linear-gradient(180deg,#ffffff,#eef0f4); box-shadow: inset 0 1px 0 rgba(255,255,255,.85), 0 1px 2px rgba(0,0,0,.12); }
-    [data-theme="light"] .wl-btn:hover { filter:brightness(.97); box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 2px 6px rgba(0,0,0,.16); }
-    [data-theme="light"] .wl-toggle { background:linear-gradient(180deg,#ffffff,#eef0f4); border-color:#cdd3de; color:#27324a; box-shadow: inset 0 1px 0 rgba(255,255,255,.85); }
-    [data-theme="light"] .modal { background:rgba(20,24,33,.45); }
-    [data-theme="light"] .modal .panel { background:#ffffff; border-color:#e3e6ec; }
-    [data-theme="light"] .modal h3 { color:#1c2230; }
-    [data-theme="light"] .modal .help { color:#5a6172; }
-    [data-theme="light"] .modal textarea { background:#ffffff; color:#1c2230; border-color:#cdd3de; }
-    [data-theme="light"] .modal .actions button { color:#27324a; border-color:#cdd3de; background:linear-gradient(180deg,#ffffff,#eef0f4); box-shadow: inset 0 1px 0 rgba(255,255,255,.85), 0 1px 2px rgba(0,0,0,.12); }
-    [data-theme="light"] .modal .actions button:hover { filter:brightness(.97); }
-    [data-theme="light"] .modal .actions .primary { color:#fff; border-color:#2e5099; background:linear-gradient(180deg,#4f86e8,#2f5fbf); }
-    [data-theme="light"] .wl-search input { background:#ffffff; color:#1c2230; border-color:#cdd3de; }
-    [data-theme="light"] .wl-results { background:#ffffff; border-color:#cdd3de; }
-    [data-theme="light"] .wl-result { border-bottom-color:#eef0f4; }
-    [data-theme="light"] .wl-result:hover { background:#f0f1f4; }
-    [data-theme="light"] .wl-result .nm { color:#1a66cc; }
-    [data-theme="light"] .wl-result .meta-line, [data-theme="light"] .wl-status { color:#5a6172; }
-    [data-theme="light"] .ticker { background:#f0f1f4; }
-    [data-theme="light"] .ticker.left { border-right-color:#e3e6ec; }
-    [data-theme="light"] .ticker.right { border-left-color:#e3e6ec; }
-    [data-theme="light"] .ticker-header { background:#ffffff; border-bottom-color:#e3e6ec; color:#5a6172; }
-    [data-theme="light"] .ticker-item { border-bottom-color:#e6e8ee; }
-    [data-theme="light"] .ticker-item:hover { background:#e9ebef; }
-    [data-theme="light"] .ticker-item .nm { color:#1c2230; }
-    [data-theme="light"] .ticker-empty { color:#8a90a0; }
-    [data-theme="light"] .stat-card { background:#ffffff; border-color:#e3e6ec;}
-    [data-theme="light"] .stat-label { color:#5a6172;}
-    [data-theme="light"] .stat-value { color:#1c2230;}
-    [data-theme="light"] .stat-sub { color:#5a6172;}
+    /* PLAINS - warm ivory page, sunlit gold accent, Cinzel headings */
+    [data-theme="plains"] body { background:#f5f0e4; color:#2a2418; }
+    [data-theme="plains"] h1, [data-theme="plains"] h2, [data-theme="plains"] h3, [data-theme="plains"] h4 {
+      font-family:'Cinzel', Georgia, serif; color:#2a2418; letter-spacing:.02em;
+    }
+    [data-theme="plains"] a { color:#c9a14a; }
+    [data-theme="plains"] header { background:#ffffff; border-bottom-color:#e0d6bc; }
+    [data-theme="plains"] header h1, [data-theme="plains"] header h1 a { color:#2a2418; }
+    [data-theme="plains"] header .meta { color:#8a7e5c; }
+    [data-theme="plains"] .footer-meta { color:#2a2418; }
+    [data-theme="plains"] .truck-anim [stroke="#fff"] { stroke:#2a2418; }
+    [data-theme="plains"] .truck-anim [fill="#fff"] { fill:#2a2418; }
+    [data-theme="plains"] .header-nav a { color:#4a3a1c; border-color:#d4c89f; background:linear-gradient(180deg,#ffffff,#f5ecd6); box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 1px 2px rgba(0,0,0,.08); font-family:'Cinzel',Georgia,serif; font-weight:500; letter-spacing:.04em;}
+    [data-theme="plains"] .header-nav a:hover { filter:none; color:#2a2418; border-color:#c9a14a;}
+    [data-theme="plains"] .header-nav a.active { color:#ffffff; border-color:#9a7a2c; background:linear-gradient(180deg,#d4b25e,#c9a14a); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 1px 4px rgba(0,0,0,.15);}
+    [data-theme="plains"] .theme-toggle { border-color:#d4c89f; background:linear-gradient(180deg,#ffffff,#f5ecd6); color:#27324a; }
+    [data-theme="plains"] .toolbar select, [data-theme="plains"] .toolbar input { background:#ffffff; color:#2a2418; border-color:#d4c89f; }
+    [data-theme="plains"] .tb-hint { color:#aab0bd; }
+    [data-theme="plains"] .tb-showing { color:#6b7280; }
+    [data-theme="plains"] th, [data-theme="plains"] td { border-bottom-color:#e0d6bc; }
+    [data-theme="plains"] th { color:#8a7e5c; }
+    [data-theme="plains"] #sort-row th:hover { color:#0f1830; }
+    [data-theme="plains"] tr.row.up { background: rgba(26,157,106,.26); }
+    [data-theme="plains"] tr.row.down { background: rgba(212,69,63,.22); }
+    [data-theme="plains"] tr.row.up:hover { background: rgba(26,157,106,.38); }
+    [data-theme="plains"] tr.row.down:hover { background: rgba(212,69,63,.34); }
+    [data-theme="plains"] .pos, [data-theme="plains"] .binder-total .bt-delta.pos, [data-theme="plains"] .bt-mover-row .delta.pos, [data-theme="plains"] .deck-open-delta.pos, [data-theme="plains"] .wl-result .price { color:#6c8c52; }
+    [data-theme="plains"] .neg, [data-theme="plains"] .binder-total .bt-delta.neg, [data-theme="plains"] .bt-mover-row .delta.neg, [data-theme="plains"] .deck-open-delta.neg { color:#d4453f; }
+    [data-theme="plains"] .chip { background:#e6e8ee; color:#27324a; }
+    [data-theme="plains"] .chip.feed-tcg { background:#b3261e; color:#fff; }
+    [data-theme="plains"] .chip.feed-ck  { background:#1f4f9c; color:#fff; }
+    [data-theme="plains"] .chip.feed-cm  { background:#b3661e; color:#fff; }
+    [data-theme="plains"] .chip.feed-mp  { background:#0f7d6b; color:#fff; }
+    [data-theme="plains"] .chip.spike { background:#5b3a90; color:#fff; }
+    [data-theme="plains"] .chip.crash { background:#7a1414; color:#ffe0e0; }
+    [data-theme="plains"] .chip.feed-pick.active { background:#27324a; color:#fff; border-color:#27324a; }
+    [data-theme="plains"] .filter-row input, [data-theme="plains"] .filter-row select { background:#ffffff; color:#2a2418; border-color:#d4c89f; }
+    [data-theme="plains"] .name a, [data-theme="plains"] .back, [data-theme="plains"] .binder-empty a { color:#c9a14a; }
+    [data-theme="plains"] .detail-head { border-bottom-color:#e0d6bc; }
+    [data-theme="plains"] .detail-head h2 { color:#c9a14a; }
+    [data-theme="plains"] .detail-head .sub, [data-theme="plains"] .price-summary .stat .label { color:#8a7e5c; }
+    [data-theme="plains"] .card-art .links a { color:#27324a; border-color:#d4c89f; background:linear-gradient(180deg,#ffffff,#f5ecd6); box-shadow: inset 0 1px 0 rgba(255,255,255,.85), 0 1px 2px rgba(0,0,0,.12); }
+    [data-theme="plains"] .card-art .links a:hover { filter:brightness(.97); }
+    [data-theme="plains"] .panel { background:#ffffff; border-color:#e0d6bc; }
+    [data-theme="plains"] .panel h3 { color:#8a7e5c; }
+    [data-theme="plains"] .stat-grid .cell { background:#f4f6f9; border-color:#e0d6bc; }
+    [data-theme="plains"] .stat-grid .cell .lbl { color:#8a7e5c; }
+    [data-theme="plains"] footer { color:#8a7e5c; border-top-color:#e0d6bc; }
+    [data-theme="plains"] .pagination button { color:#27324a; border-color:#d4c89f; background:linear-gradient(180deg,#ffffff,#f5ecd6); box-shadow: inset 0 1px 0 rgba(255,255,255,.85), 0 1px 2px rgba(0,0,0,.12); }
+    [data-theme="plains"] .pagination button:hover:not(:disabled) { filter:brightness(.97); }
+    [data-theme="plains"] .pagination .info { color:#8a7e5c; }
+    [data-theme="plains"] .binder-total { background:#ffffff; border-color:#e0d6bc; }
+    [data-theme="plains"] .binder-total .bt-label { color:#8a7e5c; }
+    [data-theme="plains"] .binder-total .bt-amount { color:#2a2418; }
+    [data-theme="plains"] .binder-total .bt-toggle button { color:#27324a; border-color:#d4c89f; background:linear-gradient(180deg,#ffffff,#f5ecd6); box-shadow: inset 0 1px 0 rgba(255,255,255,.85), 0 1px 2px rgba(0,0,0,.12); }
+    [data-theme="plains"] .binder-total .bt-toggle button.active { color:#fff; border-color:#2e5099; background:linear-gradient(180deg,#4f86e8,#2f5fbf); }
+    [data-theme="plains"] .binder-total .bt-delta { color:#8a7e5c; }
+    [data-theme="plains"] .binder-total .bt-chart-hint { color:#8a90a0; }
+    [data-theme="plains"] .bt-mover-row { border-bottom-color:#e0d6bc; }
+    [data-theme="plains"] .bt-mover-row:hover { background:#f0f1f4; }
+    [data-theme="plains"] .bt-mover-row .name { color:#c9a14a; }
+    [data-theme="plains"] .bt-mover-row .prices { color:#8a7e5c; }
+    [data-theme="plains"] .bt-mover-row img { background:#e0d6bc; }
+    [data-theme="plains"] .deck-period button { color:#27324a; border-color:#d4c89f; background:linear-gradient(180deg,#ffffff,#f5ecd6); box-shadow: inset 0 1px 0 rgba(255,255,255,.85), 0 1px 2px rgba(0,0,0,.12); }
+    [data-theme="plains"] .deck-period button.active { color:#fff; border-color:#2e5099; background:linear-gradient(180deg,#4f86e8,#2f5fbf); }
+    [data-theme="plains"] .binder-controls button { color:#27324a; border-color:#d4c89f; background:linear-gradient(180deg,#ffffff,#f5ecd6); box-shadow: inset 0 1px 0 rgba(255,255,255,.85), 0 1px 2px rgba(0,0,0,.12); }
+    [data-theme="plains"] .binder-controls button:hover:not(:disabled) { filter:brightness(.97); }
+    [data-theme="plains"] .btm-period { color:#27324a; border-color:#d4c89f; background:linear-gradient(180deg,#ffffff,#f5ecd6); box-shadow: inset 0 1px 0 rgba(255,255,255,.85), 0 1px 2px rgba(0,0,0,.12); }
+    [data-theme="plains"] .btm-period:hover { filter:brightness(.97); }
+    [data-theme="plains"] .btm-period.active { color:#fff; border-color:#2e5099; background:linear-gradient(180deg,#4f86e8,#2f5fbf); }
+    [data-theme="plains"] .deck-open-delta { color:#8a7e5c; }
+    [data-theme="plains"] .deck-sec-title { color:#8a7e5c; }
+    [data-theme="plains"] .deck-box-add { border-color:#d4c89f; color:#8a90a0; }
+    [data-theme="plains"] .deck-box-add:hover { border-color:#aab0bd; color:#8a7e5c; background:#f5ecd6; }
+    [data-theme="plains"] .binder-customize { background:#ffffff; border-color:#e0d6bc; }
+    [data-theme="plains"] .binder-customize h4, [data-theme="plains"] .binder-customize .swatch-label { color:#8a7e5c; }
+    [data-theme="plains"] .binder-customize .preset.active { border-color:#2a2418; }
+    [data-theme="plains"] .binder-empty { color:#8a7e5c; }
+    [data-theme="plains"] .wl-btn { color:#27324a; border-color:#d4c89f; background:linear-gradient(180deg,#ffffff,#f5ecd6); box-shadow: inset 0 1px 0 rgba(255,255,255,.85), 0 1px 2px rgba(0,0,0,.12); }
+    [data-theme="plains"] .wl-btn:hover { filter:brightness(.97); box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 2px 6px rgba(0,0,0,.16); }
+    [data-theme="plains"] .wl-toggle { background:linear-gradient(180deg,#ffffff,#f5ecd6); border-color:#d4c89f; color:#27324a; box-shadow: inset 0 1px 0 rgba(255,255,255,.85); }
+    [data-theme="plains"] .modal { background:rgba(20,24,33,.45); }
+    [data-theme="plains"] .modal .panel { background:#ffffff; border-color:#e0d6bc; }
+    [data-theme="plains"] .modal h3 { color:#2a2418; }
+    [data-theme="plains"] .modal .help { color:#8a7e5c; }
+    [data-theme="plains"] .modal textarea { background:#ffffff; color:#2a2418; border-color:#d4c89f; }
+    [data-theme="plains"] .modal .actions button { color:#27324a; border-color:#d4c89f; background:linear-gradient(180deg,#ffffff,#f5ecd6); box-shadow: inset 0 1px 0 rgba(255,255,255,.85), 0 1px 2px rgba(0,0,0,.12); }
+    [data-theme="plains"] .modal .actions button:hover { filter:brightness(.97); }
+    [data-theme="plains"] .modal .actions .primary { color:#fff; border-color:#2e5099; background:linear-gradient(180deg,#4f86e8,#2f5fbf); }
+    [data-theme="plains"] .wl-search input { background:#ffffff; color:#2a2418; border-color:#d4c89f; }
+    [data-theme="plains"] .wl-results { background:#ffffff; border-color:#d4c89f; }
+    [data-theme="plains"] .wl-result { border-bottom-color:#f5ecd6; }
+    [data-theme="plains"] .wl-result:hover { background:#f0f1f4; }
+    [data-theme="plains"] .wl-result .nm { color:#c9a14a; }
+    [data-theme="plains"] .wl-result .meta-line, [data-theme="plains"] .wl-status { color:#8a7e5c; }
+    [data-theme="plains"] .ticker { background:#f0f1f4; }
+    [data-theme="plains"] .ticker.left { border-right-color:#e0d6bc; }
+    [data-theme="plains"] .ticker.right { border-left-color:#e0d6bc; }
+    [data-theme="plains"] .ticker-header { background:#ffffff; border-bottom-color:#e0d6bc; color:#8a7e5c; }
+    [data-theme="plains"] .ticker-item { border-bottom-color:#e6e8ee; }
+    [data-theme="plains"] .ticker-item:hover { background:#e9ebef; }
+    [data-theme="plains"] .ticker-item .nm { color:#2a2418; }
+    [data-theme="plains"] .ticker-empty { color:#8a90a0; }
+    [data-theme="plains"] .stat-card { background:#ffffff; border-color:#e0d6bc;}
+    [data-theme="plains"] .stat-label { color:#8a7e5c;}
+    [data-theme="plains"] .stat-value { color:#2a2418;}
+    [data-theme="plains"] .stat-sub { color:#8a7e5c;}
 
     /* ================================================================== */
     /* COLLECTOR THEME                                                     */
@@ -755,130 +770,130 @@
     /* gold leaf accents, serif Cinzel display type. Activates on a third  */
     /* tap of the theme toggle (dark -> light -> collector -> dark).       */
     /* ================================================================== */
-    [data-theme="collector"] body { background:#0e0a06; color:#e8dcc0; }
-    [data-theme="collector"] h1, [data-theme="collector"] h2, [data-theme="collector"] h3, [data-theme="collector"] h4 {
+    [data-theme="swamps"] body { background:#0e0a06; color:#e8dcc0; }
+    [data-theme="swamps"] h1, [data-theme="swamps"] h2, [data-theme="swamps"] h3, [data-theme="swamps"] h4 {
       font-family: 'Cinzel', Georgia, serif; color:#e8dcc0; letter-spacing:.02em;
     }
-    [data-theme="collector"] .header-nav a {
+    [data-theme="swamps"] .header-nav a {
       font-family:'Cinzel', Georgia, serif; font-size:.78rem; letter-spacing:.12em;
       text-transform:uppercase; color:#c8a951; background:#1a140e;
       border-color:#3a2f1f; border-radius:4px;
       box-shadow: inset 0 1px 0 rgba(200,169,81,.08);
     }
-    [data-theme="collector"] .header-nav a:hover { color:#e6c45a; border-color:#6b5635; filter:none; }
-    [data-theme="collector"] .header-nav a.active {
+    [data-theme="swamps"] .header-nav a:hover { color:#e6c45a; border-color:#6b5635; filter:none; }
+    [data-theme="swamps"] .header-nav a.active {
       color:#0e0a06; background:#c8a951; border-color:#8b6f2e;
       box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 1px 4px rgba(0,0,0,.5);
     }
-    [data-theme="collector"] header.site-header,
-    [data-theme="collector"] .site-header { background:#1a140e; border-bottom:1px solid #3a2f1f; }
-    [data-theme="collector"] .wl-btn {
+    [data-theme="swamps"] header.site-header,
+    [data-theme="swamps"] .site-header { background:#1a140e; border-bottom:1px solid #3a2f1f; }
+    [data-theme="swamps"] .wl-btn {
       font-family:'Cinzel', Georgia, serif; font-size:.78rem; letter-spacing:.1em;
       text-transform:uppercase; color:#c8a951; background:#1a140e;
       border:1px solid #3a2f1f; border-radius:4px;
       box-shadow: inset 0 1px 0 rgba(200,169,81,.06);
     }
-    [data-theme="collector"] .wl-btn:hover { color:#e6c45a; border-color:#6b5635; filter:none;}
-    [data-theme="collector"] .wl-btn.primary,
-    [data-theme="collector"] button.primary {
+    [data-theme="swamps"] .wl-btn:hover { color:#e6c45a; border-color:#6b5635; filter:none;}
+    [data-theme="swamps"] .wl-btn.primary,
+    [data-theme="swamps"] button.primary {
       color:#0e0a06; background:#c8a951; border-color:#8b6f2e;
     }
-    [data-theme="collector"] .wl-toggle {
+    [data-theme="swamps"] .wl-toggle {
       color:#c8a951; background:#1a140e; border:1px solid #3a2f1f; border-radius:4px;
       box-shadow: inset 0 1px 0 rgba(200,169,81,.06);
       font-family:'Cinzel', Georgia, serif; font-size:.78rem; letter-spacing:.1em;
       text-transform:uppercase;
     }
-    [data-theme="collector"] .wl-toggle:hover { color:#e6c45a; border-color:#6b5635; filter:none; }
-    [data-theme="collector"] .wl-toggle input[type="checkbox"] { accent-color:#c8a951; }
-    [data-theme="collector"] .toolbar select,
-    [data-theme="collector"] .toolbar input,
-    [data-theme="collector"] textarea,
-    [data-theme="collector"] input[type="text"],
-    [data-theme="collector"] input[type="search"],
-    [data-theme="collector"] input[type="number"],
-    [data-theme="collector"] select {
+    [data-theme="swamps"] .wl-toggle:hover { color:#e6c45a; border-color:#6b5635; filter:none; }
+    [data-theme="swamps"] .wl-toggle input[type="checkbox"] { accent-color:#c8a951; }
+    [data-theme="swamps"] .toolbar select,
+    [data-theme="swamps"] .toolbar input,
+    [data-theme="swamps"] textarea,
+    [data-theme="swamps"] input[type="text"],
+    [data-theme="swamps"] input[type="search"],
+    [data-theme="swamps"] input[type="number"],
+    [data-theme="swamps"] select {
       background:#14110a; color:#e8dcc0; border:1px solid #3a2f1f; border-radius:4px;
     }
-    [data-theme="collector"] .table-wrap, [data-theme="collector"] #alerts {
+    [data-theme="swamps"] .table-wrap, [data-theme="swamps"] #alerts {
       background:#14110a; border-color:#3a2f1f;
     }
-    [data-theme="collector"] #alerts thead { background:#1a140e; }
-    [data-theme="collector"] #alerts th {
+    [data-theme="swamps"] #alerts thead { background:#1a140e; }
+    [data-theme="swamps"] #alerts th {
       font-family:'Cinzel', Georgia, serif; font-size:.72rem; letter-spacing:.14em;
       text-transform:uppercase; color:#8b7f6b; border-color:#3a2f1f;
     }
-    [data-theme="collector"] #alerts td { border-color:#251d12; color:#e8dcc0; }
-    [data-theme="collector"] #alerts a { color:#e8dcc0; }
-    [data-theme="collector"] tr.row:hover { background:rgba(200,169,81,.05); }
-    [data-theme="collector"] tr.row.up { background:rgba(74,140,90,.08);}
-    [data-theme="collector"] tr.row.down { background:rgba(168,52,52,.08);}
-    [data-theme="collector"] .pos { color:#7bbe85;}
-    [data-theme="collector"] .neg { color:#d27272;}
-    [data-theme="collector"] .chip {
+    [data-theme="swamps"] #alerts td { border-color:#251d12; color:#e8dcc0; }
+    [data-theme="swamps"] #alerts a { color:#e8dcc0; }
+    [data-theme="swamps"] tr.row:hover { background:rgba(200,169,81,.05); }
+    [data-theme="swamps"] tr.row.up { background:rgba(74,140,90,.08);}
+    [data-theme="swamps"] tr.row.down { background:rgba(168,52,52,.08);}
+    [data-theme="swamps"] .pos { color:#7bbe85;}
+    [data-theme="swamps"] .neg { color:#d27272;}
+    [data-theme="swamps"] .chip {
       background:#2a2118; color:#c8a951; border:1px solid #3a2f1f;
     }
-    [data-theme="collector"] .chip.spike { background:#3a2a1a; color:#e6c45a;}
-    [data-theme="collector"] .meta, [data-theme="collector"] .sub,
-    [data-theme="collector"] .help { color:#8b7f6b; font-style:italic;}
-    [data-theme="collector"] .back { color:#c8a951;}
-    [data-theme="collector"] .back:hover { color:#e6c45a;}
-    [data-theme="collector"] .ticker-header {
+    [data-theme="swamps"] .chip.spike { background:#3a2a1a; color:#e6c45a;}
+    [data-theme="swamps"] .meta, [data-theme="swamps"] .sub,
+    [data-theme="swamps"] .help { color:#8b7f6b; font-style:italic;}
+    [data-theme="swamps"] .back { color:#c8a951;}
+    [data-theme="swamps"] .back:hover { color:#e6c45a;}
+    [data-theme="swamps"] .ticker-header {
       font-family:'Cinzel', Georgia, serif; letter-spacing:.14em; text-transform:uppercase;
       background:#1a140e; border-bottom-color:#3a2f1f; color:#c8a951;
     }
-    [data-theme="collector"] aside.ticker { background:#0e0a06; border-color:#3a2f1f;}
-    [data-theme="collector"] .ticker-item { border-bottom-color:#251d12;}
-    [data-theme="collector"] .ticker-item:hover { background:#1a140e;}
-    [data-theme="collector"] .ticker-item .nm { color:#e8dcc0;}
-    [data-theme="collector"] .modal .panel,
-    [data-theme="collector"] .panel { background:#1a140e; border:1px solid #3a2f1f; color:#e8dcc0;}
-    [data-theme="collector"] .wl-results { background:#14110a; border-color:#3a2f1f;}
-    [data-theme="collector"] .wl-result { border-bottom-color:#251d12;}
-    [data-theme="collector"] .wl-result:hover { background:#1a140e;}
-    [data-theme="collector"] .wl-result .nm { color:#c8a951;}
-    [data-theme="collector"] .wl-tab { background:#14110a; color:#8b7f6b; border-color:#3a2f1f;}
-    [data-theme="collector"] .wl-tab.active { background:#2a2118; color:#c8a951; border-color:#6b5635;}
-    [data-theme="collector"] .bp-card { background:#14110a; border:1px solid #3a2f1f; border-left-width:3px;}
-    [data-theme="collector"] .bp-card.bp-buy { border-left-color:#4a8c5a;}
-    [data-theme="collector"] .bp-card.bp-sell { border-left-color:#c8a951;}
-    [data-theme="collector"] .bp-card.bp-buy .bp-price { color:#7bbe85;}
-    [data-theme="collector"] .bp-card.bp-sell .bp-price { color:#c8a951;}
-    [data-theme="collector"] .bp-label, [data-theme="collector"] .bp-feed { color:#8b7f6b;}
-    [data-theme="collector"] .binder-total, [data-theme="collector"] .binder-page,
-    [data-theme="collector"] .deck-open-head, [data-theme="collector"] .detail-head {
+    [data-theme="swamps"] aside.ticker { background:#0e0a06; border-color:#3a2f1f;}
+    [data-theme="swamps"] .ticker-item { border-bottom-color:#251d12;}
+    [data-theme="swamps"] .ticker-item:hover { background:#1a140e;}
+    [data-theme="swamps"] .ticker-item .nm { color:#e8dcc0;}
+    [data-theme="swamps"] .modal .panel,
+    [data-theme="swamps"] .panel { background:#1a140e; border:1px solid #3a2f1f; color:#e8dcc0;}
+    [data-theme="swamps"] .wl-results { background:#14110a; border-color:#3a2f1f;}
+    [data-theme="swamps"] .wl-result { border-bottom-color:#251d12;}
+    [data-theme="swamps"] .wl-result:hover { background:#1a140e;}
+    [data-theme="swamps"] .wl-result .nm { color:#c8a951;}
+    [data-theme="swamps"] .wl-tab { background:#14110a; color:#8b7f6b; border-color:#3a2f1f;}
+    [data-theme="swamps"] .wl-tab.active { background:#2a2118; color:#c8a951; border-color:#6b5635;}
+    [data-theme="swamps"] .bp-card { background:#14110a; border:1px solid #3a2f1f; border-left-width:3px;}
+    [data-theme="swamps"] .bp-card.bp-buy { border-left-color:#4a8c5a;}
+    [data-theme="swamps"] .bp-card.bp-sell { border-left-color:#c8a951;}
+    [data-theme="swamps"] .bp-card.bp-buy .bp-price { color:#7bbe85;}
+    [data-theme="swamps"] .bp-card.bp-sell .bp-price { color:#c8a951;}
+    [data-theme="swamps"] .bp-label, [data-theme="swamps"] .bp-feed { color:#8b7f6b;}
+    [data-theme="swamps"] .binder-total, [data-theme="swamps"] .binder-page,
+    [data-theme="swamps"] .deck-open-head, [data-theme="swamps"] .detail-head {
       background:#14110a; border-color:#3a2f1f;
     }
-    [data-theme="collector"] .bt-amount, [data-theme="collector"] .deck-open-value {
+    [data-theme="swamps"] .bt-amount, [data-theme="swamps"] .deck-open-value {
       font-family:'Cinzel', Georgia, serif; color:#c8a951;
     }
-    [data-theme="collector"] .bt-period button { background:#14110a; color:#8b7f6b; border-color:#3a2f1f;}
-    [data-theme="collector"] .bt-period button.active { background:#c8a951; color:#0e0a06; border-color:#8b6f2e;}
-    [data-theme="collector"] .deck-card,
-    [data-theme="collector"] .tc-card { background:#0e0a06; border-color:#3a2f1f;}
-    [data-theme="collector"] .deck-card .pr,
-    [data-theme="collector"] .tc-card .pr { color:#c8a951;}
-    [data-theme="collector"] .stat { background:#14110a; border:1px solid #3a2f1f;}
-    [data-theme="collector"] .stat .label { color:#8b7f6b;}
-    [data-theme="collector"] .stat .val { color:#e8dcc0;}
-    [data-theme="collector"] .stat.best-buy .val { color:#7bbe85;}
-    [data-theme="collector"] .stat.best-sell .val { color:#c8a951;}
+    [data-theme="swamps"] .bt-period button { background:#14110a; color:#8b7f6b; border-color:#3a2f1f;}
+    [data-theme="swamps"] .bt-period button.active { background:#c8a951; color:#0e0a06; border-color:#8b6f2e;}
+    [data-theme="swamps"] .deck-card,
+    [data-theme="swamps"] .tc-card { background:#0e0a06; border-color:#3a2f1f;}
+    [data-theme="swamps"] .deck-card .pr,
+    [data-theme="swamps"] .tc-card .pr { color:#c8a951;}
+    [data-theme="swamps"] .stat { background:#14110a; border:1px solid #3a2f1f;}
+    [data-theme="swamps"] .stat .label { color:#8b7f6b;}
+    [data-theme="swamps"] .stat .val { color:#e8dcc0;}
+    [data-theme="swamps"] .stat.best-buy .val { color:#7bbe85;}
+    [data-theme="swamps"] .stat.best-sell .val { color:#c8a951;}
     /* Accent line above special panels (mockup hairline) */
-    [data-theme="collector"] .detail-head, [data-theme="collector"] .binder-total,
-    [data-theme="collector"] .bp-card, [data-theme="collector"] .modal .panel { position:relative;}
-    [data-theme="collector"] .detail-head::before, [data-theme="collector"] .binder-total::before,
-    [data-theme="collector"] .modal .panel::before {
+    [data-theme="swamps"] .detail-head, [data-theme="swamps"] .binder-total,
+    [data-theme="swamps"] .bp-card, [data-theme="swamps"] .modal .panel { position:relative;}
+    [data-theme="swamps"] .detail-head::before, [data-theme="swamps"] .binder-total::before,
+    [data-theme="swamps"] .modal .panel::before {
       content:""; position:absolute; top:-1px; left:8%; right:8%; height:1px;
       background:linear-gradient(90deg, transparent, #c8a951 25%, #c8a951 75%, transparent);
       opacity:.55; pointer-events:none;
     }
-    [data-theme="collector"] .stat-card { background:#14110a; border-color:#3a2f1f;}
-    [data-theme="collector"] .stat-label { color:#8b7f6b; font-family:'Cinzel', Georgia, serif; letter-spacing:.14em;}
-    [data-theme="collector"] .stat-value { color:#c8a951; font-family:'Cinzel', Georgia, serif;}
-    [data-theme="collector"] .stat-value-name { color:#e8dcc0;}
-    [data-theme="collector"] .stat-sub { color:#8b7f6b; font-style:italic;}
-    [data-theme="collector"] .stat-value.pos { color:#7bbe85;}
-    [data-theme="collector"] .stat-value.neg { color:#d27272;}
+    [data-theme="swamps"] .stat-card { background:#14110a; border-color:#3a2f1f;}
+    [data-theme="swamps"] .stat-label { color:#8b7f6b; font-family:'Cinzel', Georgia, serif; letter-spacing:.14em;}
+    [data-theme="swamps"] .stat-value { color:#c8a951; font-family:'Cinzel', Georgia, serif;}
+    [data-theme="swamps"] .stat-value-name { color:#e8dcc0;}
+    [data-theme="swamps"] .stat-sub { color:#8b7f6b; font-style:italic;}
+    [data-theme="swamps"] .stat-value.pos { color:#7bbe85;}
+    [data-theme="swamps"] .stat-value.neg { color:#d27272;}
 
     /* ================================================================== */
     /* MOX THEME                                                           */
@@ -887,136 +902,348 @@
     /* feed badges (TCG/CK/Cardmarket/Mana Pool/MTGJSON) cycle through     */
     /* the five mana colors as a subtle WUBRG hint.                        */
     /* ================================================================== */
-    [data-theme="mox"] body { background:#000000; color:#e8e6e0; }
-    [data-theme="mox"] h1, [data-theme="mox"] h2, [data-theme="mox"] h3, [data-theme="mox"] h4 {
+    [data-theme="forests"] body { background:#000000; color:#e8e6e0; }
+    [data-theme="forests"] h1, [data-theme="forests"] h2, [data-theme="forests"] h3, [data-theme="forests"] h4 {
       font-family:'Cinzel', Georgia, serif; color:#f5f1e8; letter-spacing:.04em;
     }
-    [data-theme="mox"] aside.ticker { background:#000000; border-color:#1a1a1a; }
-    [data-theme="mox"] .ticker-header {
+    [data-theme="forests"] aside.ticker { background:#000000; border-color:#1a1a1a; }
+    [data-theme="forests"] .ticker-header {
       background:#0a0a0a; border-bottom-color:#1a1a1a;
       font-family:'Cinzel', Georgia, serif; letter-spacing:.16em;
       text-transform:uppercase; color:#a5a3a0; font-size:.7rem;
     }
-    [data-theme="mox"] .ticker-item { border-bottom-color:#141414; }
-    [data-theme="mox"] .ticker-item:hover { background:#0a0a0a; }
-    [data-theme="mox"] .ticker-item .nm { color:#e8e6e0; }
-    [data-theme="mox"] header.site-header, [data-theme="mox"] .site-header {
+    [data-theme="forests"] .ticker-item { border-bottom-color:#141414; }
+    [data-theme="forests"] .ticker-item:hover { background:#0a0a0a; }
+    [data-theme="forests"] .ticker-item .nm { color:#e8e6e0; }
+    [data-theme="forests"] header.site-header, [data-theme="forests"] .site-header {
       background:#000000; border-bottom:1px solid #1a1a1a;
     }
-    [data-theme="mox"] .header-nav a {
+    [data-theme="forests"] .header-nav a {
       color:#a5a3a0; background:transparent; border:1px solid #1a1a1a;
       border-radius:3px; font-weight:500; letter-spacing:.06em;
       box-shadow:none;
     }
-    [data-theme="mox"] .header-nav a:hover { color:#e8e6e0; border-color:#2a2a2a; filter:none; }
-    [data-theme="mox"] .header-nav a.active {
+    [data-theme="forests"] .header-nav a:hover { color:#e8e6e0; border-color:#2a2a2a; filter:none; }
+    [data-theme="forests"] .header-nav a.active {
       color:#5b8cdb; background:rgba(91,140,219,.10); border-color:rgba(91,140,219,.35);
       box-shadow:none;
     }
-    [data-theme="mox"] .wl-btn {
+    [data-theme="forests"] .wl-btn {
       color:#a5a3a0; background:transparent; border:1px solid #1a1a1a;
       border-radius:3px; font-weight:500; box-shadow:none;
     }
-    [data-theme="mox"] .wl-btn:hover { color:#e8e6e0; border-color:#2a2a2a; filter:none; }
-    [data-theme="mox"] .wl-btn.primary, [data-theme="mox"] button.primary {
+    [data-theme="forests"] .wl-btn:hover { color:#e8e6e0; border-color:#2a2a2a; filter:none; }
+    [data-theme="forests"] .wl-btn.primary, [data-theme="forests"] button.primary {
       color:#000000; background:#5b8cdb; border-color:#5b8cdb;
     }
-    [data-theme="mox"] .wl-toggle {
+    [data-theme="forests"] .wl-toggle {
       color:#a5a3a0; background:transparent; border:1px solid #1a1a1a; border-radius:3px;
       box-shadow:none; font-weight:500; letter-spacing:.06em;
     }
-    [data-theme="mox"] .wl-toggle:hover { color:#e8e6e0; border-color:#2a2a2a; filter:none; }
-    [data-theme="mox"] .wl-toggle input[type="checkbox"] { accent-color:#5b8cdb; }
-    [data-theme="mox"] .toolbar select, [data-theme="mox"] .toolbar input,
-    [data-theme="mox"] textarea, [data-theme="mox"] input[type="text"],
-    [data-theme="mox"] input[type="search"], [data-theme="mox"] input[type="number"],
-    [data-theme="mox"] select {
+    [data-theme="forests"] .wl-toggle:hover { color:#e8e6e0; border-color:#2a2a2a; filter:none; }
+    [data-theme="forests"] .wl-toggle input[type="checkbox"] { accent-color:#5b8cdb; }
+    [data-theme="forests"] .toolbar select, [data-theme="forests"] .toolbar input,
+    [data-theme="forests"] textarea, [data-theme="forests"] input[type="text"],
+    [data-theme="forests"] input[type="search"], [data-theme="forests"] input[type="number"],
+    [data-theme="forests"] select {
       background:#0a0a0a; color:#e8e6e0; border:1px solid #1a1a1a; border-radius:3px;
     }
-    [data-theme="mox"] .table-wrap, [data-theme="mox"] #alerts {
+    [data-theme="forests"] .table-wrap, [data-theme="forests"] #alerts {
       background:#000000; border-color:#1a1a1a;
     }
-    [data-theme="mox"] #alerts thead { background:#0a0a0a; }
-    [data-theme="mox"] #alerts th {
+    [data-theme="forests"] #alerts thead { background:#0a0a0a; }
+    [data-theme="forests"] #alerts th {
       color:#7a7a78; letter-spacing:.1em; text-transform:uppercase;
       font-size:.72rem; border-color:#1a1a1a; font-weight:500;
     }
-    [data-theme="mox"] #alerts td { border-color:#141414; color:#e8e6e0; }
-    [data-theme="mox"] #alerts a { color:#f5f1e8; }
-    [data-theme="mox"] tr.row:hover { background:rgba(245,241,232,.03); }
-    [data-theme="mox"] tr.row.up { background:rgba(111,168,107,.06); }
-    [data-theme="mox"] tr.row.down { background:rgba(212,80,78,.06); }
-    [data-theme="mox"] .pos { color:#6fa86b; }
-    [data-theme="mox"] .neg { color:#d4504e; }
+    [data-theme="forests"] #alerts td { border-color:#141414; color:#e8e6e0; }
+    [data-theme="forests"] #alerts a { color:#f5f1e8; }
+    [data-theme="forests"] tr.row:hover { background:rgba(245,241,232,.03); }
+    [data-theme="forests"] tr.row.up { background:rgba(111,168,107,.06); }
+    [data-theme="forests"] tr.row.down { background:rgba(212,80,78,.06); }
+    [data-theme="forests"] .pos { color:#6fa86b; }
+    [data-theme="forests"] .neg { color:#d4504e; }
     /* Feed chips cycle WUBRG. Falls back to a neutral if class isn't set. */
-    [data-theme="mox"] .chip {
+    [data-theme="forests"] .chip {
       background:transparent; color:#a5a3a0;
       border:1px solid #1a1a1a; font-size:.7rem;
     }
-    [data-theme="mox"] .chip.market, [data-theme="mox"] .chip.feed-market {
+    [data-theme="forests"] .chip.market, [data-theme="forests"] .chip.feed-market {
       color:#f5f1e8; background:rgba(245,241,232,.06); border-color:rgba(245,241,232,.25);
     }
-    [data-theme="mox"] .chip.cm_avg, [data-theme="mox"] .chip.feed-cm_avg {
+    [data-theme="forests"] .chip.cm_avg, [data-theme="forests"] .chip.feed-cm_avg {
       color:#5b8cdb; background:rgba(91,140,219,.08); border-color:rgba(91,140,219,.3);
     }
-    [data-theme="mox"] .chip.ck_buylist, [data-theme="mox"] .chip.feed-ck_buylist,
-    [data-theme="mox"] .chip.ck_retail, [data-theme="mox"] .chip.feed-ck_retail {
+    [data-theme="forests"] .chip.ck_buylist, [data-theme="forests"] .chip.feed-ck_buylist,
+    [data-theme="forests"] .chip.ck_retail, [data-theme="forests"] .chip.feed-ck_retail {
       color:#7a6f7e; background:rgba(122,111,126,.1); border-color:rgba(122,111,126,.35);
     }
-    [data-theme="mox"] .chip.manapool, [data-theme="mox"] .chip.feed-manapool {
+    [data-theme="forests"] .chip.manapool, [data-theme="forests"] .chip.feed-manapool {
       color:#d4504e; background:rgba(212,80,78,.08); border-color:rgba(212,80,78,.3);
     }
-    [data-theme="mox"] .chip.mtgjson, [data-theme="mox"] .chip.feed-mtgjson {
+    [data-theme="forests"] .chip.mtgjson, [data-theme="forests"] .chip.feed-mtgjson {
       color:#6fa86b; background:rgba(111,168,107,.08); border-color:rgba(111,168,107,.3);
     }
-    [data-theme="mox"] .chip.spike { color:#b67aff; background:rgba(182,122,255,.1); border-color:rgba(182,122,255,.35); }
-    [data-theme="mox"] .meta, [data-theme="mox"] .sub, [data-theme="mox"] .help { color:#7a7a78; }
-    [data-theme="mox"] .back { color:#5b8cdb; }
-    [data-theme="mox"] .back:hover { color:#7da8e8; }
-    [data-theme="mox"] .modal .panel, [data-theme="mox"] .panel {
+    [data-theme="forests"] .chip.spike { color:#b67aff; background:rgba(182,122,255,.1); border-color:rgba(182,122,255,.35); }
+    [data-theme="forests"] .meta, [data-theme="forests"] .sub, [data-theme="forests"] .help { color:#7a7a78; }
+    [data-theme="forests"] .back { color:#5b8cdb; }
+    [data-theme="forests"] .back:hover { color:#7da8e8; }
+    [data-theme="forests"] .modal .panel, [data-theme="forests"] .panel {
       background:#0a0a0a; border:1px solid #1a1a1a; color:#e8e6e0;
     }
-    [data-theme="mox"] .wl-results { background:#000000; border-color:#1a1a1a; }
-    [data-theme="mox"] .wl-result { border-bottom-color:#141414; }
-    [data-theme="mox"] .wl-result:hover { background:#0a0a0a; }
-    [data-theme="mox"] .wl-result .nm { color:#5b8cdb; }
-    [data-theme="mox"] .wl-tab { background:transparent; color:#7a7a78; border-color:#1a1a1a; }
-    [data-theme="mox"] .wl-tab.active { background:rgba(91,140,219,.1); color:#5b8cdb; border-color:rgba(91,140,219,.35); }
-    [data-theme="mox"] .bp-card { background:#0a0a0a; border:1px solid #1a1a1a; border-left-width:3px; }
-    [data-theme="mox"] .bp-card.bp-buy { border-left-color:#6fa86b; }
-    [data-theme="mox"] .bp-card.bp-sell { border-left-color:#5b8cdb; }
-    [data-theme="mox"] .bp-card.bp-buy .bp-price { color:#6fa86b; }
-    [data-theme="mox"] .bp-card.bp-sell .bp-price { color:#5b8cdb; }
-    [data-theme="mox"] .bp-label, [data-theme="mox"] .bp-feed { color:#7a7a78; }
-    [data-theme="mox"] .binder-total, [data-theme="mox"] .binder-page,
-    [data-theme="mox"] .deck-open-head, [data-theme="mox"] .detail-head {
+    [data-theme="forests"] .wl-results { background:#000000; border-color:#1a1a1a; }
+    [data-theme="forests"] .wl-result { border-bottom-color:#141414; }
+    [data-theme="forests"] .wl-result:hover { background:#0a0a0a; }
+    [data-theme="forests"] .wl-result .nm { color:#5b8cdb; }
+    [data-theme="forests"] .wl-tab { background:transparent; color:#7a7a78; border-color:#1a1a1a; }
+    [data-theme="forests"] .wl-tab.active { background:rgba(91,140,219,.1); color:#5b8cdb; border-color:rgba(91,140,219,.35); }
+    [data-theme="forests"] .bp-card { background:#0a0a0a; border:1px solid #1a1a1a; border-left-width:3px; }
+    [data-theme="forests"] .bp-card.bp-buy { border-left-color:#6fa86b; }
+    [data-theme="forests"] .bp-card.bp-sell { border-left-color:#5b8cdb; }
+    [data-theme="forests"] .bp-card.bp-buy .bp-price { color:#6fa86b; }
+    [data-theme="forests"] .bp-card.bp-sell .bp-price { color:#5b8cdb; }
+    [data-theme="forests"] .bp-label, [data-theme="forests"] .bp-feed { color:#7a7a78; }
+    [data-theme="forests"] .binder-total, [data-theme="forests"] .binder-page,
+    [data-theme="forests"] .deck-open-head, [data-theme="forests"] .detail-head {
       background:#0a0a0a; border-color:#1a1a1a;
     }
-    [data-theme="mox"] .bt-amount, [data-theme="mox"] .deck-open-value {
+    [data-theme="forests"] .bt-amount, [data-theme="forests"] .deck-open-value {
       font-family:'Cinzel', Georgia, serif; color:#f5f1e8;
     }
-    [data-theme="mox"] .bt-period button {
+    [data-theme="forests"] .bt-period button {
       background:transparent; color:#7a7a78; border-color:#1a1a1a;
     }
-    [data-theme="mox"] .bt-period button.active {
+    [data-theme="forests"] .bt-period button.active {
       background:rgba(91,140,219,.12); color:#5b8cdb; border-color:rgba(91,140,219,.4);
     }
-    [data-theme="mox"] .deck-card, [data-theme="mox"] .tc-card {
+    [data-theme="forests"] .deck-card, [data-theme="forests"] .tc-card {
       background:#000000; border-color:#1a1a1a;
     }
-    [data-theme="mox"] .deck-card .pr, [data-theme="mox"] .tc-card .pr { color:#5b8cdb; }
-    [data-theme="mox"] .stat { background:#0a0a0a; border:1px solid #1a1a1a; }
-    [data-theme="mox"] .stat .label { color:#7a7a78; }
-    [data-theme="mox"] .stat .val { color:#e8e6e0; }
-    [data-theme="mox"] .stat.best-buy .val { color:#6fa86b; }
-    [data-theme="mox"] .stat.best-sell .val { color:#5b8cdb; }
-    [data-theme="mox"] .stat-card { background:#0a0a0a; border-color:#1a1a1a;}
-    [data-theme="mox"] .stat-label { color:#7a7a78; letter-spacing:.1em;}
-    [data-theme="mox"] .stat-value { color:#f5f1e8; font-family:'Cinzel', Georgia, serif;}
-    [data-theme="mox"] .stat-value-name { font-family:inherit; color:#e8e6e0; font-weight:500;}
-    [data-theme="mox"] .stat-sub { color:#7a7a78;}
-    [data-theme="mox"] .stat-value.pos { color:#6fa86b;}
-    [data-theme="mox"] .stat-value.neg { color:#d4504e;}
+    [data-theme="forests"] .deck-card .pr, [data-theme="forests"] .tc-card .pr { color:#5b8cdb; }
+    [data-theme="forests"] .stat { background:#0a0a0a; border:1px solid #1a1a1a; }
+    [data-theme="forests"] .stat .label { color:#7a7a78; }
+    [data-theme="forests"] .stat .val { color:#e8e6e0; }
+    [data-theme="forests"] .stat.best-buy .val { color:#6fa86b; }
+    [data-theme="forests"] .stat.best-sell .val { color:#5b8cdb; }
+    [data-theme="forests"] .stat-card { background:#0a0a0a; border-color:#1a1a1a;}
+    [data-theme="forests"] .stat-label { color:#7a7a78; letter-spacing:.1em;}
+    [data-theme="forests"] .stat-value { color:#f5f1e8; font-family:'Cinzel', Georgia, serif;}
+    [data-theme="forests"] .stat-value-name { font-family:inherit; color:#e8e6e0; font-weight:500;}
+    [data-theme="forests"] .stat-sub { color:#7a7a78;}
+    [data-theme="forests"] .stat-value.pos { color:#6fa86b;}
+    [data-theme="forests"] .stat-value.neg { color:#d4504e;}
+
+    /* ================================================================== */
+    /* THEME PICKER UI                                                     */
+    /* Dropdown that replaced the old sun/moon toggle. Each option shows a */
+    /* colored mana-symbol swatch and the theme name.                      */
+    /* ================================================================== */
+    .theme-picker { position:relative; display:inline-block;}
+    .theme-pick-btn {
+      display:inline-flex; align-items:center; gap:.45rem;
+      padding:.4rem .7rem; border-radius:6px; cursor:pointer;
+      color:#dbe9ff; background:linear-gradient(180deg,#262a32 0%,#16181d 100%);
+      border:1px solid #3a4150; font-size:.82rem; font-weight:600;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 1px 2px rgba(0,0,0,.4);
+    }
+    .theme-pick-btn:hover { filter:brightness(1.18);}
+    .theme-current-name { white-space:nowrap;}
+    .theme-caret { font-size:.7rem; opacity:.7;}
+    .theme-swatch { width:14px; height:14px; border-radius:50%; display:inline-block; flex-shrink:0; border:1px solid rgba(255,255,255,.15);}
+    .sw-plains    { background:#f5ecd6; border-color:#c9a14a;}
+    .sw-islands   { background:#1d3a5c; border-color:#6ab4e0;}
+    .sw-swamps    { background:#14101a; border-color:#b8a87c;}
+    .sw-mountains { background:#3a1818; border-color:#d96838;}
+    .sw-forests   { background:#16241c; border-color:#8cb86a;}
+    .theme-menu {
+      display:none; position:absolute; top:calc(100% + 6px); right:0;
+      min-width:240px; padding:.35rem; border-radius:8px;
+      background:#0d0d0d; border:1px solid #2a2a2a;
+      box-shadow:0 8px 24px rgba(0,0,0,.55); z-index:80;
+    }
+    .theme-menu.show { display:block;}
+    .theme-opt {
+      display:flex; align-items:center; gap:.6rem; width:100%;
+      padding:.5rem .65rem; border-radius:5px; cursor:pointer;
+      background:transparent; border:none; color:inherit; text-align:left;
+      font-size:.85rem;
+    }
+    .theme-opt:hover { background:#1a1a1a;}
+    .theme-opt.active { background:#1a2a3a;}
+    .theme-opt-name { flex:1; font-weight:600;}
+    .theme-opt-sub { font-size:.72rem; opacity:.6;}
+
+    /* ================================================================== */
+    /* MANA-COLOR POLISH LAYER                                             */
+    /* The five theme blocks above were renamed from the previous theme    */
+    /* set; this layer nudges the key palette colors onto the mana-color   */
+    /* identity for each. Loaded last so it wins on specificity ties.      */
+    /* ================================================================== */
+    /* PLAINS: shift page from old #f4f5f7 already done above. Headline    */
+    /* font and accent already gold via earlier substitutions.             */
+
+    /* ISLANDS: brand new theme (no rename) - islands gets a full block.  */
+    [data-theme="islands"] body { background:#0a1525; color:#d4e1f0; }
+    [data-theme="islands"] h1, [data-theme="islands"] h2, [data-theme="islands"] h3, [data-theme="islands"] h4 {
+      font-family:'Cinzel', Georgia, serif; color:#d4e1f0; letter-spacing:.04em;
+    }
+    [data-theme="islands"] aside.ticker { background:#0a1525; border-color:#1d3a5c; }
+    [data-theme="islands"] .ticker-header { background:#102438; border-bottom-color:#1d3a5c; color:#6ab4e0; font-family:'Cinzel',Georgia,serif; letter-spacing:.14em; text-transform:uppercase; font-size:.72rem;}
+    [data-theme="islands"] .ticker-item { border-bottom-color:#162a40;}
+    [data-theme="islands"] .ticker-item:hover { background:#102438;}
+    [data-theme="islands"] .ticker-item .nm { color:#d4e1f0;}
+    [data-theme="islands"] header.site-header { background:#0a1525; border-bottom:1px solid #1d3a5c;}
+    [data-theme="islands"] .header-nav a { color:#7a96b8; background:#102438; border:1px solid #1d3a5c; border-radius:4px; box-shadow:none; font-weight:500; letter-spacing:.06em;}
+    [data-theme="islands"] .header-nav a:hover { color:#d4e1f0; border-color:#2a5278; filter:none;}
+    [data-theme="islands"] .header-nav a.active { color:#0a1525; background:#6ab4e0; border-color:#6ab4e0; }
+    [data-theme="islands"] .wl-btn { color:#7a96b8; background:#102438; border:1px solid #1d3a5c; border-radius:4px; box-shadow:none;}
+    [data-theme="islands"] .wl-btn:hover { color:#d4e1f0; border-color:#2a5278; filter:none;}
+    [data-theme="islands"] .wl-btn.primary, [data-theme="islands"] button.primary { color:#0a1525; background:#6ab4e0; border-color:#6ab4e0;}
+    [data-theme="islands"] .wl-toggle { color:#7a96b8; background:#102438; border:1px solid #1d3a5c; border-radius:4px; box-shadow:none;}
+    [data-theme="islands"] .wl-toggle input[type="checkbox"] { accent-color:#6ab4e0;}
+    [data-theme="islands"] .toolbar select, [data-theme="islands"] .toolbar input,
+    [data-theme="islands"] textarea, [data-theme="islands"] input[type="text"],
+    [data-theme="islands"] input[type="search"], [data-theme="islands"] input[type="number"],
+    [data-theme="islands"] select { background:#102438; color:#d4e1f0; border:1px solid #1d3a5c; border-radius:4px;}
+    [data-theme="islands"] .table-wrap, [data-theme="islands"] #alerts { background:#0a1525; border-color:#1d3a5c;}
+    [data-theme="islands"] #alerts thead { background:#102438;}
+    [data-theme="islands"] #alerts th { color:#7a96b8; border-color:#1d3a5c; letter-spacing:.08em; text-transform:uppercase; font-size:.72rem; font-weight:500;}
+    [data-theme="islands"] #alerts td { border-color:#162a40; color:#d4e1f0;}
+    [data-theme="islands"] #alerts a { color:#d4e1f0;}
+    [data-theme="islands"] tr.row:hover { background:rgba(106,180,224,.05);}
+    [data-theme="islands"] tr.row.up { background:rgba(95,184,168,.08);}
+    [data-theme="islands"] tr.row.down { background:rgba(224,122,106,.08);}
+    [data-theme="islands"] .pos { color:#5fb8a8;}
+    [data-theme="islands"] .neg { color:#e07a6a;}
+    [data-theme="islands"] .chip { background:#102438; color:#7a96b8; border:1px solid #1d3a5c;}
+    [data-theme="islands"] .chip.spike { background:rgba(106,180,224,.1); color:#6ab4e0; border-color:rgba(106,180,224,.3);}
+    [data-theme="islands"] .meta, [data-theme="islands"] .sub, [data-theme="islands"] .help { color:#7a96b8;}
+    [data-theme="islands"] .back { color:#6ab4e0;}
+    [data-theme="islands"] .modal .panel, [data-theme="islands"] .panel { background:#102438; border:1px solid #1d3a5c; color:#d4e1f0;}
+    [data-theme="islands"] .wl-results { background:#0a1525; border-color:#1d3a5c;}
+    [data-theme="islands"] .wl-result { border-bottom-color:#162a40;}
+    [data-theme="islands"] .wl-result:hover { background:#102438;}
+    [data-theme="islands"] .wl-result .nm { color:#6ab4e0;}
+    [data-theme="islands"] .wl-tab { background:transparent; color:#7a96b8; border-color:#1d3a5c;}
+    [data-theme="islands"] .wl-tab.active { background:rgba(106,180,224,.1); color:#6ab4e0; border-color:rgba(106,180,224,.4);}
+    [data-theme="islands"] .bp-card { background:#102438; border:1px solid #1d3a5c; border-left-width:3px;}
+    [data-theme="islands"] .bp-card.bp-buy { border-left-color:#5fb8a8;}
+    [data-theme="islands"] .bp-card.bp-sell { border-left-color:#6ab4e0;}
+    [data-theme="islands"] .bp-card.bp-buy .bp-price { color:#5fb8a8;}
+    [data-theme="islands"] .bp-card.bp-sell .bp-price { color:#6ab4e0;}
+    [data-theme="islands"] .bp-label, [data-theme="islands"] .bp-feed { color:#7a96b8;}
+    [data-theme="islands"] .binder-total, [data-theme="islands"] .binder-page,
+    [data-theme="islands"] .deck-open-head, [data-theme="islands"] .detail-head { background:#102438; border-color:#1d3a5c;}
+    [data-theme="islands"] .bt-amount, [data-theme="islands"] .deck-open-value { font-family:'Cinzel',Georgia,serif; color:#6ab4e0;}
+    [data-theme="islands"] .bt-period button { background:transparent; color:#7a96b8; border-color:#1d3a5c;}
+    [data-theme="islands"] .bt-period button.active { background:rgba(106,180,224,.15); color:#6ab4e0; border-color:rgba(106,180,224,.4);}
+    [data-theme="islands"] .deck-card, [data-theme="islands"] .tc-card { background:#0a1525; border-color:#1d3a5c;}
+    [data-theme="islands"] .deck-card .pr, [data-theme="islands"] .tc-card .pr { color:#6ab4e0;}
+    [data-theme="islands"] .stat { background:#102438; border:1px solid #1d3a5c;}
+    [data-theme="islands"] .stat .label { color:#7a96b8;}
+    [data-theme="islands"] .stat .val { color:#d4e1f0;}
+    [data-theme="islands"] .stat.best-buy .val { color:#5fb8a8;}
+    [data-theme="islands"] .stat.best-sell .val { color:#6ab4e0;}
+    [data-theme="islands"] .stat-card { background:#102438; border-color:#1d3a5c;}
+    [data-theme="islands"] .stat-card:hover { background:#163048; border-color:#2a5278;}
+    [data-theme="islands"] .stat-label { color:#7a96b8; letter-spacing:.08em;}
+    [data-theme="islands"] .stat-value { color:#d4e1f0;}
+    [data-theme="islands"] .stat-value.pos { color:#5fb8a8;}
+    [data-theme="islands"] .stat-value.neg { color:#e07a6a;}
+    [data-theme="islands"] .stat-sub { color:#7a96b8;}
+
+    /* MOUNTAINS: brand new theme - full block. */
+    [data-theme="mountains"] body { background:#1a0808; color:#e8d8c8; }
+    [data-theme="mountains"] h1, [data-theme="mountains"] h2, [data-theme="mountains"] h3, [data-theme="mountains"] h4 {
+      font-family:'Bitter', Georgia, serif; color:#e8d8c8; letter-spacing:.02em;
+    }
+    [data-theme="mountains"] aside.ticker { background:#1a0808; border-color:#4a2424;}
+    [data-theme="mountains"] .ticker-header { background:#261010; border-bottom-color:#4a2424; color:#d96838; font-family:'Bitter',Georgia,serif; letter-spacing:.12em; text-transform:uppercase; font-size:.72rem;}
+    [data-theme="mountains"] .ticker-item { border-bottom-color:#321414;}
+    [data-theme="mountains"] .ticker-item:hover { background:#261010;}
+    [data-theme="mountains"] .ticker-item .nm { color:#e8d8c8;}
+    [data-theme="mountains"] header.site-header { background:#1a0808; border-bottom:1px solid #4a2424;}
+    [data-theme="mountains"] .header-nav a { color:#a8857a; background:#261010; border:1px solid #4a2424; border-radius:4px; box-shadow:none; font-weight:500; letter-spacing:.06em; font-family:'Bitter',Georgia,serif;}
+    [data-theme="mountains"] .header-nav a:hover { color:#e8d8c8; border-color:#6b3636; filter:none;}
+    [data-theme="mountains"] .header-nav a.active { color:#1a0808; background:#d96838; border-color:#d96838;}
+    [data-theme="mountains"] .wl-btn { color:#a8857a; background:#261010; border:1px solid #4a2424; border-radius:4px; box-shadow:none; font-family:'Bitter',Georgia,serif;}
+    [data-theme="mountains"] .wl-btn:hover { color:#e8d8c8; border-color:#6b3636; filter:none;}
+    [data-theme="mountains"] .wl-btn.primary, [data-theme="mountains"] button.primary { color:#1a0808; background:#d96838; border-color:#d96838;}
+    [data-theme="mountains"] .wl-toggle { color:#a8857a; background:#261010; border:1px solid #4a2424; border-radius:4px; box-shadow:none;}
+    [data-theme="mountains"] .wl-toggle input[type="checkbox"] { accent-color:#d96838;}
+    [data-theme="mountains"] .toolbar select, [data-theme="mountains"] .toolbar input,
+    [data-theme="mountains"] textarea, [data-theme="mountains"] input[type="text"],
+    [data-theme="mountains"] input[type="search"], [data-theme="mountains"] input[type="number"],
+    [data-theme="mountains"] select { background:#261010; color:#e8d8c8; border:1px solid #4a2424; border-radius:4px;}
+    [data-theme="mountains"] .table-wrap, [data-theme="mountains"] #alerts { background:#1a0808; border-color:#4a2424;}
+    [data-theme="mountains"] #alerts thead { background:#261010;}
+    [data-theme="mountains"] #alerts th { color:#a8857a; border-color:#4a2424; letter-spacing:.08em; text-transform:uppercase; font-size:.72rem; font-weight:500; font-family:'Bitter',Georgia,serif;}
+    [data-theme="mountains"] #alerts td { border-color:#321414; color:#e8d8c8;}
+    [data-theme="mountains"] #alerts a { color:#e8d8c8;}
+    [data-theme="mountains"] tr.row:hover { background:rgba(217,104,56,.05);}
+    [data-theme="mountains"] tr.row.up { background:rgba(140,184,134,.06);}
+    [data-theme="mountains"] tr.row.down { background:rgba(255,122,90,.08);}
+    [data-theme="mountains"] .pos { color:#8cb886;}
+    [data-theme="mountains"] .neg { color:#ff7a5a;}
+    [data-theme="mountains"] .chip { background:#261010; color:#a8857a; border:1px solid #4a2424;}
+    [data-theme="mountains"] .chip.spike { background:rgba(217,104,56,.12); color:#d96838; border-color:rgba(217,104,56,.4);}
+    [data-theme="mountains"] .meta, [data-theme="mountains"] .sub, [data-theme="mountains"] .help { color:#a8857a;}
+    [data-theme="mountains"] .back { color:#d96838;}
+    [data-theme="mountains"] .modal .panel, [data-theme="mountains"] .panel { background:#261010; border:1px solid #4a2424; color:#e8d8c8;}
+    [data-theme="mountains"] .wl-results { background:#1a0808; border-color:#4a2424;}
+    [data-theme="mountains"] .wl-result { border-bottom-color:#321414;}
+    [data-theme="mountains"] .wl-result:hover { background:#261010;}
+    [data-theme="mountains"] .wl-result .nm { color:#d96838;}
+    [data-theme="mountains"] .wl-tab { background:transparent; color:#a8857a; border-color:#4a2424;}
+    [data-theme="mountains"] .wl-tab.active { background:rgba(217,104,56,.12); color:#d96838; border-color:rgba(217,104,56,.4);}
+    [data-theme="mountains"] .bp-card { background:#261010; border:1px solid #4a2424; border-left-width:3px;}
+    [data-theme="mountains"] .bp-card.bp-buy { border-left-color:#8cb886;}
+    [data-theme="mountains"] .bp-card.bp-sell { border-left-color:#d96838;}
+    [data-theme="mountains"] .bp-card.bp-buy .bp-price { color:#8cb886;}
+    [data-theme="mountains"] .bp-card.bp-sell .bp-price { color:#d96838;}
+    [data-theme="mountains"] .bp-label, [data-theme="mountains"] .bp-feed { color:#a8857a;}
+    [data-theme="mountains"] .binder-total, [data-theme="mountains"] .binder-page,
+    [data-theme="mountains"] .deck-open-head, [data-theme="mountains"] .detail-head { background:#261010; border-color:#4a2424;}
+    [data-theme="mountains"] .bt-amount, [data-theme="mountains"] .deck-open-value { font-family:'Bitter',Georgia,serif; color:#d96838;}
+    [data-theme="mountains"] .bt-period button { background:transparent; color:#a8857a; border-color:#4a2424;}
+    [data-theme="mountains"] .bt-period button.active { background:rgba(217,104,56,.15); color:#d96838; border-color:rgba(217,104,56,.4);}
+    [data-theme="mountains"] .deck-card, [data-theme="mountains"] .tc-card { background:#1a0808; border-color:#4a2424;}
+    [data-theme="mountains"] .deck-card .pr, [data-theme="mountains"] .tc-card .pr { color:#d96838;}
+    [data-theme="mountains"] .stat { background:#261010; border:1px solid #4a2424;}
+    [data-theme="mountains"] .stat .label { color:#a8857a;}
+    [data-theme="mountains"] .stat .val { color:#e8d8c8;}
+    [data-theme="mountains"] .stat.best-buy .val { color:#8cb886;}
+    [data-theme="mountains"] .stat.best-sell .val { color:#d96838;}
+    [data-theme="mountains"] .stat-card { background:#261010; border-color:#4a2424;}
+    [data-theme="mountains"] .stat-card:hover { background:#321414; border-color:#6b3636;}
+    [data-theme="mountains"] .stat-label { color:#a8857a; letter-spacing:.08em;}
+    [data-theme="mountains"] .stat-value { color:#e8d8c8; font-family:'Bitter',Georgia,serif;}
+    [data-theme="mountains"] .stat-value.pos { color:#8cb886;}
+    [data-theme="mountains"] .stat-value.neg { color:#ff7a5a;}
+    [data-theme="mountains"] .stat-sub { color:#a8857a;}
+
+    /* SWAMPS polish: shift page, accent, headline font */
+    [data-theme="swamps"] body { background:#0c0a0e !important; }
+    [data-theme="swamps"] h1, [data-theme="swamps"] h2, [data-theme="swamps"] h3, [data-theme="swamps"] h4 { font-family:'Cinzel Decorative', Georgia, serif !important;}
+
+    /* FORESTS polish: shift page from pure black to forest green, swap blue accent to moss */
+    [data-theme="forests"] body { background:#0e1812 !important; color:#e0e8d8 !important;}
+    [data-theme="forests"] aside.ticker { background:#0e1812 !important; border-color:#2a3d2e !important;}
+    [data-theme="forests"] header.site-header { background:#0e1812 !important; border-bottom-color:#2a3d2e !important;}
+    [data-theme="forests"] .header-nav a.active { color:#0e1812 !important; background:#8cb86a !important; border-color:#8cb86a !important;}
+    [data-theme="forests"] .wl-btn.primary, [data-theme="forests"] button.primary { color:#0e1812 !important; background:#8cb86a !important; border-color:#8cb86a !important;}
+    [data-theme="forests"] .back { color:#8cb86a !important;}
+    [data-theme="forests"] .wl-result .nm { color:#8cb86a !important;}
+    [data-theme="forests"] .deck-card .pr, [data-theme="forests"] .tc-card .pr { color:#c9a14a !important;}
+    [data-theme="forests"] tr.row.up { background:rgba(168,212,156,.07) !important;}
+    [data-theme="forests"] tr.row.down { background:rgba(201,122,90,.07) !important;}
+    [data-theme="forests"] .pos { color:#a8d49c !important;}
+    [data-theme="forests"] .neg { color:#c97a5a !important;}
+    [data-theme="forests"] .stat-value.pos { color:#a8d49c !important;}
+    [data-theme="forests"] .stat-value.neg { color:#c97a5a !important;}
+    [data-theme="forests"] .bt-amount, [data-theme="forests"] .deck-open-value { font-family:'Cormorant Garamond', Georgia, serif !important; color:#c9a14a !important;}
+    [data-theme="forests"] .bp-card.bp-sell { border-left-color:#8cb86a !important;}
+    [data-theme="forests"] .bp-card.bp-sell .bp-price { color:#8cb86a !important;}
   </style>
 </head>
 <body>
@@ -1052,10 +1279,20 @@
     <a href="#decks" data-v="decks" onclick="goDecks();return false;">Decks</a>
     <a href="#public" data-v="public" id="nav-browse" onclick="location.hash='#public';return false;" style="display:none;">Browse</a>
     <a href="#trades" data-v="trades" id="nav-trades" onclick="location.hash='#trades';return false;" style="display:none;">Trades<span id="nav-trades-badge" style="display:none; background:#e35a5a; color:#fff; border-radius:999px; padding:.05rem .4rem; margin-left:.3rem; font-size:.7rem; font-weight:700;">0</span></a>
-    <button type="button" class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Switch between light and dark theme" title="Toggle light / dark theme">
-      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg>
-      <svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
-    </button>
+    <div class="theme-picker" id="theme-picker">
+      <button type="button" class="theme-pick-btn" id="theme-pick-btn" onclick="toggleThemeMenu(event)" aria-label="Pick a theme" title="Pick a theme">
+        <span class="theme-swatch" id="theme-current-swatch" aria-hidden="true"></span>
+        <span class="theme-current-name" id="theme-current-name">Forests</span>
+        <span class="theme-caret" aria-hidden="true">▾</span>
+      </button>
+      <div class="theme-menu" id="theme-menu" role="menu" aria-hidden="true">
+        <button type="button" class="theme-opt" data-theme-value="plains"    onclick="pickTheme('plains')"><span class="theme-swatch sw-plains"></span><span class="theme-opt-name">Plains</span><span class="theme-opt-sub">Sunlit ivory · light</span></button>
+        <button type="button" class="theme-opt" data-theme-value="islands"   onclick="pickTheme('islands')"><span class="theme-swatch sw-islands"></span><span class="theme-opt-name">Islands</span><span class="theme-opt-sub">Midnight sea</span></button>
+        <button type="button" class="theme-opt" data-theme-value="swamps"    onclick="pickTheme('swamps')"><span class="theme-swatch sw-swamps"></span><span class="theme-opt-name">Swamps</span><span class="theme-opt-sub">Oily near-black</span></button>
+        <button type="button" class="theme-opt" data-theme-value="mountains" onclick="pickTheme('mountains')"><span class="theme-swatch sw-mountains"></span><span class="theme-opt-name">Mountains</span><span class="theme-opt-sub">Ember red</span></button>
+        <button type="button" class="theme-opt" data-theme-value="forests"   onclick="pickTheme('forests')"><span class="theme-swatch sw-forests"></span><span class="theme-opt-name">Forests</span><span class="theme-opt-sub">Deep moss · default</span></button>
+      </div>
+    </div>
     <button type="button" class="wl-btn" id="auth-btn" onclick="signIn()" style="display:none;">Sign in</button>
   </nav>
 </header>
@@ -1679,7 +1916,7 @@ let chart = null;
 function _themeColors() {
   const light = document.documentElement.getAttribute('data-theme') === 'light';
   return light
-    ? { grid:'#e3e6ec', tick:'#5a6172', line:'#1a66cc', fill:'rgba(26,102,204,.10)', legend:'#5a6172' }
+    ? { grid:'#e0d6bc', tick:'#8a7e5c', line:'#c9a14a', fill:'rgba(26,102,204,.10)', legend:'#8a7e5c' }
     : { grid:'#232938', tick:'#888',    line:'#9ecbff', fill:'rgba(158,203,255,.10)', legend:'#bbb' };
 }
 function refreshChartsForTheme() {
@@ -1696,21 +1933,56 @@ function refreshChartsForTheme() {
     } catch (e) {}
   });
 }
-// Cycle: dark -> light -> collector -> mox -> dark. Four themes, one button.
-const _THEME_CYCLE = ['dark', 'light', 'collector', 'mox'];
-const _THEME_META_COLOR = { dark:'#0d0d0d', light:'#ffffff', collector:'#0e0a06', mox:'#000000' };
-function toggleTheme() {
-  const cur = document.documentElement.getAttribute('data-theme') || 'dark';
-  const i = _THEME_CYCLE.indexOf(cur);
-  const next = _THEME_CYCLE[(i + 1) % _THEME_CYCLE.length];
-  document.documentElement.setAttribute('data-theme', next);
-  try { localStorage.setItem('mtg-theme', next); } catch (e) {}
+// Five mana-color themes, picked from a dropdown menu instead of cycled.
+const _THEME_NAMES = { plains:'Plains', islands:'Islands', swamps:'Swamps', mountains:'Mountains', forests:'Forests' };
+const _THEME_META_COLOR = {
+  plains:'#f5f0e4', islands:'#0a1525', swamps:'#0c0a0e',
+  mountains:'#1a0808', forests:'#0e1812',
+};
+function pickTheme(name) {
+  if (!_THEME_NAMES[name]) return;
+  document.documentElement.setAttribute('data-theme', name);
+  try { localStorage.setItem('mtg-theme', name); } catch (e) {}
   const mc = document.getElementById('meta-theme-color');
-  if (mc) mc.setAttribute('content', _THEME_META_COLOR[next] || '#0d0d0d');
-  // Flash a hint so users know what theme they cycled into.
-  if (typeof flashMsg === 'function') flashMsg(next.charAt(0).toUpperCase() + next.slice(1) + ' theme');
+  if (mc) mc.setAttribute('content', _THEME_META_COLOR[name] || '#0e1812');
+  // Update the picker label + active row.
+  const label = document.getElementById('theme-current-name');
+  if (label) label.textContent = _THEME_NAMES[name];
+  const sw = document.getElementById('theme-current-swatch');
+  if (sw) sw.className = 'theme-swatch sw-' + name;
+  document.querySelectorAll('.theme-opt').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-theme-value') === name);
+  });
+  closeThemeMenu();
   refreshChartsForTheme();
 }
+function toggleThemeMenu(ev) {
+  if (ev) ev.stopPropagation();
+  const m = document.getElementById('theme-menu');
+  if (!m) return;
+  const open = m.classList.toggle('show');
+  m.setAttribute('aria-hidden', open ? 'false' : 'true');
+}
+function closeThemeMenu() {
+  const m = document.getElementById('theme-menu');
+  if (m) { m.classList.remove('show'); m.setAttribute('aria-hidden','true'); }
+}
+// Click anywhere outside the menu closes it.
+document.addEventListener('click', function (e) {
+  const picker = document.getElementById('theme-picker');
+  if (picker && !picker.contains(e.target)) closeThemeMenu();
+});
+// Initialise the label to match what the no-flash script applied.
+(function () {
+  const cur = document.documentElement.getAttribute('data-theme') || 'forests';
+  const lbl = document.getElementById('theme-current-name');
+  if (lbl) lbl.textContent = _THEME_NAMES[cur] || _THEME_NAMES.forests;
+  const sw = document.getElementById('theme-current-swatch');
+  if (sw) sw.className = 'theme-swatch sw-' + cur;
+  document.querySelectorAll('.theme-opt').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-theme-value') === cur);
+  });
+})();
 const PAGE_SIZE = 100;
 const MOBILE_PAGE_SIZE = 20;   // fewer rows per page on phones -> a bigger, less cluttered list
 function pageSize() {

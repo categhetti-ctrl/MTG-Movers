@@ -540,6 +540,16 @@
     .binder-customize .reset { background:transparent; color:#9ecbff; border:1px solid transparent; border-radius:8px; cursor:pointer; font-size:.85rem; font-weight:600; margin-left:auto; padding:.4rem .7rem; transition: background .15s ease, border-color .15s ease; }
     .binder-customize .reset:hover { background:rgba(158,203,255,.10); border-color:rgba(158,203,255,.35); }
     .binder-customize .reset:focus-visible { outline:2px solid #5b8cff; outline-offset:2px; }
+    /* Stats strip on the movers page - four metric cards. Defaults match dark
+       theme; per-theme overrides at the bottom of the stylesheet recolor for
+       light/collector/mox. */
+    .stats-strip { display:grid; grid-template-columns:repeat(4, 1fr); gap:.6rem; margin:0 0 1rem;}
+    .stat-card { background:#141414; border:1px solid #2a2a2a; border-radius:6px; padding:.7rem .9rem; min-width:0;}
+    .stat-label { font-size:.7rem; color:#888; text-transform:uppercase; letter-spacing:.08em; margin-bottom:.25rem;}
+    .stat-value { font-size:1.4rem; font-weight:600; color:#e6edf5; line-height:1.1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+    .stat-value-name { font-size:1rem; font-weight:500;}
+    .stat-sub { font-size:.78rem; color:#7d8590; margin-top:.2rem; min-height:1em;}
+    @media (max-width: 640px) { .stats-strip { grid-template-columns:1fr 1fr;} }
     .wl-btn { display:inline-flex; align-items:center; gap:.4rem; color:#dbe9ff; border:1px solid #3a4150; border-radius:999px; padding:.45rem .95rem; cursor:pointer; font-size:.85rem; font-weight:600; background:linear-gradient(180deg,#262a32 0%,#16181d 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,.10), 0 1px 2px rgba(0,0,0,.45); transition: filter .15s ease, box-shadow .15s ease, transform .08s ease;}
     .wl-btn:hover { filter:brightness(1.22); color:#fff;}
     .wl-btn:active { transform:translateY(1px);}
@@ -730,6 +740,10 @@
     [data-theme="light"] .ticker-item:hover { background:#e9ebef; }
     [data-theme="light"] .ticker-item .nm { color:#1c2230; }
     [data-theme="light"] .ticker-empty { color:#8a90a0; }
+    [data-theme="light"] .stat-card { background:#ffffff; border-color:#e3e6ec;}
+    [data-theme="light"] .stat-label { color:#5a6172;}
+    [data-theme="light"] .stat-value { color:#1c2230;}
+    [data-theme="light"] .stat-sub { color:#5a6172;}
 
     /* ================================================================== */
     /* COLLECTOR THEME                                                     */
@@ -765,7 +779,14 @@
     [data-theme="collector"] button.primary {
       color:#0e0a06; background:#c8a951; border-color:#8b6f2e;
     }
-    [data-theme="collector"] .wl-toggle { color:#e8dcc0;}
+    [data-theme="collector"] .wl-toggle {
+      color:#c8a951; background:#1a140e; border:1px solid #3a2f1f; border-radius:4px;
+      box-shadow: inset 0 1px 0 rgba(200,169,81,.06);
+      font-family:'Cinzel', Georgia, serif; font-size:.78rem; letter-spacing:.1em;
+      text-transform:uppercase;
+    }
+    [data-theme="collector"] .wl-toggle:hover { color:#e6c45a; border-color:#6b5635; filter:none; }
+    [data-theme="collector"] .wl-toggle input[type="checkbox"] { accent-color:#c8a951; }
     [data-theme="collector"] .toolbar select,
     [data-theme="collector"] .toolbar input,
     [data-theme="collector"] textarea,
@@ -847,6 +868,13 @@
       background:linear-gradient(90deg, transparent, #c8a951 25%, #c8a951 75%, transparent);
       opacity:.55; pointer-events:none;
     }
+    [data-theme="collector"] .stat-card { background:#14110a; border-color:#3a2f1f;}
+    [data-theme="collector"] .stat-label { color:#8b7f6b; font-family:'Cinzel', Georgia, serif; letter-spacing:.14em;}
+    [data-theme="collector"] .stat-value { color:#c8a951; font-family:'Cinzel', Georgia, serif;}
+    [data-theme="collector"] .stat-value-name { color:#e8dcc0;}
+    [data-theme="collector"] .stat-sub { color:#8b7f6b; font-style:italic;}
+    [data-theme="collector"] .stat-value.pos { color:#7bbe85;}
+    [data-theme="collector"] .stat-value.neg { color:#d27272;}
 
     /* ================================================================== */
     /* MOX THEME                                                           */
@@ -889,7 +917,12 @@
     [data-theme="mox"] .wl-btn.primary, [data-theme="mox"] button.primary {
       color:#000000; background:#5b8cdb; border-color:#5b8cdb;
     }
-    [data-theme="mox"] .wl-toggle { color:#a5a3a0; }
+    [data-theme="mox"] .wl-toggle {
+      color:#a5a3a0; background:transparent; border:1px solid #1a1a1a; border-radius:3px;
+      box-shadow:none; font-weight:500; letter-spacing:.06em;
+    }
+    [data-theme="mox"] .wl-toggle:hover { color:#e8e6e0; border-color:#2a2a2a; filter:none; }
+    [data-theme="mox"] .wl-toggle input[type="checkbox"] { accent-color:#5b8cdb; }
     [data-theme="mox"] .toolbar select, [data-theme="mox"] .toolbar input,
     [data-theme="mox"] textarea, [data-theme="mox"] input[type="text"],
     [data-theme="mox"] input[type="search"], [data-theme="mox"] input[type="number"],
@@ -973,6 +1006,13 @@
     [data-theme="mox"] .stat .val { color:#e8e6e0; }
     [data-theme="mox"] .stat.best-buy .val { color:#6fa86b; }
     [data-theme="mox"] .stat.best-sell .val { color:#5b8cdb; }
+    [data-theme="mox"] .stat-card { background:#0a0a0a; border-color:#1a1a1a;}
+    [data-theme="mox"] .stat-label { color:#7a7a78; letter-spacing:.1em;}
+    [data-theme="mox"] .stat-value { color:#f5f1e8; font-family:'Cinzel', Georgia, serif;}
+    [data-theme="mox"] .stat-value-name { font-family:inherit; color:#e8e6e0; font-weight:500;}
+    [data-theme="mox"] .stat-sub { color:#7a7a78;}
+    [data-theme="mox"] .stat-value.pos { color:#6fa86b;}
+    [data-theme="mox"] .stat-value.neg { color:#d4504e;}
   </style>
 </head>
 <body>
@@ -1041,6 +1081,28 @@
         <label class="wl-btn mobile-hide" style="cursor:pointer;">Restore<input type="file" accept="application/json,.json" style="display:none;" onchange="importBackupFile(this)" /></label>
       </div>
       <span class="meta tb-showing">Showing <span id="count">-</span></span>
+    </div>
+    <div id="stats-strip" class="stats-strip">
+      <div class="stat-card">
+        <div class="stat-label">Total tracked</div>
+        <div class="stat-value" id="stat-total">$0.00</div>
+        <div class="stat-sub" id="stat-total-sub">&nbsp;</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Top mover</div>
+        <div class="stat-value stat-value-name" id="stat-top-name">—</div>
+        <div class="stat-sub" id="stat-top-pct">&nbsp;</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Movers up</div>
+        <div class="stat-value pos" id="stat-up">0</div>
+        <div class="stat-sub">&nbsp;</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Movers down</div>
+        <div class="stat-value neg" id="stat-down">0</div>
+        <div class="stat-sub">&nbsp;</div>
+      </div>
     </div>
     <div class="table-wrap">
     <table id="alerts">
@@ -1681,6 +1743,48 @@ function clearColumnFilters() {
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   applyFilters();
 }
+// Compute the four stat-strip metrics from a list of alert rows. Called from
+// renderList() with the already-filtered, already-collapsed set so the cards
+// reflect what the user is actually looking at.
+function renderStatsStrip(rows) {
+  const elTotal    = document.getElementById('stat-total');
+  if (!elTotal) return;   // stats strip isn't on this view
+  const elTotalSub = document.getElementById('stat-total-sub');
+  const elTopName  = document.getElementById('stat-top-name');
+  const elTopPct   = document.getElementById('stat-top-pct');
+  const elUp       = document.getElementById('stat-up');
+  const elDown     = document.getElementById('stat-down');
+  const fmtUSD = new Intl.NumberFormat('en-US', { style:'currency', currency:'USD' });
+  let totalUSD = 0;
+  let up = 0, down = 0;
+  let top = null;
+  for (const r of rows) {
+    // _toUsd (defined above) converts EUR rows via the daily FX rate so a
+    // mixed feed mix still totals in a single currency.
+    if (r.price_now != null) {
+      const usd = (typeof _toUsd === 'function') ? _toUsd(r.price_now, r.price_type) : r.price_now;
+      if (usd != null && !isNaN(usd)) totalUSD += usd;
+    }
+    if (r.pct_change > 0) up++;
+    else if (r.pct_change < 0) down++;
+    if (!top || Math.abs(r.pct_change || 0) > Math.abs(top.pct_change || 0)) top = r;
+  }
+  elTotal.textContent = fmtUSD.format(totalUSD);
+  elTotalSub.textContent = `${rows.length.toLocaleString()} ${rows.length === 1 ? 'row' : 'rows'}`;
+  if (top) {
+    elTopName.textContent = top.name || '—';
+    const pct = (top.pct_change || 0) * 100;
+    const arrow = pct >= 0 ? '▲' : '▼';
+    elTopPct.textContent = `${arrow} ${pct >= 0 ? '+' : ''}${pct.toFixed(0)}%`;
+    elTopPct.className = 'stat-sub ' + (pct >= 0 ? 'pos' : 'neg');
+  } else {
+    elTopName.textContent = '—';
+    elTopPct.textContent = '';
+  }
+  elUp.textContent   = up.toLocaleString();
+  elDown.textContent = down.toLocaleString();
+}
+
 function renderList() {
   const feed = document.getElementById('f-feed').value;
   const rule = document.getElementById('f-rule').value;
@@ -1721,6 +1825,7 @@ function renderList() {
   }
   sortRows(rows);
   updateSortIndicators();
+  renderStatsStrip(rows);   // recompute the four-card summary against the filtered set
   const total = rows.length;
   const ps = pageSize();
   const totalPages = Math.max(1, Math.ceil(total / ps));

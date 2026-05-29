@@ -192,15 +192,15 @@
     .stat.best-buy  .val { color:#5dd39e; }
     .stat.best-sell .val { color:#9ecbff; }
     [data-theme="plains"] .bp-card { background:#ffffff; border-color:#e0d6bc; }
-    [data-theme="plains"] .bp-card.bp-buy  { border-left-color:#6c8c52; }
+    [data-theme="plains"] .bp-card.bp-buy  { border-left-color:#a8862c; }
     [data-theme="plains"] .bp-card.bp-sell { border-left-color:#c9a14a; }
     [data-theme="plains"] .bp-label { color:#8a7e5c; }
     [data-theme="plains"] .bp-fin { color:#8a90a0; }
     [data-theme="plains"] .bp-feed { color:#2a2418; }
-    [data-theme="plains"] .bp-card.bp-buy  .bp-price { color:#6c8c52; }
+    [data-theme="plains"] .bp-card.bp-buy  .bp-price { color:#a8862c; }
     [data-theme="plains"] .bp-card.bp-sell .bp-price { color:#c9a14a; }
     [data-theme="plains"] .bp-native { color:#8a7e5c; }
-    [data-theme="plains"] .stat.best-buy  .val { color:#6c8c52; }
+    [data-theme="plains"] .stat.best-buy  .val { color:#a8862c; }
     [data-theme="plains"] .stat.best-sell .val { color:#c9a14a; }
     .detail-body { display:grid; grid-template-columns: 280px 1fr; gap:1.5rem; align-items:start;}
     @media (max-width: 800px) { .detail-body { grid-template-columns: 1fr; } }
@@ -557,7 +557,7 @@
     .stats-strip { display:grid; grid-template-columns:repeat(4, 1fr); gap:.6rem; margin:0 0 1rem;}
     .stat-card { background:#141414; border:1px solid #2a2a2a; border-radius:6px; padding:.7rem .9rem; min-width:0; cursor:pointer; transition: border-color .15s ease, background .15s ease;}
     .stat-card:hover { border-color:#3a4f6a; background:#1a1a1a;}
-    [data-theme="plains"] .stat-card:hover { border-color:#7a9bd6; background:#f7f9fc;}
+    [data-theme="plains"] .stat-card:hover { border-color:#c9a14a; background:#faf5ea;}
     [data-theme="swamps"] .stat-card:hover { border-color:#3a3a45; background:#1a1a22;}
     [data-theme="forests"] .stat-card:hover { border-color:#2a2a2a; background:#101010;}
     .stat-label { font-size:.7rem; color:#888; text-transform:uppercase; letter-spacing:.08em; margin-bottom:.25rem;}
@@ -678,12 +678,14 @@
     [data-theme="plains"] th, [data-theme="plains"] td { border-bottom-color:#e0d6bc; }
     [data-theme="plains"] th { color:#8a7e5c; }
     [data-theme="plains"] #sort-row th:hover { color:#0f1830; }
-    [data-theme="plains"] tr.row.up { background: rgba(26,157,106,.26); }
-    [data-theme="plains"] tr.row.down { background: rgba(212,69,63,.22); }
-    [data-theme="plains"] tr.row.up:hover { background: rgba(26,157,106,.38); }
-    [data-theme="plains"] tr.row.down:hover { background: rgba(212,69,63,.34); }
-    [data-theme="plains"] .pos, [data-theme="plains"] .binder-total .bt-delta.pos, [data-theme="plains"] .bt-mover-row .delta.pos, [data-theme="plains"] .deck-open-delta.pos, [data-theme="plains"] .wl-result .price { color:#6c8c52; }
-    [data-theme="plains"] .neg, [data-theme="plains"] .binder-total .bt-delta.neg, [data-theme="plains"] .bt-mover-row .delta.neg, [data-theme="plains"] .deck-open-delta.neg { color:#d4453f; }
+    /* Up/down row tints in Plains: warm wheat & clay instead of green/red so
+       the table reads as part of the sunlit theme. */
+    [data-theme="plains"] tr.row.up { background: rgba(168,134,44,.18); }
+    [data-theme="plains"] tr.row.down { background: rgba(140,72,40,.14); }
+    [data-theme="plains"] tr.row.up:hover { background: rgba(168,134,44,.28); }
+    [data-theme="plains"] tr.row.down:hover { background: rgba(140,72,40,.22); }
+    [data-theme="plains"] .pos, [data-theme="plains"] .binder-total .bt-delta.pos, [data-theme="plains"] .bt-mover-row .delta.pos, [data-theme="plains"] .deck-open-delta.pos, [data-theme="plains"] .wl-result .price { color:#a8862c; }
+    [data-theme="plains"] .neg, [data-theme="plains"] .binder-total .bt-delta.neg, [data-theme="plains"] .bt-mover-row .delta.neg, [data-theme="plains"] .deck-open-delta.neg { color:#8c4828; }
     [data-theme="plains"] .chip { background:#e6e8ee; color:#27324a; }
     [data-theme="plains"] .chip.feed-tcg { background:#b3261e; color:#fff; }
     [data-theme="plains"] .chip.feed-ck  { background:#1f4f9c; color:#fff; }
@@ -762,7 +764,11 @@
     [data-theme="plains"] .stat-card { background:#ffffff; border-color:#e0d6bc;}
     [data-theme="plains"] .stat-label { color:#8a7e5c;}
     [data-theme="plains"] .stat-value { color:#2a2418;}
+    [data-theme="plains"] .stat-value.pos { color:#a8862c;}
+    [data-theme="plains"] .stat-value.neg { color:#8c4828;}
     [data-theme="plains"] .stat-sub { color:#8a7e5c;}
+    [data-theme="plains"] .stat-sub.pos { color:#a8862c;}
+    [data-theme="plains"] .stat-sub.neg { color:#8c4828;}
 
     /* ================================================================== */
     /* COLLECTOR THEME                                                     */

@@ -2269,6 +2269,19 @@ const _NO_CATALYST_PATTERNS = [
   // Filler-intro pattern often used when the model is about to admit it
   // didn't find anything specific
   'i found no', 'we found no',
+  // "Cannot find" admissions - caught Ornithopter
+  'cannot find a specific', 'cannot find any', 'cannot find a clear',
+  'i cannot find', 'we cannot find',
+  // "Does not mention" / "the available content does not" - caught Befoul
+  'does not mention', 'does not specifically mention',
+  'the available content', 'available content does not',
+  // Cryptocurrency confusion - the model searched for "MAGIC" and got the
+  // crypto token instead of MTG. Caught the Treasure token entry twice.
+  'cryptocurrency', 'magic token',
+  'searches returned results about', 'search results focused on',
+  'my searches returned', 'searches returned results',
+  // Self-correcting clarifications that signal "wrong search results"
+  'let me clarify',
 ];
 function _synopsisIsUseful(text) {
   if (!text) return false;

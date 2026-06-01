@@ -242,6 +242,14 @@
     .stat-grid .cell .v { font-size:1.05rem; font-weight:600; margin-top:.2rem;}
     footer { color:#aaa; font-size:.78rem; padding: 1.5rem; text-align:center; border-top:1px solid #2a2a2a; margin-top:2rem;}
     .hidden { display:none !important; }
+    /* Tell the browser it doesn't have to lay out hidden views or
+       below-the-fold sections until they're needed. Cuts first paint cost
+       on a page that has multiple full views in the DOM. */
+    main > section { content-visibility: auto; contain-intrinsic-size: 1px 800px;}
+    /* Fade the page in slightly so the first paint feels intentional rather
+       than a flicker as themes/styles settle. */
+    body { opacity: 0; transition: opacity .18s ease; }
+    body.ready { opacity: 1; }
     .pagination { display:none; justify-content:center; align-items:center; gap:1rem; margin:1.5rem 0;}
     .pagination.show { display:flex;}
     .pagination button { color:#dbe9ff; border:1px solid #3a4150; border-radius:999px; padding:.5rem 1.1rem; cursor:pointer; font-size:.9rem; font-weight:600; background:linear-gradient(180deg,#262a32 0%,#16181d 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,.10), 0 1px 2px rgba(0,0,0,.45); transition: filter .15s ease, transform .08s ease;}
@@ -621,6 +629,46 @@
     [data-theme="forests"] .meta-panel { background:#16241c; border-color:#2a3d2e;}
     [data-theme="forests"] .meta-panel-label { color:#9aa890;}
     [data-theme="forests"] .meta-panel-body { color:#e0e8d8;}
+    /* Local events: saved-LGS cards plus an empty-state CTA tile. */
+    .store-card { display:flex; flex-direction:column; gap:.25rem; padding:.65rem .8rem; border-radius:6px; background:#141414; border:1px solid #2a2a2a; cursor:pointer; transition: border-color .15s ease, background .15s ease; position:relative;}
+    .store-card:hover { border-color:#3a4f6a; background:#1a1a1a;}
+    .store-name { font-size:.92rem; font-weight:600; color:#e6edf5; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+    .store-notes { font-size:.75rem; color:#7d8590; line-height:1.3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+    .store-action { font-size:.75rem; color:#9ecbff; margin-top:.15rem;}
+    .store-edit-btn { position:absolute; top:.3rem; right:.3rem; background:transparent; color:#7d8590; border:none; cursor:pointer; padding:.15rem .35rem; border-radius:3px; font-size:.85rem; line-height:1; display:none;}
+    .store-card:hover .store-edit-btn { display:block;}
+    .store-edit-btn:hover { color:#e6edf5; background:rgba(255,255,255,.06);}
+    .store-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:1rem; border:1px dashed #2a2a2a; border-radius:6px; text-align:center; color:#7d8590; font-size:.85rem; line-height:1.4;}
+    [data-theme="plains"] .store-card { background:#ffffff; border-color:#e0d6bc;}
+    [data-theme="plains"] .store-card:hover { background:#faf5ea; border-color:#c9a14a;}
+    [data-theme="plains"] .store-name { color:#2a2418;}
+    [data-theme="plains"] .store-notes { color:#8a7e5c;}
+    [data-theme="plains"] .store-action { color:#c9a14a;}
+    [data-theme="plains"] .store-empty { border-color:#d4c89f; color:#8a7e5c;}
+    [data-theme="islands"] .store-card { background:#102438; border-color:#1d3a5c;}
+    [data-theme="islands"] .store-card:hover { background:#163048; border-color:#2a5278;}
+    [data-theme="islands"] .store-name { color:#d4e1f0;}
+    [data-theme="islands"] .store-notes { color:#7a96b8;}
+    [data-theme="islands"] .store-action { color:#6ab4e0;}
+    [data-theme="islands"] .store-empty { border-color:#1d3a5c; color:#7a96b8;}
+    [data-theme="swamps"] .store-card { background:#15151a; border-color:#252530;}
+    [data-theme="swamps"] .store-card:hover { background:#1a1a22; border-color:#3a3a45;}
+    [data-theme="swamps"] .store-name { color:#d6d2cc;}
+    [data-theme="swamps"] .store-notes { color:#7a7882;}
+    [data-theme="swamps"] .store-action { color:#b8b4ae;}
+    [data-theme="swamps"] .store-empty { border-color:#252530; color:#7a7882;}
+    [data-theme="mountains"] .store-card { background:#261010; border-color:#4a2424;}
+    [data-theme="mountains"] .store-card:hover { background:#321414; border-color:#6b3636;}
+    [data-theme="mountains"] .store-name { color:#e8d8c8;}
+    [data-theme="mountains"] .store-notes { color:#a8857a;}
+    [data-theme="mountains"] .store-action { color:#b03434;}
+    [data-theme="mountains"] .store-empty { border-color:#4a2424; color:#a8857a;}
+    [data-theme="forests"] .store-card { background:#16241c; border-color:#2a3d2e;}
+    [data-theme="forests"] .store-card:hover { background:#1c3024; border-color:#3a5240;}
+    [data-theme="forests"] .store-name { color:#e0e8d8;}
+    [data-theme="forests"] .store-notes { color:#9aa890;}
+    [data-theme="forests"] .store-action { color:#8cb86a;}
+    [data-theme="forests"] .store-empty { border-color:#2a3d2e; color:#9aa890;}
     /* Public binder: cards I already own get a soft green badge + corner
        glow so I can scan for trade targets visually. Theme-tinted. */
     .deck-card.owned { box-shadow: inset 0 0 0 2px rgba(140,184,106,.55);}
@@ -1509,6 +1557,16 @@
       <h3 style="margin:0 0 .5rem; font-size:1.05rem;">Today&rsquo;s stories</h3>
       <div id="stories" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:.6rem;"></div>
     </div>
+    <div id="events-wrap" style="margin:0 0 1rem;">
+      <div style="display:flex; align-items:baseline; justify-content:space-between; gap:.5rem; flex-wrap:wrap; margin:0 0 .5rem;">
+        <h3 style="margin:0; font-size:1.05rem;">Local events</h3>
+        <div style="display:flex; gap:.4rem;">
+          <button class="wl-btn" onclick="findLocalEvents()" title="Open the Wizards store locator pre-filled with your zip code">Find more</button>
+          <button class="wl-btn" onclick="openStoreEditor(null)" title="Save a local game store you visit regularly">+ Add store</button>
+        </div>
+      </div>
+      <div id="events-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:.6rem;"></div>
+    </div>
     <div class="table-wrap">
     <table id="alerts">
       <thead>
@@ -1888,6 +1946,24 @@
       <button onclick="importDeckTextClean()" style="margin-right:auto" title="Strip counts/headers and dedupe">Clean list</button>
       <button onclick="closeDeckEditor()">Cancel</button>
       <button class="primary" onclick="saveDeckFromEditor()">Save deck</button>
+    </div>
+  </div>
+</div>
+
+<div id="store-modal" class="modal" onclick="if(event.target.id==='store-modal')closeStoreEditor()">
+  <div class="panel" style="width:min(480px, 94vw);">
+    <h3 id="store-modal-title">Add a local game store</h3>
+    <div class="help" style="margin-bottom:.75rem;">Saved on this device and synced to your account. Use the store's own events page URL (its website, Facebook events, etc.) so the link drops you on a useful page.</div>
+    <label style="display:block; font-size:.8rem; color:#888; margin-bottom:.2rem;">Store name</label>
+    <input id="store-name" type="text" maxlength="80" placeholder="e.g. Cool Cards &amp; Games" style="width:100%; box-sizing:border-box; background:#000; color:#fff; border:1px solid #2a2a2a; border-radius:6px; padding:.5rem .7rem; margin-bottom:.6rem;" />
+    <label style="display:block; font-size:.8rem; color:#888; margin-bottom:.2rem;">Events page URL</label>
+    <input id="store-url" type="url" maxlength="500" placeholder="https://..." style="width:100%; box-sizing:border-box; background:#000; color:#fff; border:1px solid #2a2a2a; border-radius:6px; padding:.5rem .7rem; margin-bottom:.6rem;" />
+    <label style="display:block; font-size:.8rem; color:#888; margin-bottom:.2rem;">Notes (optional)</label>
+    <input id="store-notes" type="text" maxlength="120" placeholder="e.g. Friday Modern · Saturday Commander" style="width:100%; box-sizing:border-box; background:#000; color:#fff; border:1px solid #2a2a2a; border-radius:6px; padding:.5rem .7rem; margin-bottom:.75rem;" />
+    <div class="actions">
+      <button id="store-delete" onclick="deleteStoreFromEditor()" style="margin-right:auto; display:none;">Delete</button>
+      <button onclick="closeStoreEditor()">Cancel</button>
+      <button class="primary" onclick="saveStoreFromEditor()">Save</button>
     </div>
   </div>
 </div>
@@ -2377,6 +2453,106 @@ function renderStatsStrip(rows) {
   }
   elUp.textContent   = up.toLocaleString();
   elDown.textContent = down.toLocaleString();
+}
+
+// ---- Local events: saved game stores + WPN locator link ----------------
+// Stored as a JSON array in localStorage. Each entry is
+// { id, name, url, notes }. Synced via the standard sync engine like other
+// per-user state. The user's zip code (for the Wizards locator) is stored
+// separately so it survives even if all stores are removed.
+const STORES_KEY = 'mtg-stores-v1';
+const ZIP_KEY    = 'mtg-stores-zip-v1';
+let _editingStoreId = null;
+function loadStores() {
+  try { return JSON.parse(localStorage.getItem(STORES_KEY) || '[]'); }
+  catch (e) { return []; }
+}
+function saveStores(arr) {
+  try { localStorage.setItem(STORES_KEY, JSON.stringify(arr || [])); }
+  catch (e) {}
+  markLocalChanged();
+}
+function _newStoreId() { return 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); }
+function _isValidUrl(s) {
+  if (!s) return false;
+  try { const u = new URL(s); return u.protocol === 'http:' || u.protocol === 'https:'; }
+  catch (e) { return false; }
+}
+function renderLocalEvents() {
+  const host = document.getElementById('events-grid');
+  if (!host) return;
+  const stores = loadStores();
+  if (!stores.length) {
+    host.innerHTML = `<div class="store-empty">No stores saved yet.<br><span style="font-size:.78rem;">Add the LGS you play at most so its events page is one click away, or use "Find more" to discover stores near you.</span></div>`;
+    return;
+  }
+  host.innerHTML = stores.map(s => {
+    const safeUrl = escapeHtml(s.url || '');
+    return `<div class="store-card" onclick="openStoreUrl('${s.id}')">
+      <button class="store-edit-btn" onclick="event.stopPropagation();openStoreEditor('${s.id}')" title="Edit" aria-label="Edit store">&#9881;</button>
+      <div class="store-name">${escapeHtml(s.name || 'Untitled')}</div>
+      ${s.notes ? `<div class="store-notes">${escapeHtml(s.notes)}</div>` : '<div class="store-notes" style="opacity:.6;">No notes</div>'}
+      <div class="store-action">Open events &rarr;</div>
+    </div>`;
+  }).join('');
+}
+function openStoreUrl(id) {
+  const s = loadStores().find(x => x.id === id);
+  if (!s || !_isValidUrl(s.url)) { flashMsg('No valid events URL on that store.'); return; }
+  window.open(s.url, '_blank', 'noopener');
+}
+function openStoreEditor(id) {
+  _editingStoreId = id || null;
+  const s = id ? loadStores().find(x => x.id === id) : null;
+  document.getElementById('store-modal-title').textContent = s ? 'Edit store' : 'Add a local game store';
+  document.getElementById('store-name').value  = s ? (s.name  || '') : '';
+  document.getElementById('store-url').value   = s ? (s.url   || '') : '';
+  document.getElementById('store-notes').value = s ? (s.notes || '') : '';
+  document.getElementById('store-delete').style.display = s ? '' : 'none';
+  document.getElementById('store-modal').classList.add('show');
+}
+function closeStoreEditor() {
+  document.getElementById('store-modal').classList.remove('show');
+  _editingStoreId = null;
+}
+function saveStoreFromEditor() {
+  const name  = (document.getElementById('store-name').value  || '').trim();
+  const url   = (document.getElementById('store-url').value   || '').trim();
+  const notes = (document.getElementById('store-notes').value || '').trim();
+  if (!name) { flashMsg('Give the store a name.'); return; }
+  if (!_isValidUrl(url)) { flashMsg('Enter a full URL (https://…)'); return; }
+  const stores = loadStores();
+  if (_editingStoreId) {
+    const i = stores.findIndex(s => s.id === _editingStoreId);
+    if (i >= 0) { stores[i] = Object.assign({}, stores[i], { name, url, notes }); }
+  } else {
+    stores.push({ id: _newStoreId(), name, url, notes });
+  }
+  saveStores(stores);
+  renderLocalEvents();
+  closeStoreEditor();
+  flashMsg(_editingStoreId ? 'Store updated.' : 'Store added.');
+}
+function deleteStoreFromEditor() {
+  if (!_editingStoreId) return;
+  if (!confirm('Remove this store from your list?')) return;
+  saveStores(loadStores().filter(s => s.id !== _editingStoreId));
+  renderLocalEvents();
+  closeStoreEditor();
+}
+function findLocalEvents() {
+  let zip = (localStorage.getItem(ZIP_KEY) || '').trim();
+  zip = prompt('Find events near your zip / postal code:', zip);
+  if (zip === null) return;   // user cancelled
+  zip = zip.trim();
+  if (!zip) {
+    // empty -> just open the bare locator
+    window.open('https://locator.wizards.com/', '_blank', 'noopener');
+    return;
+  }
+  localStorage.setItem(ZIP_KEY, zip);
+  const url = 'https://locator.wizards.com/?address=' + encodeURIComponent(zip);
+  window.open(url, '_blank', 'noopener');
 }
 
 // ---- Global search (top of movers page) ---------------------------------
@@ -4982,7 +5158,7 @@ function _fallbackCopy(text, done) {
 // Note: 'mtg-movers-trade-contact-v1' is also the value of TRADE_CONTACT_KEY
 // (defined later when the trade module loads). Hardcoded here to avoid a
 // temporal-dead-zone issue (BACKUP_KEYS is parsed before TRADE_CONTACT_KEY).
-const BACKUP_KEYS = [WL_KEY, WANT_KEY, DECKS_KEY, BINDER_COLOR_KEY, BINDER_PREFS_KEY, 'mtg-movers-trade-contact-v1', 'mtg-theme'];
+const BACKUP_KEYS = [WL_KEY, WANT_KEY, DECKS_KEY, BINDER_COLOR_KEY, BINDER_PREFS_KEY, 'mtg-movers-trade-contact-v1', 'mtg-stores-v1', 'mtg-stores-zip-v1', 'mtg-theme'];
 function exportBackup() {
   const data = { app: 'mtg-movers', backupVersion: 1, exportedAt: new Date().toISOString(),
                  localStorage: {}, images: {} };
@@ -5049,7 +5225,7 @@ const FIREBASE_CONFIG = {
 let _fbAuth = null, _fbDb = null;
 let _syncUid = null, _syncUnsub = null, _syncPushTimer = null, _syncSuppress = false;
 let _syncLocalAt = Number(localStorage.getItem('mtg-sync-at') || 0);
-const SYNC_MAP = { wl: WL_KEY, want: WANT_KEY, decks: DECKS_KEY, binderColors: BINDER_COLOR_KEY, binderPrefs: BINDER_PREFS_KEY, tradeContact: 'mtg-movers-trade-contact-v1' };
+const SYNC_MAP = { wl: WL_KEY, want: WANT_KEY, decks: DECKS_KEY, binderColors: BINDER_COLOR_KEY, binderPrefs: BINDER_PREFS_KEY, tradeContact: 'mtg-movers-trade-contact-v1', stores: 'mtg-stores-v1', storesZip: 'mtg-stores-zip-v1' };
 
 function _collectSyncBundle() {
   const b = {};
@@ -5073,6 +5249,7 @@ function _refreshAfterSync() {
   try { if (typeof bumpBinderCompute === 'function') bumpBinderCompute(); } catch (e) {}
   try { updateWatchlistCount(); } catch (e) {}
   try { renderLeftTicker(); } catch (e) {}
+  try { renderLocalEvents(); } catch (e) {}    // saved stores may have arrived from sync
   try { applyBinderColors(loadBinderColors()); } catch (e) {}
   // Re-pull trade contact in case a sync brought a fresh value.
   try {
@@ -5216,7 +5393,7 @@ function _clearLocalUserData() {
   // Wipe THIS device's personal collection data so it can't carry over between
   // accounts on a shared device. Cloud data is untouched and re-pulls on sign-in.
   try {
-    [WL_KEY, WANT_KEY, DECKS_KEY, BINDER_COLOR_KEY, BINDER_PREFS_KEY, 'mtg-movers-trade-contact-v1', 'mtg-sync-at']
+    [WL_KEY, WANT_KEY, DECKS_KEY, BINDER_COLOR_KEY, BINDER_PREFS_KEY, 'mtg-movers-trade-contact-v1', 'mtg-stores-v1', 'mtg-stores-zip-v1', 'mtg-sync-at']
       .forEach(k => localStorage.removeItem(k));
   } catch (e) {}
   try { _binderMemCache.clear(); _binderMemHist.clear(); _customImages.clear(); } catch (e) {}
@@ -6648,9 +6825,16 @@ function flashMsg(text) {
 })();
 
 updateWatchlistCount();
-renderRightTicker();
-renderLeftTicker();
-renderFallingCards();
+// Defer the visual flourishes (tickers + falling-card animation) until after
+// the page has painted the actual movers list and stats. They're nice-to-have
+// chrome - the page is useful without them - and they each do DOM work plus
+// kick off CSS animations that compete with first paint.
+const _deferToIdle = (fn) => (window.requestIdleCallback
+  ? requestIdleCallback(fn, { timeout: 800 })
+  : setTimeout(fn, 50));
+_deferToIdle(() => { try { renderRightTicker(); } catch (e) {} });
+_deferToIdle(() => { try { renderLeftTicker();  } catch (e) {} });
+_deferToIdle(() => { try { renderFallingCards();} catch (e) {} });
 initBinderCustomize();
 initBinderPrefs();
 // Begin loading the IndexedDB-backed binder cache into memory immediately.
@@ -6669,7 +6853,13 @@ document.getElementById('wl-search').addEventListener('input', wlSearchInput);
 document.getElementById('deck-search').addEventListener('input', deckSearchInput);
 window.addEventListener('hashchange', route);
 renderList();
+renderLocalEvents();
 route();
+// Mark the body ready as soon as the initial render commits. The CSS
+// `body { opacity: 0 }` rule keeps the page hidden until then; flipping
+// `.ready` triggers a quick fade-in so the first paint feels intentional
+// instead of a flicker as fonts / themes / scripts settle.
+requestAnimationFrame(() => document.body.classList.add('ready'));
 // Warm the per-card history in the background after first paint so opening a
 // card detail is instant. The alert table itself renders from RAW and doesn't
 // need this, so it never blocks initial load.

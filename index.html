@@ -583,6 +583,24 @@
     .binder-customize .reset { background:transparent; color:#9ecbff; border:1px solid transparent; border-radius:8px; cursor:pointer; font-size:.85rem; font-weight:600; margin-left:auto; padding:.4rem .7rem; transition: background .15s ease, border-color .15s ease; }
     .binder-customize .reset:hover { background:rgba(158,203,255,.10); border-color:rgba(158,203,255,.35); }
     .binder-customize .reset:focus-visible { outline:2px solid #5b8cff; outline-offset:2px; }
+    .fmt-tab { padding:.35rem .7rem; border:1px solid #2a2a2a; background:transparent; color:#bbb; border-radius:999px; cursor:pointer; font-size:.78rem; font-weight:500; transition:all .12s ease;}
+    .fmt-tab:hover { color:#fff; border-color:#3a4f6a;}
+    .fmt-tab.active { background:#3a4f6a; color:#fff; border-color:#3a4f6a;}
+    [data-theme="plains"] .fmt-tab { color:#8a7e5c; border-color:#d4c89f;}
+    [data-theme="plains"] .fmt-tab:hover { color:#2a2418; border-color:#c9a14a;}
+    [data-theme="plains"] .fmt-tab.active { background:#c9a14a; color:#fff; border-color:#9a7a2c;}
+    [data-theme="islands"] .fmt-tab { color:#7a96b8; border-color:#1d3a5c;}
+    [data-theme="islands"] .fmt-tab:hover { color:#d4e1f0; border-color:#2a5278;}
+    [data-theme="islands"] .fmt-tab.active { background:#6ab4e0; color:#0a1525; border-color:#6ab4e0;}
+    [data-theme="swamps"] .fmt-tab { color:#7a7882; border-color:#252530;}
+    [data-theme="swamps"] .fmt-tab:hover { color:#d6d2cc; border-color:#3a3a45;}
+    [data-theme="swamps"] .fmt-tab.active { background:#3a3a45; color:#d6d2cc; border-color:#3a3a45;}
+    [data-theme="mountains"] .fmt-tab { color:#a8857a; border-color:#4a2424;}
+    [data-theme="mountains"] .fmt-tab:hover { color:#e8d8c8; border-color:#6b3636;}
+    [data-theme="mountains"] .fmt-tab.active { background:#b03434; color:#fff; border-color:#b03434;}
+    [data-theme="forests"] .fmt-tab { color:#9aa890; border-color:#2a3d2e;}
+    [data-theme="forests"] .fmt-tab:hover { color:#e0e8d8; border-color:#3a5240;}
+    [data-theme="forests"] .fmt-tab.active { background:#8cb86a; color:#0e1812; border-color:#8cb86a;}
     .global-search input { transition: border-color .12s ease;}
     .global-search input:focus { outline:none; border-color:#5b8cff;}
     [data-theme="plains"] .global-search input { background:#ffffff; color:#2a2418; border-color:#d4c89f;}
@@ -629,6 +647,60 @@
     [data-theme="forests"] .meta-panel { background:#16241c; border-color:#2a3d2e;}
     [data-theme="forests"] .meta-panel-label { color:#9aa890;}
     [data-theme="forests"] .meta-panel-body { color:#e0e8d8;}
+    /* Card hover preview - small floating panel that follows the cursor. */
+    #card-hover { position:fixed; display:none; z-index:100; pointer-events:none;
+      background:#0a0a0a; border:1px solid #2a2a2a; border-radius:8px;
+      padding:.4rem; box-shadow:0 8px 24px rgba(0,0,0,.55);
+      width:200px; transition:opacity .12s ease; opacity:0;}
+    #card-hover.show { display:block; opacity:1;}
+    #card-hover img { display:block; width:100%; aspect-ratio:5/7; border-radius:5px; background:#000; object-fit:cover;}
+    #card-hover .hp-price { margin-top:.35rem; padding:0 .25rem; font-size:.8rem; color:#9ecbff; font-weight:600;}
+    [data-theme="plains"] #card-hover { background:#ffffff; border-color:#d4c89f; box-shadow:0 8px 24px rgba(106,86,40,.25);}
+    [data-theme="plains"] #card-hover .hp-price { color:#c9a14a;}
+    [data-theme="islands"] #card-hover { background:#102438; border-color:#1d3a5c;}
+    [data-theme="islands"] #card-hover .hp-price { color:#6ab4e0;}
+    [data-theme="swamps"] #card-hover { background:#15151a; border-color:#252530;}
+    [data-theme="swamps"] #card-hover .hp-price { color:#b8b4ae;}
+    [data-theme="mountains"] #card-hover { background:#261010; border-color:#4a2424;}
+    [data-theme="mountains"] #card-hover .hp-price { color:#b03434;}
+    [data-theme="forests"] #card-hover { background:#16241c; border-color:#2a3d2e;}
+    [data-theme="forests"] #card-hover .hp-price { color:#8cb86a;}
+    /* Daily card spotlight - hero card above Today's stories. */
+    .spotlight-card { display:grid; grid-template-columns:140px 1fr; gap:1rem; background:#141414; border:1px solid #2a2a2a; border-radius:8px; padding:1rem; cursor:pointer; transition:border-color .15s ease, background .15s ease; align-items:center;}
+    .spotlight-card:hover { border-color:#3a4f6a; background:#1a1a1a;}
+    .spotlight-art { aspect-ratio:5/7; border-radius:6px; overflow:hidden; background:#000; box-shadow:0 2px 8px rgba(0,0,0,.5);}
+    .spotlight-art img { width:100%; height:100%; object-fit:cover; display:block;}
+    .spotlight-body { min-width:0; display:flex; flex-direction:column; gap:.35rem;}
+    .spotlight-eyebrow { font-size:.7rem; color:#888; text-transform:uppercase; letter-spacing:.1em; font-weight:600;}
+    .spotlight-name { font-size:1.4rem; font-weight:600; color:#e6edf5; line-height:1.15;}
+    .spotlight-pct { font-size:1.1rem; font-weight:600;}
+    .spotlight-synopsis { font-size:.92rem; color:#bbb; line-height:1.5;}
+    @media (max-width: 540px) { .spotlight-card { grid-template-columns:100px 1fr; padding:.75rem;} .spotlight-name { font-size:1.15rem;} }
+    [data-theme="plains"] .spotlight-card { background:#ffffff; border-color:#e0d6bc;}
+    [data-theme="plains"] .spotlight-card:hover { background:#faf5ea; border-color:#c9a14a;}
+    [data-theme="plains"] .spotlight-name { color:#2a2418; font-family:'Cinzel',Georgia,serif;}
+    [data-theme="plains"] .spotlight-synopsis { color:#5a4a2a;}
+    [data-theme="plains"] .spotlight-eyebrow { color:#8a7e5c; font-family:'Cinzel',Georgia,serif;}
+    [data-theme="islands"] .spotlight-card { background:#102438; border-color:#1d3a5c;}
+    [data-theme="islands"] .spotlight-card:hover { background:#163048; border-color:#2a5278;}
+    [data-theme="islands"] .spotlight-name { color:#d4e1f0; font-family:'Cinzel',Georgia,serif;}
+    [data-theme="islands"] .spotlight-synopsis { color:#9ab4d4;}
+    [data-theme="islands"] .spotlight-eyebrow { color:#7a96b8;}
+    [data-theme="swamps"] .spotlight-card { background:#15151a; border-color:#252530;}
+    [data-theme="swamps"] .spotlight-card:hover { background:#1a1a22; border-color:#3a3a45;}
+    [data-theme="swamps"] .spotlight-name { color:#d6d2cc; font-family:'Cinzel Decorative',Georgia,serif;}
+    [data-theme="swamps"] .spotlight-synopsis { color:#a6a4a0;}
+    [data-theme="swamps"] .spotlight-eyebrow { color:#7a7882;}
+    [data-theme="mountains"] .spotlight-card { background:#261010; border-color:#4a2424;}
+    [data-theme="mountains"] .spotlight-card:hover { background:#321414; border-color:#6b3636;}
+    [data-theme="mountains"] .spotlight-name { color:#e8d8c8; font-family:'Bitter',Georgia,serif;}
+    [data-theme="mountains"] .spotlight-synopsis { color:#c8aa9a;}
+    [data-theme="mountains"] .spotlight-eyebrow { color:#a8857a; font-family:'Bitter',Georgia,serif;}
+    [data-theme="forests"] .spotlight-card { background:#16241c; border-color:#2a3d2e;}
+    [data-theme="forests"] .spotlight-card:hover { background:#1c3024; border-color:#3a5240;}
+    [data-theme="forests"] .spotlight-name { color:#e0e8d8; font-family:'Cormorant Garamond',Georgia,serif;}
+    [data-theme="forests"] .spotlight-synopsis { color:#b0bca0;}
+    [data-theme="forests"] .spotlight-eyebrow { color:#9aa890;}
     /* Local events: saved-LGS cards plus an empty-state CTA tile. */
     .store-card { display:flex; flex-direction:column; gap:.25rem; padding:.65rem .8rem; border-radius:6px; background:#141414; border:1px solid #2a2a2a; cursor:pointer; transition: border-color .15s ease, background .15s ease; position:relative;}
     .store-card:hover { border-color:#3a4f6a; background:#1a1a1a;}
@@ -1525,6 +1597,16 @@
       </div>
       <span class="meta tb-showing">Showing <span id="count">-</span></span>
     </div>
+    <div id="format-tabs" style="display:flex; flex-wrap:wrap; gap:.3rem; margin:0 0 .8rem;">
+      <button class="fmt-tab active" data-fmt="" onclick="setFormatFilter('')">All</button>
+      <button class="fmt-tab" data-fmt="std" onclick="setFormatFilter('std')">Standard</button>
+      <button class="fmt-tab" data-fmt="pio" onclick="setFormatFilter('pio')">Pioneer</button>
+      <button class="fmt-tab" data-fmt="mod" onclick="setFormatFilter('mod')">Modern</button>
+      <button class="fmt-tab" data-fmt="lgc" onclick="setFormatFilter('lgc')">Legacy</button>
+      <button class="fmt-tab" data-fmt="vin" onclick="setFormatFilter('vin')">Vintage</button>
+      <button class="fmt-tab" data-fmt="cmd" onclick="setFormatFilter('cmd')">Commander</button>
+      <button class="fmt-tab" data-fmt="pau" onclick="setFormatFilter('pau')">Pauper</button>
+    </div>
     <div class="global-search" style="display:flex; align-items:center; gap:.5rem; margin:0 0 1rem;">
       <input id="global-search" type="search" placeholder="Search by card name or set…" oninput="onGlobalSearch(this.value)" style="flex:1; min-width:0; background:#141414; color:#fff; border:1px solid #2a2a2a; border-radius:6px; padding:.5rem .75rem; font-size:.95rem; box-sizing:border-box;" autocomplete="off" />
       <button type="button" id="surprise-btn" class="wl-btn" onclick="surpriseMeJump()" title="Jump to a random spiking card with a real story" style="flex-shrink:0;">
@@ -1552,6 +1634,9 @@
         <div class="stat-value neg" id="stat-down">0</div>
         <div class="stat-sub">&nbsp;</div>
       </div>
+    </div>
+    <div id="spotlight-wrap" style="display:none; margin:0 0 1rem;">
+      <div id="spotlight" class="spotlight-card"></div>
     </div>
     <div id="stories-wrap" style="display:none; margin:0 0 1rem;">
       <h3 style="margin:0 0 .5rem; font-size:1.05rem;">Today&rsquo;s stories</h3>
@@ -1646,6 +1731,11 @@
           <p id="d-spike-synopsis" style="display:none; margin:0 0 .6rem; line-height:1.45;"></p>
           <p id="d-spike-disclaimer" class="meta" style="color:#aaa; font-size:.78rem; margin:0 0 .6rem;"></p>
           <div id="d-spike-links" style="display:flex; gap:.5rem; flex-wrap:wrap;"></div>
+        </div>
+        <div class="panel" id="d-prints-panel" style="display:none;">
+          <h3 style="margin:0 0 .5rem;">All printings</h3>
+          <div class="help" style="margin-bottom:.5rem;">Click any printing to jump to its detail page.</div>
+          <div id="d-prints" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(110px, 1fr)); gap:.5rem;"></div>
         </div>
       </div>
     </div>
@@ -1888,7 +1978,7 @@
       <button type="button" id="wl-tab-have" class="wl-tab active" onclick="setWlTab('have')">Have</button>
       <button type="button" id="wl-tab-want" class="wl-tab" onclick="setWlTab('want')">Want</button>
     </div>
-    <div class="help" id="wl-help-have">Cards you OWN. Search to find a specific printing, or type / paste card names directly into the list below. To bulk-import a deck list (e.g. <code>1 Aetherize</code> / <code>4 Lightning Bolt</code>), paste it below and click <b>Import deck list</b> - leading counts and section headers get stripped automatically. Saved in your browser and synced to your account.</div>
+    <div class="help" id="wl-help-have">Cards you OWN. Search to find a specific printing, or type / paste card names directly into the list below. To bulk-import a deck list (e.g. <code>1 Aetherize</code> / <code>4 Lightning Bolt</code>), paste it below and click <b>Import deck list</b> - leading counts and section headers get stripped automatically. Saved in your browser and synced to your account.<br><b>Price targets:</b> add <code>@&lt;5</code> after a card to flag when it drops below $5 (buy target), or <code>@&gt;15</code> for above $15 (sell target). e.g. <code>Lightning Bolt @&lt;3 @&gt;8</code>. Targets show as 🎯 badges in the movers table.</div>
     <div class="help" id="wl-help-want" style="display:none;">Cards you WANT. Used to advertise what you're looking for when you share your binder, and to let other users see they have something you want when proposing trades. Same format as the Have list.</div>
     <div class="wl-search">
       <input id="wl-search" type="search" placeholder="Search printings (e.g. 'Force of Will')..." autocomplete="off" />
@@ -1897,7 +1987,8 @@
     <textarea id="wl-text" placeholder="Force of Will&#10;Force of Will (STA-12)&#10;Boseiju"></textarea>
     <textarea id="wl-text-want" placeholder="Cards you're looking for..." style="display:none;"></textarea>
     <div class="actions">
-      <button onclick="importDeckList()" style="margin-right:auto" title="Strip counts and dedupe entries above">Import deck list</button>
+      <button onclick="importDeckList()" title="Strip counts and dedupe entries above">Import deck list</button>
+      <label class="wl-btn" style="cursor:pointer; margin-right:auto;" title="Import a CSV from Deckbox / Manabox / Moxfield (auto-detects columns)">Import CSV<input type="file" accept=".csv,text/csv" style="display:none;" onchange="importCsvFile(this)" /></label>
       <button onclick="closeWatchlist()">Cancel</button>
       <button class="primary" onclick="saveWatchlist()">Save</button>
     </div>
@@ -2040,6 +2131,8 @@
     </div>
   </div>
 </div>
+
+<div id="card-hover" aria-hidden="true"><img id="card-hover-img" alt="" /><div class="hp-price" id="card-hover-price"></div></div>
 
 <footer>
   <div class="footer-meta">Snapshot: <b>2026-06-01</b> &middot; 2500 movers &middot; <b>USD</b> for TCGPlayer/CardKingdom &middot; <b>EUR</b> for Cardmarket</div>
@@ -2367,6 +2460,122 @@ function _synopsisIsUseful(text) {
   }
   return true;
 }
+// ---- Card hover preview --------------------------------------------------
+// Show a small floating panel with the card image + current price when the
+// user hovers ANY element that has `data-card-id="<scryfall_id>"`. Markup
+// elsewhere just needs to add that attribute; the global listener does the
+// rest. Disabled on touch devices (no hover).
+let _hoverTimer = null;
+let _hoverEl = null;
+const _hasFineHover = !window.matchMedia || window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+function _showCardHover(id, x, y) {
+  const card = HISTORY[id];
+  if (!card) return;
+  const panel = document.getElementById('card-hover');
+  const img   = document.getElementById('card-hover-img');
+  const pr    = document.getElementById('card-hover-price');
+  if (!panel || !img) return;
+  img.src = card.image_uri || '';
+  // Try to surface a USD price from any feed in the history.
+  let price = null;
+  if (card.history) {
+    for (const pt of Object.keys(card.history)) {
+      for (const fin of Object.keys(card.history[pt])) {
+        const s = card.history[pt][fin] || [];
+        if (s.length) { const v = s[s.length - 1][1]; if (v != null) { price = v; break; } }
+      }
+      if (price != null) break;
+    }
+  }
+  if (pr) pr.textContent = (price != null) ? '$' + Number(price).toFixed(2) : '';
+  // Position so it doesn't fall off-screen.
+  const w = panel.offsetWidth || 200, h = panel.offsetHeight || 280;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let left = x + 18, top = y + 18;
+  if (left + w > vw - 8) left = x - w - 18;
+  if (top + h > vh - 8)  top  = vh - h - 8;
+  if (left < 8) left = 8;
+  if (top  < 8) top  = 8;
+  panel.style.left = left + 'px';
+  panel.style.top  = top  + 'px';
+  panel.classList.add('show');
+  panel.setAttribute('aria-hidden', 'false');
+}
+function _hideCardHover() {
+  const panel = document.getElementById('card-hover');
+  if (panel) { panel.classList.remove('show'); panel.setAttribute('aria-hidden', 'true'); }
+  _hoverEl = null;
+  clearTimeout(_hoverTimer);
+}
+if (_hasFineHover) {
+  document.addEventListener('mouseover', (e) => {
+    const t = e.target.closest('[data-card-id]');
+    if (!t) return;
+    const id = t.getAttribute('data-card-id');
+    if (!id) return;
+    if (t === _hoverEl) return;
+    _hoverEl = t;
+    clearTimeout(_hoverTimer);
+    _hoverTimer = setTimeout(() => _showCardHover(id, e.clientX, e.clientY), 280);
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (!_hoverEl) return;
+    const panel = document.getElementById('card-hover');
+    if (!panel || !panel.classList.contains('show')) return;
+    const w = panel.offsetWidth || 200, h = panel.offsetHeight || 280;
+    let left = e.clientX + 18, top = e.clientY + 18;
+    if (left + w > window.innerWidth - 8) left = e.clientX - w - 18;
+    if (top + h > window.innerHeight - 8) top = window.innerHeight - h - 8;
+    panel.style.left = Math.max(8, left) + 'px';
+    panel.style.top  = Math.max(8, top)  + 'px';
+  });
+  document.addEventListener('mouseout', (e) => {
+    const t = e.target.closest('[data-card-id]');
+    if (!t) return;
+    if (e.relatedTarget && t.contains(e.relatedTarget)) return;
+    _hideCardHover();
+  });
+  document.addEventListener('scroll', _hideCardHover, { passive: true });
+}
+
+// Daily card spotlight - one hero card chosen from the current filtered set.
+// Pick: biggest absolute % move among cards that have a USEFUL synopsis.
+// Rendered above Today's stories.
+function renderSpotlight(rows) {
+  const wrap = document.getElementById('spotlight-wrap');
+  const host = document.getElementById('spotlight');
+  if (!wrap || !host) return;
+  const seen = new Set();
+  let best = null;
+  for (const r of rows) {
+    if (!r.scryfall_id || seen.has(r.scryfall_id)) continue;
+    const card = HISTORY[r.scryfall_id];
+    if (!card || !_synopsisIsUseful(card.synopsis)) continue;
+    seen.add(r.scryfall_id);
+    if (!best || Math.abs(r.pct_change || 0) > Math.abs(best.row.pct_change || 0)) {
+      best = { row: r, card };
+    }
+  }
+  if (!best) { wrap.style.display = 'none'; host.innerHTML = ''; return; }
+  wrap.style.display = '';
+  const { row, card } = best;
+  const pct = (row.pct_change || 0) * 100;
+  const arrow = pct >= 0 ? '▲' : '▼';
+  const sign = pct >= 0 ? '+' : '';
+  const cls  = pct >= 0 ? 'pos' : 'neg';
+  const img = escapeHtml(card.image_uri || '');
+  const safeId = (row.scryfall_id || '').replace(/'/g, "\\'");
+  const safeFin = (row.finish || 'normal').replace(/'/g, "\\'");
+  const safePt = (row.price_type || 'market').replace(/'/g, "\\'");
+  host.innerHTML = `<div class="spotlight-art" onclick="goCard('${safeId}','${safeFin}','${safePt}')">${img ? `<img src="${img}" loading="lazy" alt="" />` : ''}</div>
+    <div class="spotlight-body" onclick="goCard('${safeId}','${safeFin}','${safePt}')">
+      <div class="spotlight-eyebrow">Today's spotlight</div>
+      <div class="spotlight-name">${escapeHtml(card.name || row.name || '')}</div>
+      <div class="spotlight-pct ${cls}">${arrow} ${sign}${pct.toFixed(0)}% &middot; <span style="font-weight:400;color:#888;">${escapeHtml((card.set_name || '') + (card.set_code ? ' (' + card.set_code.toUpperCase() + ')' : ''))}</span></div>
+      <div class="spotlight-synopsis">${escapeHtml(card.synopsis)}</div>
+    </div>`;
+}
+
 // "Today's stories" - top movers in the current filtered set that have an AI
 // synopsis attached. Rendered above the table.
 function renderStories(rows) {
@@ -2398,7 +2607,7 @@ function renderStories(rows) {
     const safeId = (row.scryfall_id || '').replace(/'/g, "\\'");
     const safeFin = (row.finish || 'normal').replace(/'/g, "\\'");
     const safePt = (row.price_type || 'market').replace(/'/g, "\\'");
-    return `<div class="story-card" onclick="goCard('${safeId}','${safeFin}','${safePt}')">
+    return `<div class="story-card" data-card-id="${safeId}" onclick="goCard('${safeId}','${safeFin}','${safePt}')">
       <div class="story-thumb">${img ? `<img src="${img}" loading="lazy" alt="" />` : ''}</div>
       <div class="story-body">
         <div class="story-head">
@@ -2553,6 +2762,22 @@ function findLocalEvents() {
   localStorage.setItem(ZIP_KEY, zip);
   const url = 'https://locator.wizards.com/?address=' + encodeURIComponent(zip);
   window.open(url, '_blank', 'noopener');
+}
+
+// ---- Format movers tab filter ------------------------------------------
+let _formatFilter = '';   // '' for All, or one of std/pio/mod/lgc/vin/cmd/pau
+function setFormatFilter(code) {
+  _formatFilter = code || '';
+  document.querySelectorAll('.fmt-tab').forEach(el => {
+    el.classList.toggle('active', (el.getAttribute('data-fmt') || '') === _formatFilter);
+  });
+  applyFilters();
+}
+function _rowMatchesFormat(r) {
+  if (!_formatFilter) return true;
+  const c = HISTORY[r.scryfall_id];
+  if (!c || !Array.isArray(c.legal)) return false;
+  return c.legal.includes(_formatFilter);
 }
 
 // ---- Global search (top of movers page) ---------------------------------
@@ -2726,6 +2951,7 @@ function renderList() {
     if (minPct && Math.abs(r.pct_change) < minPct) return false;
     if (qName && !r.name.toLowerCase().includes(qName)) return false;
     if (qSet && !(r.set_code||'').toLowerCase().includes(qSet)) return false;
+    if (_formatFilter && !_rowMatchesFormat(r)) return false;
     return true;
   });
   // With no specific rule selected ("all rules"), collapse each card to a
@@ -2743,6 +2969,7 @@ function renderList() {
   sortRows(rows);
   updateSortIndicators();
   renderStatsStrip(rows);   // recompute the four-card summary against the filtered set
+  renderSpotlight(rows);    // hero card above stories
   renderStories(rows);      // render "today's stories" cards above the table
   const total = rows.length;
   const ps = pageSize();
@@ -2762,17 +2989,25 @@ function renderList() {
     pag.classList.remove('show');
   }
   const tbody = document.querySelector('#alerts tbody');
-  tbody.innerHTML = pageRows.map(r => `
-    <tr class="row ${r.pct_change >= 0 ? 'up' : 'down'}" onclick="goCard('${r.scryfall_id}','${r.finish}','${r.price_type}')">
+  tbody.innerHTML = pageRows.map(r => {
+    const target = _targetHitForRow(r);
+    const targetBadge = target === 'below'
+      ? '<span title="Below your buy target" style="margin-left:.35rem; font-size:.7rem; padding:.05rem .35rem; background:rgba(123,190,133,.18); color:#7bbe85; border:1px solid rgba(123,190,133,.4); border-radius:3px;">🎯 buy</span>'
+      : target === 'above'
+        ? '<span title="Above your sell target" style="margin-left:.35rem; font-size:.7rem; padding:.05rem .35rem; background:rgba(224,122,106,.18); color:#e07a6a; border:1px solid rgba(224,122,106,.4); border-radius:3px;">🎯 sell</span>'
+        : '';
+    return `
+    <tr class="row ${r.pct_change >= 0 ? 'up' : 'down'}" data-card-id="${r.scryfall_id}" onclick="goCard('${r.scryfall_id}','${r.finish}','${r.price_type}')">
       <td><span class="chip ${feedClass(r.price_type)}"><span class="feed-long">${PT_LABELS[r.price_type] || r.price_type}</span><span class="feed-abbr">${PT_LABELS_SHORT[r.price_type] || PT_LABELS[r.price_type] || r.price_type}</span></span></td>
       <td><span class="chip ${r.rule==='spike'?'spike':''}${r.rule==='crash'?'crash':''}">${RULE_LABELS[r.rule] || r.rule}</span></td>
-      <td class="name">${r.image_uri ? `<img class="thumb" src="${r.image_uri}" loading="lazy" />` : ''}<a>${r.name}</a></td>
+      <td class="name">${r.image_uri ? `<img class="thumb" src="${r.image_uri}" loading="lazy" />` : ''}<a>${r.name}</a>${targetBadge}</td>
       <td>${(r.set_code||'').toUpperCase()}</td>
       <td>${r.finish}</td>
       <td style="text-align:right">${fmtPrice(r.price_now, r.price_type)}</td>
       <td style="text-align:right">${fmtPrice(r.price_prev, r.price_type)}</td>
       <td style="text-align:right" class="${r.pct_change>=0?'pos':'neg'}">${fmtPct(r.pct_change)}</td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 }
 /* ===================== DECKS (deck boxes) ===================== */
 const DECKS_KEY = 'mtg-decks-v1';
@@ -3401,6 +3636,54 @@ function _metaCacheWrite(id, data) {
     }
   } catch (e) {}
 }
+// All-printings fetcher: returns a list of {id, set_name, set_code, released_at, image, price} for every printing of this card name. Cached by name for 7 days.
+async function fetchAllPrintings(cardName) {
+  if (!cardName) return null;
+  const key = 'prints:' + cardName.toLowerCase();
+  const cached = _metaCacheRead(key);
+  if (cached) return cached;
+  try {
+    const q = `!"${cardName}"`;
+    const url = `https://api.scryfall.com/cards/search?q=${encodeURIComponent(q)}&unique=prints&order=released&dir=desc`;
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    const j = await r.json();
+    const data = (j.data || []).map(c => ({
+      id: c.id,
+      set_name: c.set_name || '',
+      set_code: (c.set || '').toUpperCase(),
+      collector_number: c.collector_number || '',
+      released_at: c.released_at || '',
+      image: (c.image_uris && c.image_uris.normal)
+          || (c.card_faces && c.card_faces[0] && c.card_faces[0].image_uris && c.card_faces[0].image_uris.normal)
+          || '',
+      price: c.prices && c.prices.usd ? Number(c.prices.usd) : null,
+    }));
+    _metaCacheWrite(key, data);
+    return data;
+  } catch (e) { console.warn('fetchAllPrintings failed', e); return null; }
+}
+function renderPrintsGallery(prints, currentId) {
+  const panel = document.getElementById('d-prints-panel');
+  const host  = document.getElementById('d-prints');
+  if (!panel || !host) return;
+  if (!prints || prints.length < 2) { panel.style.display = 'none'; return; }
+  panel.style.display = '';
+  const fmt = n => '$' + Number(n).toFixed(2);
+  host.innerHTML = prints.map(p => {
+    const isCurrent = p.id === currentId;
+    const safeId = (p.id || '').replace(/'/g, "\\'");
+    return `<div onclick="goCard('${safeId}','normal','market')" data-card-id="${safeId}" style="cursor:pointer; border:${isCurrent ? '2px solid #4cd964' : '1px solid #2a2a2a'}; border-radius:6px; overflow:hidden; background:#000; padding:.25rem; transition:transform .1s ease;">
+      <div style="aspect-ratio:5/7; border-radius:4px; overflow:hidden; background:#0a0a0a;">${p.image ? `<img src="${escapeHtml(p.image)}" loading="lazy" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" />` : ''}</div>
+      <div style="padding:.3rem .15rem 0; font-size:.7rem;">
+        <div style="font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(p.set_code || '')}</div>
+        <div style="color:#888; font-size:.65rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(p.set_name || '')}</div>
+        ${p.price != null ? `<div style="color:#4cd964; margin-top:.15rem;">${fmt(p.price)}</div>` : '<div style="color:#666; margin-top:.15rem;">—</div>'}
+      </div>
+    </div>`;
+  }).join('');
+}
+
 async function fetchCardMeta(scryfallId) {
   if (!scryfallId) return null;
   const cached = _metaCacheRead(scryfallId);
@@ -3482,6 +3765,10 @@ function renderDetail(id, preferFinish, preferFeed) {
   const edhLink = document.getElementById('d-edhrec-link');
   if (edhLink) edhLink.setAttribute('href',
     'https://edhrec.com/cards/' + _edhrecSlug(card.name));
+  // Lazy-fetch all printings for the art gallery (hide while we wait).
+  const _pp = document.getElementById('d-prints-panel');
+  if (_pp) _pp.style.display = 'none';
+  fetchAllPrintings(card.name).then(prints => renderPrintsGallery(prints, id));
   document.getElementById('d-sub').textContent =
     `${card.set_name || ''} (${(card.set_code||'').toUpperCase()}) - #${card.collector_no||''} - ${card.rarity||''}`;
   const img = document.getElementById('d-img');
@@ -3615,11 +3902,19 @@ function parseWatchlistEntry(line) {
   //   "4 Sol Ring (CMM) 287"                 -> quantity 4
   //   "Sol Ring (CMM) 287 *F*"               -> foil (any *X* suffix flags foil)
   //   "2 Sol Ring (CMM) 287 *F*"             -> 2 foils
-  const s = (line || '').trim();
+  // Price target suffixes (stripped before name parsing):
+  //   "@<5"  or "@< 5.00"  -> alert when current price drops below $5
+  //   "@>15" or "@> 15"    -> alert when current price climbs above $15
+  let s = (line || '').trim();
+  if (!s) return null;
+  let targetBelow = null, targetAbove = null;
+  s = s.replace(/\s*@\s*<\s*(\d+(?:\.\d+)?)/g, (_, v) => { targetBelow = Number(v); return ''; })
+       .replace(/\s*@\s*>\s*(\d+(?:\.\d+)?)/g, (_, v) => { targetAbove = Number(v); return ''; })
+       .trim();
   if (!s) return null;
   // Captures:  1=count  2=name  3=set  4=num-inside-parens  5=num-outside-parens  6=foil-marker
   const m = s.match(/^(?:(\d+)\s*x?\s+)?(.+?)(?:\s*\(([A-Za-z0-9]+)(?:[-\s]+(\S+))?\)\s*([^\s*]+)?)?(?:\s*\*([A-Za-z]+)\*)?\s*$/);
-  if (!m) return {name: s.toLowerCase(), set: null, num: null, count: 1, foil: false};
+  if (!m) return {name: s.toLowerCase(), set: null, num: null, count: 1, foil: false, targetBelow, targetAbove};
   const num = m[4] || m[5] || null;
   return {
     name:  m[2].trim().toLowerCase(),
@@ -3627,7 +3922,24 @@ function parseWatchlistEntry(line) {
     num:   num ? num.toLowerCase() : null,
     count: m[1] ? Math.max(1, parseInt(m[1], 10)) : 1,
     foil:  !!(m[6] && /^(f|foil|fe|fp|e|etch|etched)$/i.test(m[6])),
+    targetBelow, targetAbove,
   };
+}
+// Given a movers row, does it currently satisfy a price target from the
+// user's Have list? Returns 'below', 'above', or null.
+function _targetHitForRow(r) {
+  const entries = (typeof watchlistEntries === 'function') ? watchlistEntries() : [];
+  if (!entries.length) return null;
+  const price = Number(r.price_now);
+  if (!price || !isFinite(price)) return null;
+  const name = (r.name || '').toLowerCase();
+  for (const e of entries) {
+    if (e.targetBelow == null && e.targetAbove == null) continue;
+    if (!name.startsWith(e.name)) continue;
+    if (e.targetBelow != null && price <= e.targetBelow) return 'below';
+    if (e.targetAbove != null && price >= e.targetAbove) return 'above';
+  }
+  return null;
 }
 function watchlistEntries() {
   return loadWatchlist().map(parseWatchlistEntry).filter(Boolean);
@@ -3652,6 +3964,88 @@ function closeWatchlist() {
   r.innerHTML = '';
   r.classList.remove('show');
 }
+// ---- CSV import (Deckbox / Manabox / Moxfield) ----
+// Reads a CSV file and appends each row to the currently active textarea
+// (Have or Want). Auto-detects common column names: Name/Card, Edition/Set,
+// Card Number/Collector Number, Quantity/Count, Foil. Output uses our
+// "Name (SET-NUM) *F*" format so it survives a Save.
+function importCsvFile(input) {
+  const f = input && input.files && input.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try { _importCsvText(String(e.target.result || '')); }
+    catch (err) { flashMsg('CSV parse failed: ' + (err.message || err)); }
+    input.value = '';
+  };
+  reader.onerror = () => flashMsg('Could not read that file.');
+  reader.readAsText(f);
+}
+function _parseCsvLine(line) {
+  // Minimal CSV parser - handles quoted fields with embedded commas/quotes.
+  const out = []; let cur = ''; let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (inQ) {
+      if (c === '"' && line[i+1] === '"') { cur += '"'; i++; }
+      else if (c === '"') inQ = false;
+      else cur += c;
+    } else {
+      if (c === '"') inQ = true;
+      else if (c === ',') { out.push(cur); cur = ''; }
+      else cur += c;
+    }
+  }
+  out.push(cur);
+  return out;
+}
+function _importCsvText(text) {
+  const lines = text.replace(/\r\n?/g, '\n').split('\n').filter(l => l.trim());
+  if (!lines.length) { flashMsg('CSV is empty.'); return; }
+  const header = _parseCsvLine(lines[0]).map(h => h.trim().toLowerCase());
+  // Find column indices (handle the most common naming variants)
+  const idxOf = (...names) => {
+    for (const n of names) {
+      const i = header.indexOf(n);
+      if (i >= 0) return i;
+    }
+    return -1;
+  };
+  const iName = idxOf('name', 'card', 'card name');
+  if (iName < 0) { flashMsg('CSV needs a "Name" column.'); return; }
+  const iSet  = idxOf('set', 'edition', 'set code', 'expansion');
+  const iNum  = idxOf('card number', 'collector number', 'collector no', 'number', '#');
+  const iQty  = idxOf('count', 'quantity', 'qty', 'amount');
+  const iFoil = idxOf('foil', 'finish', 'is foil');
+  const seen = new Set();
+  const out = [];
+  for (let r = 1; r < lines.length; r++) {
+    const cols = _parseCsvLine(lines[r]);
+    const name = (cols[iName] || '').trim();
+    if (!name) continue;
+    const set  = iSet  >= 0 ? (cols[iSet]  || '').trim().toUpperCase() : '';
+    const num  = iNum  >= 0 ? (cols[iNum]  || '').trim() : '';
+    const qty  = iQty  >= 0 ? Math.max(1, parseInt((cols[iQty] || '1'), 10) || 1) : 1;
+    const foil = iFoil >= 0 && /^(true|yes|foil|y|1|f)$/i.test((cols[iFoil] || '').trim());
+    let entry = name;
+    if (set) entry += num ? ` (${set}-${num})` : ` (${set})`;
+    if (qty > 1) entry = `${qty} ${entry}`;
+    if (foil) entry += ' *F*';
+    const key = entry.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(entry);
+  }
+  if (!out.length) { flashMsg('No card rows recognized in that CSV.'); return; }
+  const taId = _wlActiveTextareaId();
+  const ta = document.getElementById(taId);
+  if (!ta) return;
+  // Append to whatever's already there, separated by a newline if needed.
+  const existing = (ta.value || '').replace(/\s+$/, '');
+  ta.value = existing ? existing + '\n' + out.join('\n') : out.join('\n');
+  flashMsg(`Imported ${out.length} card${out.length === 1 ? '' : 's'} into ${_wlActiveTab === 'want' ? 'Want' : 'Have'} list.`);
+}
+
 function importDeckList() {
   const ta = document.getElementById(_wlActiveTextareaId());
   if (!ta) return;
@@ -4965,7 +5359,7 @@ function tickerItemHtml(r) {
   const safeFin = (r.finish || '').replace(/'/g, "\\\\'");
   const safePt = (r.price_type || '').replace(/'/g, "\\\\'");
   return `
-    <div class="ticker-item" onclick="goCard('${safeId}','${safeFin}','${safePt}')">
+    <div class="ticker-item" data-card-id="${safeId}" onclick="goCard('${safeId}','${safeFin}','${safePt}')">
       <img src="${r.image_uri}" loading="lazy" alt="" />
       <div class="nm">${escapeHtml(r.name)}</div>
       <div class="pct ${dirCls}">${fmtPct(r.pct_change)}</div>
@@ -6870,7 +7264,10 @@ setTimeout(() => {
     // without the user having to interact with a filter or re-load.
     if (typeof renderStories === 'function' && Array.isArray(_statsCurrentRows)) {
       renderStories(_statsCurrentRows);
+      if (typeof renderSpotlight === 'function') renderSpotlight(_statsCurrentRows);
     }
+    // History now has legalities attached - re-apply format filter if active.
+    if (_formatFilter) { try { applyFilters(); } catch (e) {} }
   });
 }, 0);
 /* Firebase SDK loads async; once it's ready, kick off sign-in restoration.

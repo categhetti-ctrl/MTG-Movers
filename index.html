@@ -2454,7 +2454,25 @@ const _NO_CATALYST_PATTERNS = [
 ];
 function _synopsisIsUseful(text) {
   if (!text) return false;
-  const lower = text.toLowerCase();
+  const trimmed = text.trim();
+  // Too short to be real content (likely a trim stub).
+  if (trimmed.length < 40) return false;
+  // Begins with stray punctuation (trim ate the leading clause).
+  if (/^[.,;:!?]/.test(trimmed)) return false;
+  // Begins with pure narration ("I'll search...") - the model never returned an answer block.
+  const lower = trimmed.toLowerCase();
+  const narrationLeads = ["i'll search", "i will search", "let me search",
+    "let me look", "i need to", "i'll start", "let me check", "i'll begin",
+    "let me find", "let me investigate"];
+  for (const lead of narrationLeads) {
+    if (lower.startsWith(lead)) return false;
+  }
+  // Begins with a connector word (stranded fragment after trim).
+  const fragmentLeads = ["however,", "additionally,", "furthermore,", "moreover,",
+    "but ", "and ", "though,", "although,", "while ", "still,", "yet,", "also,"];
+  for (const lead of fragmentLeads) {
+    if (lower.startsWith(lead)) return false;
+  }
   for (const p of _NO_CATALYST_PATTERNS) {
     if (lower.includes(p)) return false;
   }

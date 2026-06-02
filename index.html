@@ -2570,22 +2570,36 @@ function renderSpotlight(rows) {
   const wrap = document.getElementById('spotlight-wrap');
   const host = document.getElementById('spotlight');
   if (!wrap || !host) return;
+  // Build the candidate pool: unique cards with useful synopses.
   const seen = new Set();
-  let best = null;
+  const pool = [];
   for (const r of rows) {
     if (!r.scryfall_id || seen.has(r.scryfall_id)) continue;
     const card = HISTORY[r.scryfall_id];
     if (!card || !_synopsisIsUseful(card.synopsis)) continue;
     seen.add(r.scryfall_id);
-    // Prefer newer synopsis_date; within same date, biggest % wins. Same
-    // policy as the stories panel so the hero doesn't pick a stale card.
-    if (!best) { best = { row: r, card }; continue; }
-    const newD = card.synopsis_date || '';
-    const curD = best.card.synopsis_date || '';
-    if (newD > curD) { best = { row: r, card }; continue; }
-    if (newD === curD && Math.abs(r.pct_change || 0) > Math.abs(best.row.pct_change || 0)) {
-      best = { row: r, card };
+    pool.push({ row: r, card });
+  }
+  // Prefer the freshest synopsis date - restrict to candidates tied for the
+  // newest date. That keeps yesterday's stale card out of the spotlight even
+  // when its % move was huge.
+  let best = null;
+  if (pool.length) {
+    let newestDate = '';
+    for (const c of pool) {
+      const d = c.card.synopsis_date || '';
+      if (d > newestDate) newestDate = d;
     }
+    const top = pool.filter(c => (c.card.synopsis_date || '') === newestDate);
+    // Sort by scryfall_id for a deterministic order so today's seed always
+    // picks the same card (no flicker on re-renders).
+    top.sort((a, b) => (a.row.scryfall_id || '').localeCompare(b.row.scryfall_id || ''));
+    // Seed: hash of today's local date. Same day -> same pick; tomorrow ->
+    // different pick from the same pool, so the hero rotates daily without
+    // any persistence.
+    const today = new Date();
+    const seed = today.getFullYear() * 372 + (today.getMonth() + 1) * 31 + today.getDate();
+    best = top[seed % top.length];
   }
   if (!best) { wrap.style.display = 'none'; host.innerHTML = ''; return; }
   wrap.style.display = '';

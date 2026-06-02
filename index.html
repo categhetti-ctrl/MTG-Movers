@@ -2451,6 +2451,13 @@ const _NO_CATALYST_PATTERNS = [
   'my searches returned', 'searches returned results',
   // Self-correcting clarifications that signal "wrong search results"
   'let me clarify',
+  // Tool/page-load failure admissions - model found a citation but couldn't
+  // actually read it ("requires JavaScript and didn't load").
+  'requires javascript', "didn't load", 'did not load',
+  'page failed to load', 'failed to render',
+  'i found a reference', 'found a reference to',
+  'content was not accessible', 'could not access the',
+  'could not retrieve the', 'unable to retrieve',
 ];
 function _synopsisIsUseful(text) {
   if (!text) return false;

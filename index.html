@@ -2466,6 +2466,10 @@ const _NO_CATALYST_PATTERNS = [
   'there are no recent', 'no recent news items',
   'no direct reporting', 'no direct news',
   'no dated catalyst', 'no catalyst information',
+  // "More targeted searches" / "broader search" - model narrating that
+  // it'll re-run with different terms.
+  'more targeted searches', 'more targeted search',
+  'broader search', 'additional searches', 'different search terms',
 ];
 // Standalone NONE token (whole-word match). Caught separately because the
 // model often writes a long hedge ending with "NONE" instead of just NONE.
@@ -2481,7 +2485,9 @@ function _synopsisIsUseful(text) {
   const lower = trimmed.toLowerCase();
   const narrationLeads = ["i'll search", "i will search", "let me search",
     "let me look", "i need to", "i'll start", "let me check", "i'll begin",
-    "let me find", "let me investigate"];
+    "let me find", "let me investigate",
+    "let me try", "i'll try", "i will try", "let me attempt", "i'll attempt",
+    "let me run", "let me do", "let me see"];
   for (const lead of narrationLeads) {
     if (lower.startsWith(lead)) return false;
   }

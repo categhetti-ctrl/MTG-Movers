@@ -2458,7 +2458,18 @@ const _NO_CATALYST_PATTERNS = [
   'i found a reference', 'found a reference to',
   'content was not accessible', 'could not access the',
   'could not retrieve the', 'unable to retrieve',
+  // "Exhausted my search" / "results only showed" - model gives up after
+  // the search came back empty.
+  'exhausted my search', 'exhausted search', "i've exhausted",
+  'results only showed', 'results only show',
+  // More variants of "I have nothing"
+  'there are no recent', 'no recent news items',
+  'no direct reporting', 'no direct news',
+  'no dated catalyst', 'no catalyst information',
 ];
+// Standalone NONE token (whole-word match). Caught separately because the
+// model often writes a long hedge ending with "NONE" instead of just NONE.
+const _NONE_TOKEN_RE = /(?:^|[\s.,;:!?'"\(\)])NONE(?:[\s.,;:!?'"\(\)]|$)/i;
 function _synopsisIsUseful(text) {
   if (!text) return false;
   const trimmed = text.trim();
@@ -2483,6 +2494,8 @@ function _synopsisIsUseful(text) {
   for (const p of _NO_CATALYST_PATTERNS) {
     if (lower.includes(p)) return false;
   }
+  // Standalone NONE token (model wrote a hedge then appended NONE).
+  if (_NONE_TOKEN_RE.test(text)) return false;
   return true;
 }
 // ---- Card hover preview --------------------------------------------------

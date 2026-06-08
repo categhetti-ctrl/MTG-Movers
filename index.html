@@ -2470,6 +2470,14 @@ const _NO_CATALYST_PATTERNS = [
   // it'll re-run with different terms.
   'more targeted searches', 'more targeted search',
   'broader search', 'additional searches', 'different search terms',
+  // "Not recent enough" / "too old to explain" - model found older info
+  // and is disclaiming it doesn't explain today's spike. Effectively
+  // "I have nothing new."
+  'not recent enough', 'too old to explain',
+  'predates the spike', 'predates the current',
+  'well before the spike', 'well before the current',
+  "doesn't explain the recent", 'does not explain the recent',
+  "doesn't explain the current", 'does not explain the current',
 ];
 // Standalone NONE token (whole-word match). Caught separately because the
 // model often writes a long hedge ending with "NONE" instead of just NONE.
